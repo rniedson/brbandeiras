@@ -1,0 +1,15 @@
+# public/uploads/.htaccess
+# Permitir apenas imagens e documentos específicos
+<Files ~ "\.(jpg|jpeg|png|gif|webp|pdf|doc|docx)$">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Negar execução de PHP
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Desabilitar listagem de diretório
+Options -Indexes

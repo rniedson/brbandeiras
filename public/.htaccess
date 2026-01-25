@@ -1,0 +1,5 @@
+# Tentar usar PHP do Homebrew se disponível
+<IfModule mod_actions.c>
+    Action application/x-httpd-php /opt/homebrew/bin/php-cgi
+</IfModule>
+AddHandler application/x-httpd-php .php

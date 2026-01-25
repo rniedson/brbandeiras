@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "BR Bandeiras"
+		}
+	],
+	"settings": {
+		"php.validate.executablePath": "/usr/bin/php",
+		"php.validate.enable": true,
+		"editor.formatOnSave": true,
+		"files.associations": {
+			"*.php": "php"
+		},
+		"files.exclude": {
+			"**/_notes": true,
+			"**/backup*": true
+		},
+		"search.exclude": {
+			"**/_notes": true,
+			"**/backup*": true,
+			"**/uploads": false
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"bmewburn.vscode-intelephense-client",
+			"felixfbecker.php-debug",
+			"felixfbecker.php-intellisense"
+		]
+	}
+}
+
