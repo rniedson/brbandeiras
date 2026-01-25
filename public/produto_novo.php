@@ -10,10 +10,10 @@ $clientes = $pdo->query("SELECT id, nome FROM clientes WHERE ativo = true ORDER 
 
 $titulo = 'Novo Pedido';
 $breadcrumb = [
-    ['label' => 'Pedidos', 'url' => 'pedidos.php'],
+    ['label' => 'Pedidos', 'url' => 'pedidos/pedidos.php'],
     ['label' => 'Novo Pedido']
 ];
-include '../views/_header.php';
+include '../views/layouts/_header.php';
 ?>
 
 <div class="max-w-4xl mx-auto">
@@ -199,7 +199,7 @@ include '../views/_header.php';
             
             <!-- Botões -->
             <div class="flex justify-between">
-                <a href="pedidos.php" 
+                <a href="pedidos/pedidos.php" 
                    class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 inline-flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -308,4 +308,4 @@ document.addEventListener('input', function(e) {
 });
 </script>
 
-<?php include '../views/_footer.php'; ?>
+<?php include '../views/layouts/_footer.php'; ?>

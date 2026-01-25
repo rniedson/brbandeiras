@@ -1,7 +1,7 @@
 <?php
-require_once '../app/config.php';
-require_once '../app/auth.php';
-require_once '../app/functions.php';
+require_once '../../app/config.php';
+require_once '../../app/auth.php';
+require_once '../../app/functions.php';
 
 requireRole(['gestor']);
 
@@ -67,7 +67,7 @@ $breadcrumb = [
     ['label' => 'Catálogo', 'url' => 'catalogo.php'],
     ['label' => 'Editar Produto']
 ];
-include '../views/_header.php';
+include '../../views/layouts/_header.php';
 ?>
 
 <div class="max-w-4xl mx-auto">
@@ -438,4 +438,4 @@ function validarFormulario(form) {
 }
 </script>
 
-<?php include '../views/_footer.php'; ?>
+<?php include '../../views/layouts/_footer.php'; ?>

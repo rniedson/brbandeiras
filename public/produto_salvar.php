@@ -31,7 +31,7 @@ try {
     ];
     
     // Validar código único
-    $stmt = $pdo->prepare("SELECT id FROM produtos_estoque WHERE codigo = ? AND ativo = true");
+    $stmt = $pdo->prepare("SELECT id FROM produtos_estoque WHERE codigo = ?");
     $stmt->execute([$dados['codigo']]);
     if ($stmt->fetch()) {
         $_SESSION['erro'] = 'Código já cadastrado no sistema';

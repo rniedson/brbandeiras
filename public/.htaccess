@@ -1,5 +1,199 @@
-# Tentar usar PHP do Homebrew se disponível
+# Configuração PHP
 <IfModule mod_actions.c>
     Action application/x-httpd-php /opt/homebrew/bin/php-cgi
 </IfModule>
 AddHandler application/x-httpd-php .php
+
+# ========================================
+# OTIMIZAÇÕES DE PERFORMANCE
+# ========================================
+
+# Compressão GZIP (reduz tamanho de resposta em ~70%)
+<IfModule mod_deflate.c>
+    # Habilitar compressão para tipos de conteúdo textuais
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml application/xhtml+xml text/x-component
+    # Comprimir também fontes
+    AddOutputFilterByType DEFLATE font/woff font/woff2 application/font-woff application/font-woff2 application/vnd.ms-fontobject application/x-font-ttf
+    # Não comprimir imagens (já estão comprimidas)
+    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png|webp|svg|ico)$ no-gzip dont-vary
+    # Forçar compressão mesmo se o cliente não suportar (alguns navegadores antigos)
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    # Adicionar header Vary para cache correto
+    Header append Vary Accept-Encoding
+</IfModule>
+
+# Fallback: compressão via PHP se mod_deflate não estiver disponível
+<IfModule !mod_deflate.c>
+    php_flag output_buffering On
+    php_value output_handler ob_gzhandler
+</IfModule>
+
+# Cache de recursos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Imagens (1 ano)
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    
+    # CSS e JavaScript (1 mês)
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    
+    # Fontes (1 ano)
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+    
+    # HTML sem cache (sempre atualizado)
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# Cache-Control headers
+<IfModule mod_headers.c>
+    # Recursos estáticos - cache longo
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|css|js|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "max-age=31536000, public, immutable"
+    </FilesMatch>
+    
+    # HTML/PHP - sem cache
+    <FilesMatch "\.(html|php)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+    
+    # Security Headers
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Content Security Policy (ajustar conforme necessário)
+    # Nota: 'unsafe-eval' é necessário para Alpine.js funcionar corretamente
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.tailwindcss.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' data: https:; connect-src 'self';"
+    
+    # HSTS (apenas em HTTPS - descomentar quando usar HTTPS)
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+</IfModule>
+
+# Rewrite Engine para compatibilidade com URLs antigas
+RewriteEngine On
+
+# Pedidos
+RewriteRule ^pedidos\.php$ /pedidos/pedidos.php [L]
+RewriteRule ^pedido_novo\.php$ /pedidos/pedido_novo.php [L]
+RewriteRule ^pedido_salvar\.php$ /pedidos/pedido_salvar.php [L]
+RewriteRule ^pedido_editar\.php$ /pedidos/pedido_editar.php [L]
+RewriteRule ^pedido_atualizar\.php$ /pedidos/pedido_atualizar.php [L]
+RewriteRule ^pedido_status\.php$ /pedidos/pedido_status.php [L]
+RewriteRule ^pedido_upload_ajax\.php$ /pedidos/pedido_upload_ajax.php [L]
+RewriteRule ^pedido_detalhes\.php$ /pedidos/detalhes/pedido_detalhes.php [L]
+RewriteRule ^pedido_detalhes_gestor\.php$ /pedidos/detalhes/pedido_detalhes_gestor.php [L]
+RewriteRule ^pedido_detalhes_vendedor\.php$ /pedidos/detalhes/pedido_detalhes_vendedor.php [L]
+RewriteRule ^pedido_detalhes_producao\.php$ /pedidos/detalhes/pedido_detalhes_producao.php [L]
+RewriteRule ^pedido_detalhes_arte_finalista\.php$ /pedidos/detalhes/pedido_detalhes_arte_finalista.php [L]
+
+# Clientes
+RewriteRule ^clientes\.php$ /clientes/clientes.php [L]
+RewriteRule ^cliente_novo\.php$ /clientes/cliente_novo.php [L]
+RewriteRule ^cliente_salvar\.php$ /clientes/cliente_salvar.php [L]
+RewriteRule ^cliente_detalhes\.php$ /clientes/cliente_detalhes.php [L]
+RewriteRule ^clientes_importar\.php$ /clientes/clientes_importar.php [L]
+RewriteRule ^clientes_processar_importacao\.php$ /clientes/clientes_processar_importacao.php [L]
+RewriteRule ^clientes_processar_lote\.php$ /clientes/clientes_processar_lote.php [L]
+RewriteRule ^clientes_template_csv\.php$ /clientes/clientes_template_csv.php [L]
+
+# Produtos/Catálogo
+RewriteRule ^catalogo\.php$ /produtos/catalogo.php [L]
+RewriteRule ^catalogo_produto_novo\.php$ /produtos/catalogo_produto_novo.php [L]
+RewriteRule ^catalogo_produto_editar\.php$ /produtos/catalogo_produto_editar.php [L]
+RewriteRule ^catalogo_produto_salvar\.php$ /produtos/catalogo_produto_salvar.php [L]
+RewriteRule ^catalogo_produto_detalhes\.php$ /produtos/catalogo_produto_detalhes.php [L]
+RewriteRule ^catalogo_produto_atualizar\.php$ /produtos/catalogo_produto_atualizar.php [L]
+RewriteRule ^catalogo_produto_status\.php$ /produtos/catalogo_produto_status.php [L]
+RewriteRule ^catalogo_produto_duplicar\.php$ /produtos/catalogo_produto_duplicar.php [L]
+RewriteRule ^catalogo_importar\.php$ /produtos/catalogo_importar.php [L]
+RewriteRule ^catalogo_importar_processar\.php$ /produtos/catalogo_importar_processar.php [L]
+RewriteRule ^catalogo_importar_erros\.php$ /produtos/catalogo_importar_erros.php [L]
+RewriteRule ^catalogo_precos\.php$ /produtos/catalogo_precos.php [L]
+RewriteRule ^catalogo_precos_salvar\.php$ /produtos/catalogo_precos_salvar.php [L]
+RewriteRule ^catalogo_template_download\.php$ /produtos/catalogo_template_download.php [L]
+RewriteRule ^categorias_produtos\.php$ /produtos/categorias_produtos.php [L]
+RewriteRule ^categoria_produto_criar\.php$ /produtos/categoria_produto_criar.php [L]
+RewriteRule ^categoria_produto_atualizar\.php$ /produtos/categoria_produto_atualizar.php [L]
+RewriteRule ^categoria_produto_excluir\.php$ /produtos/categoria_produto_excluir.php [L]
+RewriteRule ^categoria_produto_status\.php$ /produtos/categoria_produto_status.php [L]
+
+# Orçamentos
+RewriteRule ^orcamentos\.php$ /orcamentos/orcamentos.php [L]
+RewriteRule ^orcamento\.php$ /orcamentos/orcamento.php [L]
+RewriteRule ^orcamento_detalhes\.php$ /orcamentos/orcamento_detalhes.php [L]
+RewriteRule ^orcamento_enviar\.php$ /orcamentos/orcamento_enviar.php [L]
+RewriteRule ^orcamento_aprovar\.php$ /orcamentos/orcamento_aprovar.php [L]
+RewriteRule ^orcamento_reprovar\.php$ /orcamentos/orcamento_reprovar.php [L]
+RewriteRule ^orcamento_pdf\.php$ /orcamentos/orcamento_pdf.php [L]
+
+# Produção
+RewriteRule ^producao\.php$ /producao/producao.php [L]
+RewriteRule ^producao_atualizar_status\.php$ /producao/producao_atualizar_status.php [L]
+RewriteRule ^producao_atualizar_checklist\.php$ /producao/producao_atualizar_checklist.php [L]
+RewriteRule ^producao_atualizar_observacoes\.php$ /producao/producao_atualizar_observacoes.php [L]
+RewriteRule ^producao_atualizar_responsavel\.php$ /producao/producao_atualizar_responsavel.php [L]
+RewriteRule ^producao_dados_kanban\.php$ /producao/producao_dados_kanban.php [L]
+
+# Arte
+RewriteRule ^artes\.php$ /arte/artes.php [L]
+RewriteRule ^arte_finalista\.php$ /arte/arte_finalista.php [L]
+RewriteRule ^arte_finalista_detalhes\.php$ /arte/arte_finalista_detalhes.php [L]
+RewriteRule ^arte_finalista_upload\.php$ /arte/arte_finalista_upload.php [L]
+RewriteRule ^arte_upload\.php$ /arte/arte_upload.php [L]
+RewriteRule ^arte_exclui\.php$ /arte/arte_exclui.php [L]
+
+# Estoque
+RewriteRule ^estoque\.php$ /estoque/estoque.php [L]
+RewriteRule ^estoque_relatorio\.php$ /estoque/estoque_relatorio.php [L]
+RewriteRule ^movimentacao_nova\.php$ /estoque/movimentacao_nova.php [L]
+RewriteRule ^movimentacao_rapida\.php$ /estoque/movimentacao_rapida.php [L]
+RewriteRule ^movimentacao_salvar\.php$ /estoque/movimentacao_salvar.php [L]
+
+# Usuários
+RewriteRule ^usuarios\.php$ /usuarios/usuarios.php [L]
+RewriteRule ^usuario_novo\.php$ /usuarios/usuario_novo.php [L]
+RewriteRule ^usuario_editar\.php$ /usuarios/usuario_editar.php [L]
+RewriteRule ^usuario_salvar\.php$ /usuarios/usuario_salvar.php [L]
+RewriteRule ^usuario_excluir\.php$ /usuarios/usuario_excluir.php [L]
+RewriteRule ^usuario_toggle_status\.php$ /usuarios/usuario_toggle_status.php [L]
+RewriteRule ^usuario_resetar_senha\.php$ /usuarios/usuario_resetar_senha.php [L]
+RewriteRule ^perfil\.php$ /usuarios/perfil.php [L]
+RewriteRule ^configuracoes_usuario\.php$ /usuarios/configuracoes_usuario.php [L]
+
+# Dashboard
+RewriteRule ^dashboard\.php$ /dashboard/dashboard.php [L]
+RewriteRule ^dashboard_gestor\.php$ /dashboard/dashboard_gestor.php [L]
+RewriteRule ^dashboard_vendedor\.php$ /dashboard/dashboard_vendedor.php [L]
+RewriteRule ^dashboard_producao\.php$ /dashboard/dashboard_producao.php [L]
+RewriteRule ^dashboard_arte_finalista\.php$ /dashboard/dashboard_arte_finalista.php [L]
+RewriteRule ^dashboard_security\.php$ /dashboard/dashboard_security.php [L]
+
+# Relatórios
+RewriteRule ^relatorio_entregas\.php$ /relatorios/relatorio_entregas.php [L]
+
+# Calendário
+RewriteRule ^calendario_entrega\.php$ /calendario/calendario_entrega.php [L]
+RewriteRule ^calendario_entregas_dia\.php$ /calendario/calendario_entregas_dia.php [L]
+
+# Utils
+RewriteRule ^download\.php$ /utils/download.php [L]
+RewriteRule ^view\.php$ /utils/view.php [L]
+RewriteRule ^ping\.php$ /utils/ping.php [L]
+RewriteRule ^ver_como_ativar\.php$ /utils/ver_como_ativar.php [L]
+RewriteRule ^ver_como_desativar\.php$ /utils/ver_como_desativar.php [L]
+
+# Arquivos na raiz de public/ (não precisam rewrite, mas garantimos compatibilidade)
+# logout.php, index.php, login.php, auth.php permanecem na raiz
