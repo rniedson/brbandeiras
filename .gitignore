@@ -1,0 +1,55 @@
+# Arquivos de ambiente e configuração sensíveis
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+/storage/logs/*
+!storage/logs/.gitkeep
+
+# Dependências
+/vendor/
+/node_modules/
+
+# Uploads e arquivos gerados
+/uploads/*
+!uploads/.gitkeep
+/storage/cache/*
+!storage/cache/.gitkeep
+
+# Arquivos de backup
+*.backup
+*.backup_*
+*.bak
+*.swp
+*.swo
+*~
+
+# Arquivos do sistema operacional
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.phpstorm.meta.php
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.cache
+
+# Arquivos de teste
+/tests/_output/
+/tests/_support/_generated/
+
+# Arquivos de documentação gerados
+/docs/_build/

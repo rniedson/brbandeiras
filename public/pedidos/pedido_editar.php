@@ -14,23 +14,18 @@ require_once '../../app/functions.php';
 
 requireLogin();
 
-// Verificar ID do pedido
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 
-if (!$pedido_id || !is_numeric($pedido_id)) {
+if (!$pedido_id) {
     $_SESSION['erro'] = 'ID do pedido inválido';
-    header('Location: pedidos.php');
-    exit;
+    redirect('pedidos.php');
 }
 
 try {
-    // 1. VERIFICAR COLUNAS EXISTENTES
-    $checkColumns = $pdo->query("
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'pedidos' 
-        AND column_name IN ('forma_pagamento', 'condicoes_pagamento')
-    ")->fetchAll(PDO::FETCH_COLUMN);
+    // 1. VERIFICAR COLUNAS EXISTENTES usando função auxiliar
+    $tem_forma_pagamento = verificarColunaExiste('pedidos', 'forma_pagamento');
+    $tem_condicoes_pagamento = verificarColunaExiste('pedidos', 'condicoes_pagamento');
     
     // 2. BUSCAR PEDIDO
     $stmt = $pdo->prepare("
@@ -50,8 +45,7 @@ try {
     
     if (!$pedido) {
         $_SESSION['erro'] = 'Pedido não encontrado';
-        header('Location: pedidos.php');
-        exit;
+        redirect('pedidos.php');
     }
     
     // 3. VERIFICAR PERMISSÕES
@@ -64,15 +58,19 @@ try {
         }
     }
     
+    // Buscar desconto máximo para vendedor
+    $descontoMaximoVendedor = getDescontoMaximoVendedor();
+    $isVendedor = $_SESSION['user_perfil'] === 'vendedor' && $_SESSION['user_perfil'] !== 'gestor';
+    $isGestor = $_SESSION['user_perfil'] === 'gestor';
+    
     if (!$pode_editar) {
         $_SESSION['erro'] = 'Você não tem permissão para editar este pedido';
-        header('Location: pedido_detalhes.php?id=' . $pedido_id);
-        exit;
+        redirect("pedido_detalhes.php?id={$pedido_id}");
     }
     
     // 4. BUSCAR ITENS DO PEDIDO
     $stmt = $pdo->prepare("
-        SELECT pi.*, pc.codigo as produto_codigo, pc.nome as produto_nome
+        SELECT pi.*, pc.id as produto_codigo, pc.nome as produto_nome
         FROM pedido_itens pi
         LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
         WHERE pi.pedido_id = ?
@@ -195,7 +193,7 @@ include '../../views/layouts/_header.php';
     
     <!-- Formulário de Edição -->
     <form id="formEditarPedido" method="POST" action="pedido_atualizar.php" enctype="multipart/form-data">
-        
+        <?= CSRF::getField() ?>
         <input type="hidden" name="pedido_id" value="<?= $pedido_id ?>">
         <input type="hidden" name="status_atual" value="<?= $pedido['status'] ?>">
         
@@ -347,14 +345,26 @@ include '../../views/layouts/_header.php';
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Desconto (R$)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Desconto (R$)
+                        <?php if ($isVendedor): ?>
+                            <span class="text-xs text-gray-500">(Máx: <?= number_format($descontoMaximoVendedor, 1, ',', '.') ?>%)</span>
+                        <?php endif; ?>
+                    </label>
                     <input type="number" name="desconto" x-model.number="desconto" 
-                           @input="calcularValorFinal()"
+                           @input="calcularValorFinal(); validarDesconto()"
                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                           :class="descontoExcedido ? 'border-red-500' : ''"
                            step="0.01" min="0" :max="valorTotal">
                     <p class="text-xs text-gray-500 mt-1">
                         <span x-text="descontoPercentual"></span>% do subtotal
                     </p>
+                    <?php if ($isVendedor): ?>
+                    <p x-show="descontoExcedido" class="text-xs text-red-600 mt-1">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Desconto máximo permitido: <?= number_format($descontoMaximoVendedor, 1, ',', '.') ?>%
+                    </p>
+                    <?php endif; ?>
                 </div>
                 
                 <div>
@@ -372,7 +382,7 @@ include '../../views/layouts/_header.php';
                 </div>
             </div>
             
-            <?php if (in_array('forma_pagamento', $checkColumns)): ?>
+            <?php if ($tem_forma_pagamento): ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
@@ -387,7 +397,7 @@ include '../../views/layouts/_header.php';
                     </select>
                 </div>
                 
-                <?php if (in_array('condicoes_pagamento', $checkColumns)): ?>
+                <?php if ($tem_condicoes_pagamento): ?>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Condições de Pagamento</label>
                     <input type="text" name="condicoes_pagamento" 
@@ -557,6 +567,11 @@ function editarPedidoForm() {
         valorFinal: 0,
         descontoPercentual: 0,
         
+        // Configurações de desconto
+        descontoMaximoVendedor: <?= $isVendedor ? $descontoMaximoVendedor : '999999' ?>,
+        isVendedor: <?= $isVendedor ? 'true' : 'false' ?>,
+        descontoExcedido: false,
+        
         // Controle do Modal
         showModalProdutos: false,
         buscaProduto: '',
@@ -594,9 +609,23 @@ function editarPedidoForm() {
         
         calcularValorFinal() {
             this.valorFinal = Math.max(0, this.valorTotal - this.desconto);
-            this.descontoPercentual = this.valorTotal > 0 
+            this.descontoPercentual = this.valorTotal > 0
                 ? ((this.desconto / this.valorTotal) * 100).toFixed(1) 
                 : 0;
+            this.validarDesconto();
+        },
+        
+        validarDesconto() {
+            if (!this.isVendedor) {
+                this.descontoExcedido = false;
+                return;
+            }
+            
+            // Calcular percentual do desconto atual
+            const percentualDesconto = this.valorTotal > 0 
+                ? (this.desconto / this.valorTotal) * 100 
+                : 0;
+            this.descontoExcedido = percentualDesconto > this.descontoMaximoVendedor;
         },
         
         // Gestão de Itens

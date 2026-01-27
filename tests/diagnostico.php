@@ -335,6 +335,16 @@ if (isset($_POST['apply_fixes'])) {
         $fixes_failed++;
     }
     
+    // Adicionar coluna usuario_id em pedido_arquivos
+    try {
+        $pdo->exec("ALTER TABLE pedido_arquivos ADD COLUMN IF NOT EXISTS usuario_id INTEGER REFERENCES usuarios(id)");
+        echo "<p class='success'>✓ Coluna usuario_id verificada/criada</p>";
+        $fixes_applied++;
+    } catch (PDOException $e) {
+        echo "<p class='error'>✗ Erro ao criar coluna usuario_id: " . htmlspecialchars($e->getMessage()) . "</p>";
+        $fixes_failed++;
+    }
+    
     // Resumo
     echo "<h2>RESUMO DAS CORREÇÕES</h2>";
     echo "<p class='info'>Correções aplicadas: <span class='success'>{$fixes_applied}</span></p>";

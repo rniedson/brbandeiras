@@ -13,17 +13,23 @@ requireLogin();
 // Verificar se é POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $_SESSION['erro'] = 'Método inválido';
-    header('Location: pedidos.php');
-    exit;
+    redirect('pedidos.php');
+}
+
+// Validar token CSRF
+try {
+    CSRF::validate($_POST['csrf_token'] ?? '');
+} catch (RuntimeException $e) {
+    $_SESSION['erro'] = 'Token CSRF inválido. Recarregue a página e tente novamente.';
+    redirect('pedidos.php');
 }
 
 // Obter ID do pedido
-$pedido_id = $_POST['pedido_id'] ?? null;
+$pedido_id = validarPedidoId($_POST['pedido_id'] ?? null);
 
-if (!$pedido_id || !is_numeric($pedido_id)) {
+if (!$pedido_id) {
     $_SESSION['erro'] = 'ID do pedido inválido';
-    header('Location: pedidos.php');
-    exit;
+    redirect('pedidos.php');
 }
 
 try {

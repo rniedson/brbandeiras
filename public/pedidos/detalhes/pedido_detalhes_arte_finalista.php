@@ -51,11 +51,12 @@ function processarObservacoes($html) {
     return nl2br(trim($texto));
 }
 
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 
 if (!$pedido_id) {
-    header('Location: dashboard_arte_finalista.php');
-    exit;
+    $_SESSION['erro'] = 'ID de pedido inválido';
+    redirect('../../dashboard/dashboard_arte_finalista.php');
 }
 
 // PROCESSAR AÇÕES AJAX
@@ -234,72 +235,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // Buscar dados do pedido
-$stmt = $pdo->prepare("
-    SELECT 
-        p.numero,
-        p.prazo_entrega,
-        p.status,
-        p.urgente,
-        p.observacoes,
-        c.nome as cliente_nome,
-        c.telefone as cliente_telefone,
-        c.whatsapp as cliente_whatsapp,
-        pa.arte_finalista_id,
-        af.nome as arte_finalista_nome,
-        v.nome as vendedor_nome
-    FROM pedidos p
-    LEFT JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
-    LEFT JOIN usuarios af ON pa.arte_finalista_id = af.id
-    LEFT JOIN usuarios v ON p.vendedor_id = v.id
-    WHERE p.id = ?
-");
-$stmt->execute([$pedido_id]);
-$pedido = $stmt->fetch();
-
-if (!$pedido) {
-    $_SESSION['erro'] = 'Pedido não encontrado';
-    header('Location: dashboard_arte_finalista.php');
-    exit;
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.numero,
+            p.prazo_entrega,
+            p.status,
+            p.urgente,
+            p.observacoes,
+            c.nome as cliente_nome,
+            c.telefone as cliente_telefone,
+            c.whatsapp as cliente_whatsapp,
+            pa.arte_finalista_id,
+            af.nome as arte_finalista_nome,
+            v.nome as vendedor_nome
+        FROM pedidos p
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
+        LEFT JOIN usuarios af ON pa.arte_finalista_id = af.id
+        LEFT JOIN usuarios v ON p.vendedor_id = v.id
+        WHERE p.id = ?
+    ");
+    $stmt->execute([$pedido_id]);
+    $pedido = $stmt->fetch();
+    
+    if (!$pedido) {
+        throw new Exception('Pedido não encontrado');
+    }
+} catch (PDOException $e) {
+    error_log("Erro ao buscar pedido: " . $e->getMessage());
+    $_SESSION['erro'] = 'Erro ao carregar dados do pedido';
+    redirect('../../dashboard/dashboard_arte_finalista.php');
+} catch (Exception $e) {
+    $_SESSION['erro'] = $e->getMessage();
+    redirect('../../dashboard/dashboard_arte_finalista.php');
 }
 
 // Buscar itens do pedido
-$stmt = $pdo->prepare("
-    SELECT 
-        pi.descricao,
-        pi.quantidade,
-        pi.observacoes,
-        pc.nome as produto_nome
-    FROM pedido_itens pi
-    LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
-    WHERE pi.pedido_id = ?
-    ORDER BY pi.id
-");
-$stmt->execute([$pedido_id]);
-$itens = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            pi.descricao,
+            pi.quantidade,
+            pi.observacoes,
+            pc.nome as produto_nome
+        FROM pedido_itens pi
+        LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
+        WHERE pi.pedido_id = ?
+        ORDER BY pi.id
+    ");
+    $stmt->execute([$pedido_id]);
+    $itens = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar itens do pedido: " . $e->getMessage());
+    $itens = [];
+}
 
 // Buscar arquivos do cliente
-$stmt = $pdo->prepare("
-    SELECT * FROM pedido_arquivos 
-    WHERE pedido_id = ? 
-    ORDER BY uploaded_at DESC
-");
-$stmt->execute([$pedido_id]);
-$arquivos_cliente = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT * FROM pedido_arquivos 
+        WHERE pedido_id = ? 
+        ORDER BY uploaded_at DESC
+    ");
+    $stmt->execute([$pedido_id]);
+    $arquivos_cliente = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar arquivos do cliente: " . $e->getMessage());
+    $arquivos_cliente = [];
+}
 
 // Buscar todas as versões de arte
-$stmt = $pdo->prepare("
-    SELECT 
-        av.*,
-        u.nome as usuario_nome,
-        u.perfil as usuario_perfil
-    FROM arte_versoes av
-    LEFT JOIN usuarios u ON av.usuario_id = u.id
-    WHERE av.pedido_id = ?
-    ORDER BY av.versao DESC
-");
-$stmt->execute([$pedido_id]);
-$versoes = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            av.*,
+            u.nome as usuario_nome,
+            u.perfil as usuario_perfil
+        FROM arte_versoes av
+        LEFT JOIN usuarios u ON av.usuario_id = u.id
+        WHERE av.pedido_id = ?
+        ORDER BY av.versao DESC
+    ");
+    $stmt->execute([$pedido_id]);
+    $versoes = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar versões de arte: " . $e->getMessage());
+    $versoes = [];
+}
 
 // Calcular dias até entrega
 $prazo = new DateTime($pedido['prazo_entrega']);
@@ -323,7 +346,8 @@ include '../../../views/layouts/_header.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $titulo ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preload" href="/public/css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/public/css/font-awesome/all.min.css"></noscript>
     <style>
         .preview-grid {
             display: grid;

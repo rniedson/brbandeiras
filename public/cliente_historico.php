@@ -24,7 +24,7 @@ if ($cliente_id) {
 
 // Filtro de datas
 if ($data_inicio && $data_fim) {
-    $where[] = "DATE(p.created_at) BETWEEN ? AND ?";
+    $where[] = "p.created_at >= ?::date AND p.created_at < (?::date + INTERVAL '1 day')";
     $params[] = $data_inicio;
     $params[] = $data_fim;
 }

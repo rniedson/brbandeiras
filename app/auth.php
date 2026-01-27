@@ -158,20 +158,17 @@ function getInfoUsuarioDisplay() {
  * @param string $detalhes
  */
 function registrarLogComVerComo($acao, $detalhes) {
-    global $pdo;
-    
     $usuario_id = getUserIdReal(); // Sempre usar o ID real para logs
     
     if (isVerComoAtivo()) {
         $detalhes = "[MODO VER COMO - Visualizando como: {$_SESSION['ver_como_usuario']['nome']}] " . $detalhes;
     }
     
-    $stmt = $pdo->prepare("
+    $db = getDb();
+    $db->query("
         INSERT INTO logs_sistema (usuario_id, acao, detalhes, ip_address, created_at)
         VALUES (?, ?, ?, ?, NOW())
-    ");
-    
-    $stmt->execute([
+    ", [
         $usuario_id,
         $acao,
         $detalhes,
@@ -179,8 +176,73 @@ function registrarLogComVerComo($acao, $detalhes) {
     ]);
 }
 
+/**
+ * Renova o ID da sessão periodicamente para melhorar segurança
+ * Regenera o ID a cada 30 minutos de atividade
+ */
+function renovarSessaoSeNecessario(): void {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Verificar se há última atividade registrada
+    if (isset($_SESSION['last_activity'])) {
+        $tempoInativo = time() - $_SESSION['last_activity'];
+        
+        // Regenerar ID da sessão a cada 30 minutos (1800 segundos)
+        if ($tempoInativo > 1800) {
+            session_regenerate_id(true);
+            $_SESSION['last_activity'] = time();
+        }
+    } else {
+        // Primeira vez, registrar atividade
+        $_SESSION['last_activity'] = time();
+    }
+}
+
+/**
+ * Verifica se a sessão expirou e destrói se necessário
+ * @return bool True se sessão ainda válida, false se expirada
+ */
+function verificarSessaoExpirada(): bool {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Tempo máximo de inatividade: 2 horas (7200 segundos)
+    $timeout = 7200;
+    
+    if (isset($_SESSION['last_activity'])) {
+        $tempoInativo = time() - $_SESSION['last_activity'];
+        
+        if ($tempoInativo > $timeout) {
+            // Sessão expirada
+            session_unset();
+            session_destroy();
+            return false;
+        }
+    }
+    
+    // Atualizar timestamp de última atividade
+    $_SESSION['last_activity'] = time();
+    return true;
+}
+
 // Inicializar sessão se ainda não estiver iniciada
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Renovar sessão se necessário (apenas se usuário estiver logado)
+if (isLoggedIn()) {
+    renovarSessaoSeNecessario();
+    
+    // Verificar se sessão expirou
+    if (!verificarSessaoExpirada()) {
+        // Sessão expirada, redirecionar para login
+        $_SESSION['erro'] = 'Sua sessão expirou por inatividade. Por favor, faça login novamente.';
+        header('Location: index.php');
+        exit;
+    }
 }
 ?>

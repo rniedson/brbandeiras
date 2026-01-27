@@ -45,15 +45,14 @@ function detectarTentativaBurla() {
     $user_id = $_SESSION['user_id'];
     
     // Verificar se há múltiplas tentativas de acesso negado nos últimos 5 minutos
-    global $pdo;
-    $stmt = $pdo->prepare("
+    $db = getDb();
+    $stmt = $db->query("
         SELECT COUNT(*) 
         FROM logs_sistema 
         WHERE usuario_id = ? 
         AND acao = 'acesso_negado_dashboard' 
         AND created_at > NOW() - INTERVAL '5 minutes'
-    ");
-    $stmt->execute([$user_id]);
+    ", [$user_id]);
     $tentativas = $stmt->fetchColumn();
     
     if ($tentativas >= 3) {

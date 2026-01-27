@@ -14,7 +14,7 @@ session_set_cookie_params([
     'lifetime' => 50400,        // 14 horas
     'path' => '/',              // Disponível em todo o site
     'domain' => '',             // Usa o domínio atual
-    'secure' => true,           // Apenas HTTPS (ajuste para false se usar HTTP local)
+    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', // HTTPS apenas se disponível
     'httponly' => true,         // Não acessível via JavaScript
     'samesite' => 'Lax'         // Proteção CSRF
 ]);

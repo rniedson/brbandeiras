@@ -31,8 +31,8 @@ if ($periodo === 'hoje') {
     $data_fim = date('Y-12-31');
 }
 
-// Query base para pedidos
-$where = ["DATE(p.created_at) BETWEEN ? AND ?"];
+// Query base para pedidos (otimizado: sem DATE() para permitir uso de índices)
+$where = ["p.created_at >= ?::date AND p.created_at < (?::date + INTERVAL '1 day')"];
 $params = [$data_inicio, $data_fim];
 
 // Filtro por vendedor
@@ -63,13 +63,11 @@ try {
             u.nome as vendedor_nome,
             c.nome as cliente_nome,
             c.email as cliente_email,
-            COUNT(pi.id) as total_itens
+            COALESCE((SELECT COUNT(*)::integer FROM pedido_itens pi WHERE pi.pedido_id = p.id), 0) as total_itens
         FROM pedidos p
         LEFT JOIN usuarios u ON p.vendedor_id = u.id
         LEFT JOIN clientes c ON p.cliente_id = c.id
-        LEFT JOIN pedido_itens pi ON pi.pedido_id = p.id
         WHERE $whereClause
-        GROUP BY p.id, u.nome, c.nome, c.email
         ORDER BY p.created_at DESC
         LIMIT ? OFFSET ?
     ";
@@ -78,7 +76,14 @@ try {
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params_query);
-    $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $pedidos_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Garantir que total_itens sempre existe e é um número
+    $pedidos = [];
+    foreach ($pedidos_raw as $pedido) {
+        $pedido['total_itens'] = isset($pedido['total_itens']) ? intval($pedido['total_itens']) : 0;
+        $pedidos[] = $pedido;
+    }
     
     // Contar total
     $sql_count = "
@@ -141,7 +146,7 @@ try {
             COUNT(p.id) as total_pedidos,
             COALESCE(SUM(p.valor_final) FILTER (WHERE p.status = 'entregue'), 0) as valor_total
         FROM usuarios u
-        LEFT JOIN pedidos p ON p.vendedor_id = u.id AND DATE(p.created_at) BETWEEN ? AND ?
+        LEFT JOIN pedidos p ON p.vendedor_id = u.id AND p.created_at >= ?::date AND p.created_at < (?::date + INTERVAL '1 day')
         WHERE u.perfil = 'vendedor'
         GROUP BY u.id, u.nome
         HAVING COUNT(p.id) > 0
@@ -164,7 +169,7 @@ try {
             COUNT(*) as total,
             COALESCE(SUM(valor_final), 0) as valor_total
         FROM pedidos
-        WHERE DATE(created_at) BETWEEN ? AND ?
+        WHERE created_at >= ?::date AND created_at < (?::date + INTERVAL '1 day')
         GROUP BY status
         ORDER BY total DESC
     ";

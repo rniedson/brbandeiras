@@ -1,19 +1,33 @@
 <?php
+// IMPORTANTE: Carregar ajax_helper ANTES de config.php
+require_once '../../app/ajax_helper.php';
+AjaxResponse::init();
+
 require_once '../../app/config.php';
 require_once '../../app/auth.php';
 require_once '../../app/functions.php';
 
-header('Content-Type: application/json');
+// Verificar autenticação
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    AjaxResponse::error('Não autenticado', 401);
+}
 
-requireLogin();
-requireRole(['producao', 'gestor']);
+// Verificar permissões
+if (!hasRole(['producao', 'gestor'])) {
+    AjaxResponse::error('Sem permissão para esta ação', 403);
+}
 
+// Verificar método HTTP
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Método não permitido']);
-    exit;
+    AjaxResponse::error('Método não permitido', 405);
 }
 
 try {
+    // Verificar conexão com banco
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        throw new Exception('Conexão com banco de dados não disponível');
+    }
+    
     $input = json_decode(file_get_contents('php://input'), true);
     
     if (!$input || !isset($input['pedido_id']) || !isset($input['novo_status'])) {
@@ -190,22 +204,17 @@ try {
     
     $pdo->commit();
     
-    echo json_encode([
-        'success' => true,
-        'message' => 'Status atualizado com sucesso',
-        'data' => $dadosResposta
-    ]);
+    AjaxResponse::success($dadosResposta, 'Status atualizado com sucesso');
     
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+} catch (PDOException $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    AjaxResponse::error('Erro de banco de dados: ' . $e->getMessage());
     
-    error_log("Erro ao atualizar status: " . $e->getMessage());
-    
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
+} catch (Exception $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    AjaxResponse::error($e->getMessage());
 }
-?>

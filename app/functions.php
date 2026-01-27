@@ -11,6 +11,107 @@
  */
 
 // ============================================================================
+// FUNÇÕES DE CONFIGURAÇÃO DO SISTEMA
+// ============================================================================
+
+/**
+ * Obtém valor de uma configuração do sistema
+ * @param string $chave Chave da configuração
+ * @param mixed $default Valor padrão se não encontrar
+ * @return mixed Valor da configuração ou default
+ */
+function getConfig($chave, $default = null) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT valor, tipo FROM configuracoes WHERE chave = ?");
+        $stmt->execute([$chave]);
+        $config = $stmt->fetch();
+        
+        if (!$config) {
+            return $default;
+        }
+        
+        // Converter conforme o tipo
+        switch ($config['tipo']) {
+            case 'integer':
+                return intval($config['valor']);
+            case 'decimal':
+            case 'float':
+                return floatval($config['valor']);
+            case 'boolean':
+                return filter_var($config['valor'], FILTER_VALIDATE_BOOLEAN);
+            case 'json':
+                return json_decode($config['valor'], true);
+            default:
+                return $config['valor'];
+        }
+    } catch (Exception $e) {
+        error_log("Erro ao buscar configuração $chave: " . $e->getMessage());
+        return $default;
+    }
+}
+
+/**
+ * Define ou atualiza uma configuração do sistema
+ * @param string $chave Chave da configuração
+ * @param mixed $valor Valor a ser salvo
+ * @param string $tipo Tipo da configuração (string, integer, decimal, boolean, json)
+ * @param string $descricao Descrição da configuração
+ * @return bool Sucesso da operação
+ */
+function setConfig($chave, $valor, $tipo = 'string', $descricao = null) {
+    global $pdo;
+    try {
+        // Converter valor conforme o tipo
+        switch ($tipo) {
+            case 'integer':
+                $valor = intval($valor);
+                break;
+            case 'decimal':
+            case 'float':
+                $valor = floatval($valor);
+                break;
+            case 'boolean':
+                $valor = $valor ? '1' : '0';
+                break;
+            case 'json':
+                $valor = json_encode($valor);
+                break;
+            default:
+                $valor = strval($valor);
+        }
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO configuracoes (chave, valor, tipo, descricao, updated_at) 
+            VALUES (?, ?, ?, ?, NOW())
+            ON CONFLICT (chave) 
+            DO UPDATE SET valor = EXCLUDED.valor, tipo = EXCLUDED.tipo, descricao = EXCLUDED.descricao, updated_at = NOW()
+        ");
+        
+        return $stmt->execute([$chave, $valor, $tipo, $descricao]);
+    } catch (Exception $e) {
+        error_log("Erro ao salvar configuração $chave: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Obtém o desconto máximo permitido para vendedores
+ * @return float Percentual máximo de desconto (padrão: 2%)
+ */
+function getDescontoMaximoVendedor() {
+    return getConfig('desconto_maximo_vendedor', 2.0);
+}
+
+/**
+ * Verifica se o usuário pode ver valores financeiros
+ * @return bool True se pode ver valores
+ */
+function podeVerValores() {
+    return $_SESSION['user_perfil'] === 'gestor' || $_SESSION['user_perfil'] === 'vendedor';
+}
+
+// ============================================================================
 // CONSTANTES GLOBAIS
 // ============================================================================
 
@@ -23,6 +124,23 @@ if (!defined('SISTEMA_EMAIL')) {
 }
 if (!defined('BASE_URL')) {
     define('BASE_URL', 'https://brbandeiras.com.br/');
+}
+
+// ============================================================================
+// FUNÇÕES DE ACESSO AO BANCO DE DADOS
+// ============================================================================
+
+/**
+ * Obtém instância do Database (substitui uso de global $pdo)
+ * 
+ * @return Database Instância singleton do Database
+ * 
+ * @example
+ * $pdo = getDb()->getPdo();
+ * $stmt = getDb()->query("SELECT * FROM pedidos WHERE id = ?", [$id]);
+ */
+function getDb(): Database {
+    return Database::getInstance();
 }
 
 // ============================================================================
@@ -223,6 +341,16 @@ function validarCPFCNPJ($documento) {
  */
 function validarEmail($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+/**
+ * Valida ID de pedido
+ * @param mixed $id ID do pedido (string ou int)
+ * @return int|null ID validado como inteiro ou null se inválido
+ */
+function validarPedidoId($id) {
+    $id = filter_var($id, FILTER_VALIDATE_INT);
+    return $id !== false && $id > 0 ? $id : null;
 }
 
 /**
@@ -603,8 +731,6 @@ function gerarLinkWhatsApp($telefone, $mensagem = '') {
  * @return bool True se registrado com sucesso
  */
 function registrarLog($acao, $detalhes = '', $usuario_id = null) {
-    global $pdo;
-    
     if (!$usuario_id) {
         $usuario_id = $_SESSION['user_id'] ?? null;
     }
@@ -614,14 +740,20 @@ function registrarLog($acao, $detalhes = '', $usuario_id = null) {
     }
     
     try {
-        $stmt = $pdo->prepare("
+        // Usar sistema de auditoria se disponível
+        if (class_exists('App\Core\Auditoria')) {
+            \App\Core\Auditoria::registrar($acao, $detalhes, $usuario_id);
+            return true;
+        }
+        
+        // Fallback para método antigo
+        $db = getDb();
+        $stmt = $db->query("
             INSERT INTO logs_sistema (usuario_id, acao, detalhes, ip, created_at) 
             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ");
+        ", [$usuario_id, $acao, $detalhes, $_SERVER['REMOTE_ADDR'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null]);
         
-        $ip = $_SERVER['REMOTE_ADDR'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null;
-        
-        return $stmt->execute([$usuario_id, $acao, $detalhes, $ip]);
+        return true;
     } catch (Exception $e) {
         error_log("Erro ao registrar log: " . $e->getMessage());
         return false;
@@ -642,7 +774,7 @@ function registrarLog($acao, $detalhes = '', $usuario_id = null) {
  */
 function getStatusColor($status) {
     $info = getStatusInfo($status);
-    return $info['color'];
+    return $info['cor'] ?? 'bg-gray-500';
 }
 
 // ============================================================================
@@ -768,6 +900,103 @@ function gerarOpcoesMeses() {
     ];
 }
 
+/**
+ * Redireciona para uma URL com validação
+ * @param string $url URL para redirecionar (relativa ou absoluta)
+ * @param int $statusCode Código HTTP de status (padrão 302)
+ */
+function redirect($url, $statusCode = 302) {
+    // Se for URL absoluta (http/https), usar diretamente
+    if (strpos($url, 'http') === 0) {
+        header("Location: {$url}", true, $statusCode);
+        exit;
+    }
+    
+    // Se começar com '/', é caminho absoluto do servidor
+    if (strpos($url, '/') === 0) {
+        header("Location: {$url}", true, $statusCode);
+        exit;
+    }
+    
+    // Caso contrário, é caminho relativo - usar diretamente
+    // O navegador resolve caminhos relativos corretamente
+    header("Location: {$url}", true, $statusCode);
+    exit;
+}
+
+/**
+ * Obtém informações de status do pedido
+ * @param string|null $status Status específico ou null para retornar todos
+ * @return array|array[] Array de informações de status ou informações de um status específico
+ */
+function getStatusInfo($status = null) {
+    static $status_info = [
+        'orcamento' => ['cor' => 'bg-gray-600', 'texto' => 'Orçamento', 'icone' => 'clipboard-list'],
+        'arte' => ['cor' => 'bg-lime-600', 'texto' => 'Arte', 'icone' => 'paint-brush'],
+        'aprovado' => ['cor' => 'bg-blue-600', 'texto' => 'Aprovado', 'icone' => 'check-circle'],
+        'pagamento_50' => ['cor' => 'bg-yellow-600', 'texto' => 'Entrada 50%', 'icone' => 'currency-dollar'],
+        'producao' => ['cor' => 'bg-orange-600', 'texto' => 'Em Produção', 'icone' => 'cog'],
+        'pagamento_100' => ['cor' => 'bg-yellow-700', 'texto' => 'Pagamento Final', 'icone' => 'credit-card'],
+        'pronto' => ['cor' => 'bg-green-600', 'texto' => 'Pronto', 'icone' => 'package'],
+        'entregue' => ['cor' => 'bg-green-800', 'texto' => 'Entregue', 'icone' => 'truck'],
+        'cancelado' => ['cor' => 'bg-red-600', 'texto' => 'Cancelado', 'icone' => 'x-circle']
+    ];
+    
+    if ($status === null) {
+        return $status_info;
+    }
+    
+    return $status_info[$status] ?? ['cor' => 'bg-gray-500', 'texto' => 'Desconhecido', 'icone' => 'question-mark-circle'];
+}
+
+/**
+ * Processa observações HTML permitindo apenas tags seguras
+ * @param string $observacoes Texto com observações (pode conter HTML)
+ * @return string Texto processado com HTML seguro
+ */
+function processarObservacoesHTML($observacoes) {
+    if (empty($observacoes)) {
+        return '';
+    }
+    
+    // Se o HTML foi escapado, decodificar primeiro
+    if (strpos($observacoes, '&lt;') !== false || strpos($observacoes, '&gt;') !== false) {
+        $observacoes = html_entity_decode($observacoes, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+    
+    // Permitir apenas tags HTML seguras
+    $observacoes = strip_tags($observacoes, '<b><strong><i><em><u><br><br/><p><ul><ol><li>');
+    
+    // Converter quebras de linha em <br> se ainda não houver tags <br>
+    if (strpos($observacoes, '<br') === false) {
+        $observacoes = nl2br($observacoes);
+    }
+    
+    return $observacoes;
+}
+
+/**
+ * Separa arquivos por tipo (imagens e outros)
+ * @param array $arquivos Array de arquivos com campo 'nome_arquivo'
+ * @return array Array com chaves 'imagens' e 'outros'
+ */
+function separarArquivosPorTipo($arquivos) {
+    $arquivos_imagem = [];
+    $arquivos_outros = [];
+    $extensoes_imagem = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    
+    foreach ($arquivos as $arquivo) {
+        $extensao = strtolower(pathinfo($arquivo['nome_arquivo'] ?? '', PATHINFO_EXTENSION));
+        if (in_array($extensao, $extensoes_imagem)) {
+            $arquivos_imagem[] = $arquivo;
+        } else {
+            $arquivos_outros[] = $arquivo;
+        }
+    }
+    
+    return ['imagens' => $arquivos_imagem, 'outros' => $arquivos_outros];
+}
+
 // ============================================================================
 // FUNÇÕES DE BANCO DE DADOS
 // ============================================================================
@@ -794,28 +1023,38 @@ function verificarTabelaExiste($tabela) {
 }
 
 function verificarColunaExiste($tabela, $coluna) {
-    global $pdo;
+    // Cache estático para evitar múltiplas consultas ao information_schema
+    static $colunaCache = [];
+    $cacheKey = "{$tabela}.{$coluna}";
+    
+    if (isset($colunaCache[$cacheKey])) {
+        return $colunaCache[$cacheKey];
+    }
     
     try {
-        $stmt = $pdo->prepare("
+        $db = getDb();
+        $stmt = $db->query("
             SELECT 1 FROM information_schema.columns 
             WHERE table_schema = 'public' 
             AND table_name = ? 
             AND column_name = ?
             LIMIT 1
-        ");
-        $stmt->execute([$tabela, $coluna]);
-        return (bool)$stmt->fetchColumn();
+        ", [$tabela, $coluna]);
+        $resultado = (bool)$stmt->fetchColumn();
+        
+        // Armazenar no cache
+        $colunaCache[$cacheKey] = $resultado;
+        
+        return $resultado;
     } catch (Exception $e) {
         return false;
     }
 }
 
 function getDatabaseSchema($tabela) {
-    global $pdo;
-    
     try {
-        $stmt = $pdo->prepare("
+        $db = getDb();
+        $stmt = $db->query("
             SELECT 
                 column_name, 
                 data_type, 
@@ -826,8 +1065,7 @@ function getDatabaseSchema($tabela) {
             WHERE table_schema = 'public'
             AND table_name = ?
             ORDER BY ordinal_position
-        ");
-        $stmt->execute([$tabela]);
+        ", [$tabela]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         return [];
@@ -870,6 +1108,64 @@ function debugLog($data, $arquivo = 'debug.log') {
         $log_data = "[$timestamp] " . print_r($data, true) . "\n";
         file_put_contents($arquivo, $log_data, FILE_APPEND | LOCK_EX);
     }
+}
+
+// ============================================================================
+// FUNÇÕES DE CACHE
+// ============================================================================
+
+/**
+ * Executa uma query com cache usando APCu (se disponível)
+ * @param PDO $pdo Conexão PDO
+ * @param string $cache_key Chave única para o cache
+ * @param string $sql Query SQL a executar
+ * @param array $params Parâmetros para a query (opcional)
+ * @param int $ttl Tempo de vida do cache em segundos (padrão: 5 minutos)
+ * @return array Resultado da query
+ */
+function getCachedQuery($pdo, $cache_key, $sql, $params = [], $ttl = 300) {
+    // Tentar buscar do cache se APCu estiver disponível
+    if (function_exists('apcu_fetch')) {
+        $cached = apcu_fetch($cache_key);
+        if ($cached !== false) {
+            return $cached;
+        }
+    }
+    
+    // Executar query
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Armazenar no cache se APCu estiver disponível
+    if (function_exists('apcu_store')) {
+        apcu_store($cache_key, $result, $ttl);
+    }
+    
+    return $result;
+}
+
+/**
+ * Limpa um item específico do cache
+ * @param string $cache_key Chave do cache a limpar
+ * @return bool Sucesso da operação
+ */
+function clearCache($cache_key) {
+    if (function_exists('apcu_delete')) {
+        return apcu_delete($cache_key);
+    }
+    return false;
+}
+
+/**
+ * Limpa todo o cache (use com cuidado!)
+ * @return bool Sucesso da operação
+ */
+function clearAllCache() {
+    if (function_exists('apcu_clear_cache')) {
+        return apcu_clear_cache();
+    }
+    return false;
 }
 
 // ============================================================================

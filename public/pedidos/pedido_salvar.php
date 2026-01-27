@@ -26,14 +26,20 @@ function errorResponse($message, $isAjax = false) {
         jsonResponse(false, $message);
     } else {
         $_SESSION['erro'] = $message;
-        header('Location: pedido_novo.php');
-        exit;
+        redirect('pedido_novo.php');
     }
 }
 
 // Verificar se é POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     errorResponse('Método inválido', $isAjax);
+}
+
+// Validar token CSRF
+try {
+    CSRF::validate($_POST['csrf_token'] ?? '');
+} catch (RuntimeException $e) {
+    errorResponse('Token CSRF inválido. Recarregue a página e tente novamente.', $isAjax);
 }
 
 // Determinar se é INSERT ou UPDATE
@@ -179,6 +185,23 @@ try {
     
     if ($desconto < 0) {
         throw new Exception('Desconto não pode ser negativo');
+    }
+    
+    // VALIDAÇÃO: Verificar limite de desconto para vendedores
+    if ($_SESSION['user_perfil'] === 'vendedor' && $_SESSION['user_perfil'] !== 'gestor') {
+        $descontoMaximoVendedor = getDescontoMaximoVendedor();
+        
+        if ($tipo_desconto === 'porcentagem') {
+            if ($desconto > $descontoMaximoVendedor) {
+                throw new Exception("Desconto máximo permitido para vendedores é de {$descontoMaximoVendedor}%. Para descontos maiores, entre em contato com o gestor.");
+            }
+        } else {
+            // Para desconto em valor, calcular percentual equivalente
+            $percentualDesconto = $valor_total > 0 ? ($desconto / $valor_total) * 100 : 0;
+            if ($percentualDesconto > $descontoMaximoVendedor) {
+                throw new Exception("Desconto máximo permitido para vendedores é de {$descontoMaximoVendedor}%. O desconto informado representa " . number_format($percentualDesconto, 2, ',', '.') . "%. Para descontos maiores, entre em contato com o gestor.");
+            }
+        }
     }
     
     // Calcular o valor do desconto

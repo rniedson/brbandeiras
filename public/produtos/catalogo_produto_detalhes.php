@@ -185,7 +185,7 @@ include '../../views/layouts/_header.php';
                             <?php foreach ($pedidos_recentes as $pedido): ?>
                             <tr class="hover:bg-gray-50">
                                 <td class="px-4 py-2">
-                                    <a href="pedido_detalhes.php?id=<?= $pedido['id'] ?>" 
+                                    <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" 
                                        class="text-blue-600 hover:text-blue-800">
                                         #<?= htmlspecialchars($pedido['numero']) ?>
                                     </a>

@@ -69,8 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     throw new Exception('Você não é responsável por esta OS');
                 }
                 
-                // Mudar status para arte_aprovacao
-                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'arte_aprovacao' WHERE id = ?");
+                // Mudar status para aprovado
+                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'aprovado' WHERE id = ?");
                 $stmt->execute([$pedido_id]);
                 
                 registrarLog('arte_entregue', "OS #$pedido_id entregue para aprovação");
@@ -144,7 +144,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN clientes c ON p.cliente_id = c.id
     LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
     LEFT JOIN arte_versoes av ON av.pedido_id = p.id
-    WHERE p.status = 'arte_aprovacao' AND pa.arte_finalista_id = ?
+    WHERE p.status = 'aprovado' AND pa.arte_finalista_id = ?
     GROUP BY p.id, p.numero, p.urgente, c.nome, av.aprovada, av.reprovada, av.comentario_cliente
     ORDER BY p.created_at DESC
 ");
@@ -294,7 +294,7 @@ include '../../views/layouts/_header.php';
                         $atrasado = $hoje > $prazo;
                     ?>
                     <div class="os-card bg-white rounded-xl shadow-md overflow-hidden cursor-pointer"
-                         onclick="window.location.href='pedido_detalhes.php?id=<?= $os['id'] ?>'">
+                         onclick="window.location.href='../pedidos/pedido_detalhes.php?id=<?= $os['id'] ?>'">
                         
                         <!-- Preview da Arte -->
                         <div class="preview-thumb h-40 flex items-center justify-center relative">
@@ -491,7 +491,7 @@ include '../../views/layouts/_header.php';
                             </div>
                         <?php endif; ?>
                         
-                        <button onclick="window.location.href='pedido_detalhes.php?id=<?= $os['id'] ?>'"
+                        <button onclick="window.location.href='../pedidos/pedido_detalhes.php?id=<?= $os['id'] ?>'"
                                 class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm">
                             <i class="fas fa-eye mr-2"></i>
                             Ver Detalhes

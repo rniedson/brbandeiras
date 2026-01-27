@@ -65,49 +65,75 @@ try {
     $stmt->execute($params_query);
     $metas_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Calcular valor atingido para cada meta
+    // Calcular valor atingido para todas as metas em UMA query (otimização N+1)
     $metas = [];
-    foreach ($metas_raw as $meta) {
-        // Calcular período baseado no tipo
-        $meta_data_inicio = null;
-        $meta_data_fim = null;
+    
+    if (!empty($metas_raw)) {
+        // Preparar IDs das metas para query única
+        $meta_ids = array_column($metas_raw, 'id');
+        $placeholders = implode(',', array_fill(0, count($meta_ids), '?'));
         
-        if ($meta['periodo_tipo'] === 'mes') {
-            $meta_data_inicio = $meta['periodo_referencia'] . '-01';
-            $meta_data_fim = date('Y-m-t', strtotime($meta_data_inicio));
-        } elseif ($meta['periodo_tipo'] === 'trimestre') {
-            $parts = explode('-Q', $meta['periodo_referencia']);
-            $ano = $parts[0];
-            $trimestre = intval($parts[1] ?? 1);
-            $mes_inicio = ($trimestre - 1) * 3 + 1;
-            $meta_data_inicio = sprintf('%04d-%02d-01', $ano, $mes_inicio);
-            $mes_fim = $trimestre * 3;
-            $meta_data_fim = date('Y-m-t', strtotime(sprintf('%04d-%02d-01', $ano, $mes_fim)));
-        } elseif ($meta['periodo_tipo'] === 'ano') {
-            $meta_data_inicio = $meta['periodo_referencia'] . '-01-01';
-            $meta_data_fim = $meta['periodo_referencia'] . '-12-31';
-        }
-        
-        // Buscar valor atingido
+        // Query única que calcula valores atingidos para todas as metas
         $sql_vendas = "
-            SELECT COALESCE(SUM(valor_final), 0) as total
-            FROM pedidos
-            WHERE status = 'entregue'
-            AND DATE(created_at) BETWEEN ? AND ?
+            SELECT 
+                m.id as meta_id,
+                COALESCE(SUM(p.valor_final), 0) as valor_atingido
+            FROM metas_vendas m
+            LEFT JOIN pedidos p ON (
+                p.status = 'entregue'
+                AND (
+                    -- Período MÊS
+                    (m.periodo_tipo = 'mes' 
+                     AND p.created_at >= (m.periodo_referencia || '-01')::date
+                     AND p.created_at < ((m.periodo_referencia || '-01')::date + INTERVAL '1 month'))
+                    OR
+                    -- Período TRIMESTRE
+                    (m.periodo_tipo = 'trimestre'
+                     AND p.created_at >= (
+                         CASE 
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '1' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-01-01')::date
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '2' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-04-01')::date
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '3' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-07-01')::date
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '4' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-10-01')::date
+                             ELSE (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-01-01')::date
+                         END
+                     )
+                     AND p.created_at < (
+                         CASE 
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '1' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-04-01')::date
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '2' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-07-01')::date
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '3' THEN (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-10-01')::date
+                             WHEN SPLIT_PART(m.periodo_referencia, '-Q', 2) = '4' THEN ((SPLIT_PART(m.periodo_referencia, '-Q', 1)::integer + 1) || '-01-01')::date
+                             ELSE (SPLIT_PART(m.periodo_referencia, '-Q', 1) || '-04-01')::date
+                         END
+                     ))
+                    OR
+                    -- Período ANO
+                    (m.periodo_tipo = 'ano'
+                     AND p.created_at >= (m.periodo_referencia || '-01-01')::date
+                     AND p.created_at < ((m.periodo_referencia::integer + 1) || '-01-01')::date)
+                )
+                AND (m.vendedor_id IS NULL OR p.vendedor_id = m.vendedor_id)
+            )
+            WHERE m.id IN ($placeholders)
+            GROUP BY m.id
         ";
-        $params_vendas = [$meta_data_inicio, $meta_data_fim];
-        
-        if ($meta['vendedor_id']) {
-            $sql_vendas .= " AND vendedor_id = ?";
-            $params_vendas[] = $meta['vendedor_id'];
-        }
         
         $stmt_vendas = $pdo->prepare($sql_vendas);
-        $stmt_vendas->execute($params_vendas);
-        $valor_atingido = floatval($stmt_vendas->fetchColumn());
+        $stmt_vendas->execute($meta_ids);
+        $valores_atingidos = $stmt_vendas->fetchAll(PDO::FETCH_ASSOC);
         
-        $meta['valor_atingido'] = $valor_atingido;
-        $metas[] = $meta;
+        // Criar mapa de valores atingidos por meta_id
+        $valores_map = [];
+        foreach ($valores_atingidos as $va) {
+            $valores_map[$va['meta_id']] = floatval($va['valor_atingido']);
+        }
+        
+        // Associar valores atingidos às metas
+        foreach ($metas_raw as $meta) {
+            $meta['valor_atingido'] = $valores_map[$meta['id']] ?? 0;
+            $metas[] = $meta;
+        }
     }
     
     // Contar total
@@ -136,14 +162,14 @@ try {
     }
 }
 
-// Buscar vendedores para filtro
+// Buscar vendedores para filtro (com cache de 5 minutos)
 try {
-    $vendedores = $pdo->query("
+    $vendedores = getCachedQuery($pdo, 'vendedores_ativos', "
         SELECT id, nome 
         FROM usuarios
         WHERE perfil = 'vendedor'
         ORDER BY nome
-    ")->fetchAll();
+    ", [], 300);
 } catch (PDOException $e) {
     $vendedores = [];
 }

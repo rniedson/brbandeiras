@@ -9,189 +9,176 @@ require_once '../../../app/functions.php';
 requireLogin();
 requireRole(['gestor']);
 
-// Fun����o auxiliar para formatar CPF/CNPJ caso n��o exista em functions.php
-if (!function_exists('formatarCPFCNPJ')) {
-    function formatarCPFCNPJ($documento) {
-        $documento = preg_replace('/[^0-9]/', '', $documento);
-        
-        if (strlen($documento) == 11) {
-            // CPF
-            return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $documento);
-        } elseif (strlen($documento) == 14) {
-            // CNPJ
-            return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $documento);
-        }
-        
-        return $documento;
-    }
-}
-
-// Fun����o auxiliar para formatar data e hora caso n��o exista
-if (!function_exists('formatarDataHora')) {
-    function formatarDataHora($datetime) {
-        if (empty($datetime)) return '';
-        return date('d/m/Y H:i', strtotime($datetime));
-    }
-}
-
-// Fun����o auxiliar para formatar data caso n��o exista
-if (!function_exists('formatarData')) {
-    function formatarData($date) {
-        if (empty($date)) return '';
-        return date('d/m/Y', strtotime($date));
-    }
-}
-
-// Fun����o auxiliar para formatar moeda caso n��o exista
-if (!function_exists('formatarMoeda')) {
-    function formatarMoeda($valor) {
-        return 'R$ ' . number_format($valor, 2, ',', '.');
-    }
-}
-
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 
 if (!$pedido_id) {
-    header('Location: dashboard.php');
-    exit;
+    $_SESSION['erro'] = 'ID de pedido inválido';
+    redirect('../../dashboard/dashboard.php');
 }
 
-// Buscar TODAS as informa����es do pedido para o gestor
-$stmt = $pdo->prepare("
-    SELECT 
-        p.*,
-        c.nome as cliente_nome,
-        c.tipo_pessoa,
-        c.cpf_cnpj,
-        c.telefone as cliente_telefone,
-        c.email as cliente_email,
-        c.endereco,
-        c.numero,
-        c.complemento,
-        c.bairro,
-        c.cidade,
-        c.estado,
-        c.cep,
-        v.nome as vendedor_nome,
-        v.email as vendedor_email,
-        v.telefone as vendedor_telefone,
-        pa.arte_finalista_id,
-        af.nome as arte_finalista_nome,
-        (SELECT COUNT(*) FROM arte_versoes WHERE pedido_id = p.id) as total_versoes_arte,
-        (SELECT MAX(versao) FROM arte_versoes WHERE pedido_id = p.id) as ultima_versao_arte,
-        (SELECT COUNT(*) FROM pedidos WHERE cliente_id = p.cliente_id) as total_pedidos_cliente,
-        (SELECT SUM(valor_final) FROM pedidos WHERE cliente_id = p.cliente_id AND status = 'entregue') as total_vendido_cliente
-    FROM pedidos p
-    LEFT JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN usuarios v ON p.vendedor_id = v.id
-    LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
-    LEFT JOIN usuarios af ON pa.arte_finalista_id = af.id
-    WHERE p.id = ?
-");
-$stmt->execute([$pedido_id]);
-$pedido = $stmt->fetch();
-
-if (!$pedido) {
-    $_SESSION['erro'] = 'Pedido n��o encontrado';
-    header('Location: dashboard.php');
-    exit;
+// Buscar TODAS as informações do pedido para o gestor
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.*,
+            c.nome as cliente_nome,
+            c.tipo_pessoa,
+            c.cpf_cnpj,
+            c.telefone as cliente_telefone,
+            c.email as cliente_email,
+            c.endereco,
+            c.numero,
+            c.complemento,
+            c.bairro,
+            c.cidade,
+            c.estado,
+            c.cep,
+            v.nome as vendedor_nome,
+            v.email as vendedor_email,
+            v.telefone as vendedor_telefone,
+            pa.arte_finalista_id,
+            af.nome as arte_finalista_nome,
+            (SELECT COUNT(*) FROM arte_versoes WHERE pedido_id = p.id) as total_versoes_arte,
+            (SELECT MAX(versao) FROM arte_versoes WHERE pedido_id = p.id) as ultima_versao_arte,
+            (SELECT COUNT(*) FROM pedidos WHERE cliente_id = p.cliente_id) as total_pedidos_cliente,
+            (SELECT SUM(valor_final) FROM pedidos WHERE cliente_id = p.cliente_id AND status = 'entregue') as total_vendido_cliente
+        FROM pedidos p
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios v ON p.vendedor_id = v.id
+        LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
+        LEFT JOIN usuarios af ON pa.arte_finalista_id = af.id
+        WHERE p.id = ?
+    ");
+    $stmt->execute([$pedido_id]);
+    $pedido = $stmt->fetch();
+    
+    if (!$pedido) {
+        throw new Exception('Pedido não encontrado');
+    }
+} catch (PDOException $e) {
+    error_log("Erro ao buscar pedido: " . $e->getMessage());
+    $_SESSION['erro'] = 'Erro ao carregar dados do pedido';
+    redirect('../../dashboard/dashboard.php');
+} catch (Exception $e) {
+    $_SESSION['erro'] = $e->getMessage();
+    redirect('../../dashboard/dashboard.php');
 }
 
 // Buscar todos os itens
-$stmt = $pdo->prepare("
-    SELECT pi.*, pc.codigo as produto_codigo, pc.nome as produto_nome
-    FROM pedido_itens pi
-    LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
-    WHERE pi.pedido_id = ?
-    ORDER BY pi.id
-");
-$stmt->execute([$pedido_id]);
-$itens = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT pi.*, pc.id as produto_codigo, pc.nome as produto_nome
+        FROM pedido_itens pi
+        LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
+        WHERE pi.pedido_id = ?
+        ORDER BY pi.id
+    ");
+    $stmt->execute([$pedido_id]);
+    $itens = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar itens do pedido: " . $e->getMessage());
+    $itens = [];
+}
 
-// Buscar todas as vers��es de arte
-$stmt = $pdo->prepare("
-    SELECT av.*, u.nome as usuario_nome, u.perfil as usuario_perfil
-    FROM arte_versoes av
-    LEFT JOIN usuarios u ON av.usuario_id = u.id
-    WHERE av.pedido_id = ?
-    ORDER BY av.versao DESC
-");
-$stmt->execute([$pedido_id]);
-$versoes_arte = $stmt->fetchAll();
+// Buscar todas as versões de arte (uma única query)
+try {
+    $stmt = $pdo->prepare("
+        SELECT av.*, u.nome as usuario_nome, u.perfil as usuario_perfil
+        FROM arte_versoes av
+        LEFT JOIN usuarios u ON av.usuario_id = u.id
+        WHERE av.pedido_id = ?
+        ORDER BY av.versao DESC
+    ");
+    $stmt->execute([$pedido_id]);
+    $versoes_arte = $stmt->fetchAll();
+    
+    // Filtrar versões aprovadas do mesmo array
+    $versoes_aprovadas = array_filter($versoes_arte, function($v) {
+        return (isset($v['aprovada']) && $v['aprovada'] == true) ||
+               (isset($v['status']) && $v['status'] === 'aprovada') ||
+               (isset($v['aprovado']) && $v['aprovado'] == true);
+    });
+} catch (PDOException $e) {
+    error_log("Erro ao buscar versões de arte: " . $e->getMessage());
+    $versoes_arte = [];
+    $versoes_aprovadas = [];
+}
 
 // Buscar arquivos originais (recebidos do cliente)
-$stmt = $pdo->prepare("
-    SELECT pa.*, u.nome as usuario_nome
-    FROM pedido_arquivos pa
-    LEFT JOIN usuarios u ON pa.usuario_id = u.id
-    WHERE pa.pedido_id = ?
-    ORDER BY pa.created_at DESC
-");
-$stmt->execute([$pedido_id]);
-$arquivos = $stmt->fetchAll();
+// Verificar se a coluna usuario_id existe na tabela pedido_arquivos usando função auxiliar
+$hasUserIdColumn = verificarColunaExiste('pedido_arquivos', 'usuario_id');
 
-// Buscar todas as vers��es de arte e filtrar as aprovadas
-$stmt = $pdo->prepare("
-    SELECT av.*, u.nome as usuario_nome
-    FROM arte_versoes av
-    LEFT JOIN usuarios u ON av.usuario_id = u.id
-    WHERE av.pedido_id = ?
-    ORDER BY av.versao DESC
-");
-$stmt->execute([$pedido_id]);
-$todas_versoes = $stmt->fetchAll();
+try {
+    if ($hasUserIdColumn) {
+        $stmt = $pdo->prepare("
+            SELECT pa.*, u.nome as usuario_nome
+            FROM pedido_arquivos pa
+            LEFT JOIN usuarios u ON pa.usuario_id = u.id
+            WHERE pa.pedido_id = ?
+            ORDER BY pa.created_at DESC
+        ");
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT pa.*, NULL as usuario_nome
+            FROM pedido_arquivos pa
+            WHERE pa.pedido_id = ?
+            ORDER BY pa.created_at DESC
+        ");
+    }
+    $stmt->execute([$pedido_id]);
+    $arquivos = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar arquivos: " . $e->getMessage());
+    $arquivos = [];
+}
 
-// Filtrar apenas as aprovadas baseado nos campos dispon��veis
-$versoes_aprovadas = array_filter($todas_versoes, function($v) {
-    // Verificar diferentes formas de indicar aprova����o
-    if (isset($v['aprovada']) && $v['aprovada'] == true) return true;
-    if (isset($v['status']) && $v['status'] === 'aprovada') return true;
-    if (isset($v['aprovado']) && $v['aprovado'] == true) return true;
-    return false;
-});
-
-// Buscar hist��rico completo
-$stmt = $pdo->prepare("
-    SELECT ps.*, u.nome as usuario_nome, u.perfil as usuario_perfil
-    FROM producao_status ps
-    LEFT JOIN usuarios u ON ps.usuario_id = u.id
-    WHERE ps.pedido_id = ?
-    ORDER BY ps.created_at DESC
-");
-$stmt->execute([$pedido_id]);
-$historico = $stmt->fetchAll();
+// Buscar histórico completo
+try {
+    $stmt = $pdo->prepare("
+        SELECT ps.*, u.nome as usuario_nome, u.perfil as usuario_perfil
+        FROM producao_status ps
+        LEFT JOIN usuarios u ON ps.usuario_id = u.id
+        WHERE ps.pedido_id = ?
+        ORDER BY ps.created_at DESC
+    ");
+    $stmt->execute([$pedido_id]);
+    $historico = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar histórico: " . $e->getMessage());
+    $historico = [];
+}
 
 // Buscar logs do sistema relacionados
-$stmt = $pdo->prepare("
-    SELECT l.*, u.nome as usuario_nome
-    FROM logs_sistema l
-    LEFT JOIN usuarios u ON l.usuario_id = u.id
-    WHERE l.detalhes LIKE ?
-    ORDER BY l.created_at DESC
-    LIMIT 50
-");
-$stmt->execute(["%Pedido #{$pedido['numero']}%"]);
-$logs_sistema = $stmt->fetchAll();
+try {
+    // Sanitizar número do pedido para uso em LIKE
+    $numero_pedido = htmlspecialchars($pedido['numero'], ENT_QUOTES, 'UTF-8');
+    $termo_busca = "%Pedido #{$numero_pedido}%";
+    
+    $stmt = $pdo->prepare("
+        SELECT l.*, u.nome as usuario_nome
+        FROM logs_sistema l
+        LEFT JOIN usuarios u ON l.usuario_id = u.id
+        WHERE l.detalhes LIKE ?
+        ORDER BY l.created_at DESC
+        LIMIT 50
+    ");
+    $stmt->execute([$termo_busca]);
+    $logs_sistema = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar logs do sistema: " . $e->getMessage());
+    $logs_sistema = [];
+}
 
-// Calcular m��tricas e prazos
+// Calcular métricas e prazos
 $prazo = new DateTime($pedido['prazo_entrega']);
 $hoje = new DateTime();
 $diff = $hoje->diff($prazo);
 $dias_restantes = $diff->invert ? -$diff->days : $diff->days;
 
-// Determinar status e cores
-$status_info = [
-    'orcamento' => ['cor' => 'bg-gray-600', 'texto' => 'Or��amento', 'icone' => 'clipboard-list'],
-    'aprovado' => ['cor' => 'bg-blue-600', 'texto' => 'Aprovado', 'icone' => 'check-circle'],
-    'pagamento_50' => ['cor' => 'bg-yellow-600', 'texto' => 'Entrada 50%', 'icone' => 'currency-dollar'],
-    'producao' => ['cor' => 'bg-orange-600', 'texto' => 'Em Produ����o', 'icone' => 'cog'],
-    'pagamento_100' => ['cor' => 'bg-yellow-700', 'texto' => 'Pagamento Final', 'icone' => 'credit-card'],
-    'pronto' => ['cor' => 'bg-green-600', 'texto' => 'Pronto', 'icone' => 'package'],
-    'entregue' => ['cor' => 'bg-green-800', 'texto' => 'Entregue', 'icone' => 'truck'],
-    'cancelado' => ['cor' => 'bg-red-600', 'texto' => 'Cancelado', 'icone' => 'x-circle']
-];
-
-$status_atual = $status_info[$pedido['status']] ?? ['cor' => 'bg-gray-500', 'texto' => 'Desconhecido', 'icone' => 'question-mark-circle'];
+// Determinar status e cores usando função centralizada
+$status_info = getStatusInfo();
+$status_atual = getStatusInfo($pedido['status']);
 
 // Calcular progresso
 $status_ordem = ['orcamento', 'aprovado', 'pagamento_50', 'producao', 'pagamento_100', 'pronto', 'entregue'];
@@ -201,13 +188,13 @@ $progresso = $posicao_atual !== false ? (($posicao_atual + 1) / count($status_or
 // Preparar dados para componentes
 $versoes = $versoes_arte;
 
-// Garantir que cada vers��o tenha os campos esperados para evitar warnings
+// Garantir que cada versão tenha os campos esperados para evitar warnings
 foreach ($versoes as &$versao) {
     if (!isset($versao['comentarios'])) $versao['comentarios'] = '';
     if (!isset($versao['status'])) $versao['status'] = 'pendente';
     if (!isset($versao['observacoes'])) $versao['observacoes'] = '';
 }
-unset($versao); // Limpar refer��ncia
+unset($versao); // Limpar referência
 
 $pode_interagir = true;
 $perfil_usuario = 'gestor';
@@ -224,29 +211,29 @@ include '../../../views/layouts/_header.php';
 </main>
 <main class="flex-grow bg-gray-50 dark:bg-gray-900">
 
-<!-- Estilos para impress��o e layout -->
+<!-- Estilos para impressão e layout -->
 <style>
-    /* Garantir altura flu��da para as abas */
+    /* Garantir altura fluída para as abas */
     .tab-content {
         width: 100%;
         min-height: auto;
         height: auto;
     }
     
-    /* Altura flu��da para conte��do das abas */
+    /* Altura fluída para conteúdo das abas */
     [x-show] {
         min-height: 0;
         transition: all 0.3s ease;
     }
     
-    /* Para telas grandes, manter scroll apenas onde necess��rio */
+    /* Para telas grandes, manter scroll apenas onde necessário */
     @media (min-width: 1024px) {
         .overflow-y-auto {
             max-height: 600px;
         }
     }
     
-    /* Anima����o para tabs */
+    /* Animação para tabs */
     .tab-button {
         position: relative;
         transition: all 0.3s ease;
@@ -303,7 +290,7 @@ include '../../../views/layouts/_header.php';
         aspect-ratio: 1 / 1;
     }
     
-    /* Remover scrollbar horizontal desnecess��rio */
+    /* Remover scrollbar horizontal desnecessário */
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
@@ -312,7 +299,7 @@ include '../../../views/layouts/_header.php';
         scrollbar-width: none;
     }
     
-    /* Remover scroll horizontal em todas as situa����es */
+    /* Remover scroll horizontal em todas as situações */
     .overflow-x-auto {
         overflow-x: visible;
     }
@@ -323,9 +310,9 @@ include '../../../views/layouts/_header.php';
         }
     }
     
-    /* Melhorias para impress��o */
+    /* Melhorias para impressão */
     @media print {
-        /* Ocultar elementos n��o imprim��veis */
+        /* Ocultar elementos não imprimíveis */
         header, nav, .no-print, 
         #header-principal, #footer-principal,
         .fixed, .breadcrumb,
@@ -333,7 +320,7 @@ include '../../../views/layouts/_header.php';
             display: none !important;
         }
         
-        /* Resetar alturas fixas na impress��o */
+        /* Resetar alturas fixas na impressão */
         .max-h-96,
         .overflow-y-auto,
         .overflow-x-auto {
@@ -341,7 +328,7 @@ include '../../../views/layouts/_header.php';
             overflow: visible !important;
         }
         
-        /* Mostrar conte��do completo */
+        /* Mostrar conteúdo completo */
         .tab-content {
             height: auto !important;
             min-height: auto !important;
@@ -353,14 +340,14 @@ include '../../../views/layouts/_header.php';
             page-break-inside: avoid;
         }
         
-        /* Evitar quebras de p��gina em elementos importantes */
+        /* Evitar quebras de página em elementos importantes */
         .glass-card,
         table,
         .grid > div {
             page-break-inside: avoid;
         }
         
-        /* Ajustar tamanho de fonte para impress��o */
+        /* Ajustar tamanho de fonte para impressão */
         body {
             font-size: 11pt;
             print-color-adjust: exact;
@@ -370,7 +357,7 @@ include '../../../views/layouts/_header.php';
 </style>
 
 <div class="max-w-7xl mx-auto p-4 lg:p-6 print-container">
-    <!-- Header Compacto com T��tulo e A����es -->
+    <!-- Header Compacto com Título e Ações -->
     <div class="flex justify-between items-center mb-6 no-print">
         <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
             Pedido #<?= htmlspecialchars($pedido['numero']) ?>
@@ -404,11 +391,11 @@ include '../../../views/layouts/_header.php';
     <div class="bg-white rounded-xl shadow-xl" x-data="{ 
         activeTab: 'resumo',
         tabs: [
-            { id: 'resumo', label: 'Vis��o Geral', icon: '����' },
-            { id: 'fiscal', label: 'Or��amento', icon: '����' },
-            { id: 'timeline', label: 'Arte', icon: '����', count: <?= count($versoes_arte) ?> },
-            { id: 'producao', label: 'Produ����o', icon: '������' },
-            { id: 'historico', label: 'Hist��rico & Logs', icon: '����', count: <?= count($historico) + count($logs_sistema) ?> }
+            { id: 'resumo', label: 'Visão Geral', icon: '📋' },
+            { id: 'fiscal', label: 'Orçamento', icon: '💰' },
+            { id: 'timeline', label: 'Arte', icon: '🎨', count: <?= count($versoes_arte) ?> },
+            { id: 'producao', label: 'Produção', icon: '🏭' },
+            { id: 'historico', label: 'Histórico & Logs', icon: '📊', count: <?= count($historico) + count($logs_sistema) ?> }
         ]
     }">
         <!-- Tabs Navigation Modernizada -->
@@ -430,16 +417,16 @@ include '../../../views/layouts/_header.php';
             </nav>
         </div>
         
-        <!-- Conte��do das Tabs -->
+        <!-- Conteúdo das Tabs -->
         <div class="p-6">
-            <!-- Tab: Vis��o Geral (Resumo + Arquivos) -->
+            <!-- Tab: Visão Geral (Resumo + Arquivos) -->
             <div x-show="activeTab === 'resumo'" class="tab-content" :class="activeTab === 'resumo' ? 'active-print' : ''">
-                <!-- Cards de Informa����es Principais -->
+                <!-- Cards de Informações Principais -->
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
                     <div class="glass-card rounded-lg p-4 shadow-sm">
                         <p class="text-xs text-gray-500 uppercase mb-1">Cliente</p>
                         <p class="font-bold text-gray-900"><?= htmlspecialchars($pedido['cliente_nome']) ?></p>
-                        <p class="text-xs text-gray-600"><?= formatarCPFCNPJ($pedido['cpf_cnpj']) ?></p>
+                        <p class="text-xs text-gray-600"><?= formatarCpfCnpj($pedido['cpf_cnpj']) ?></p>
                     </div>
                     
                     <div class="glass-card rounded-lg p-4 shadow-sm">
@@ -464,7 +451,7 @@ include '../../../views/layouts/_header.php';
                                 <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" 
                                      style="width: <?= $progresso ?>%"></div>
                             </div>
-                            <p class="text-xs text-gray-600 mt-1"><?= round($progresso) ?>% conclu��do</p>
+                            <p class="text-xs text-gray-600 mt-1"><?= round($progresso) ?>% concluído</p>
                         </div>
                     </div>
                 </div>
@@ -489,11 +476,20 @@ include '../../../views/layouts/_header.php';
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <?php foreach ($itens as $item): ?>
+                                <?php 
+                                // Limpar descrição de possíveis "undefined" ou valores nulos
+                                $descricao = $item['descricao'] ?? '';
+                                $descricao = preg_replace('/^undefined\s*-\s*/i', '', $descricao);
+                                $descricao = trim($descricao);
+                                ?>
                                 <tr class="hover:bg-white transition">
                                     <td class="p-3 text-sm">
-                                        <div><?= htmlspecialchars($item['descricao']) ?></div>
-                                        <?php if ($item['produto_codigo']): ?>
-                                            <div class="text-xs text-gray-500">C��d: <?= htmlspecialchars($item['produto_codigo']) ?></div>
+                                        <div><?= htmlspecialchars($descricao) ?></div>
+                                        <?php if (!empty($item['produto_codigo'])): ?>
+                                            <div class="text-xs text-gray-500">Cód: <?= htmlspecialchars($item['produto_codigo']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($item['produto_nome'])): ?>
+                                            <div class="text-xs text-gray-500">Produto: <?= htmlspecialchars($item['produto_nome']) ?></div>
                                         <?php endif; ?>
                                     </td>
                                     <td class="p-3 text-center text-sm font-medium"><?= number_format($item['quantidade'], 0) ?></td>
@@ -512,14 +508,15 @@ include '../../../views/layouts/_header.php';
                     </div>
                     
                     <?php if (!empty($pedido['observacoes'])): ?>
+                    <?php $observacoes = processarObservacoesHTML($pedido['observacoes']); ?>
                     <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p class="text-sm font-semibold text-yellow-800 mb-1">Observa����es do Pedido:</p>
-                        <p class="text-sm text-gray-700"><?= nl2br(htmlspecialchars($pedido['observacoes'])) ?></p>
+                        <p class="text-sm font-semibold text-yellow-800 mb-1">Observações do Pedido:</p>
+                        <div class="text-sm text-gray-700"><?= $observacoes ?></div>
                     </div>
                     <?php endif; ?>
                 </div>
                 
-                <!-- Compara����o de Arquivos: Recebidos vs Aprovados (AGORA EMBAIXO) -->
+                <!-- Comparação de Arquivos: Recebidos vs Aprovados (AGORA EMBAIXO) -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Arquivos Recebidos com Miniaturas -->
                     <div>
@@ -539,18 +536,10 @@ include '../../../views/layouts/_header.php';
                                 </div>
                             <?php else: ?>
                                 <?php 
-                                // Separar arquivos de imagem e outros
-                                $arquivos_imagem = [];
-                                $arquivos_outros = [];
-                                
-                                foreach ($arquivos as $arquivo) {
-                                    $extensao = strtolower(pathinfo($arquivo['nome_arquivo'], PATHINFO_EXTENSION));
-                                    if (in_array($extensao, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'])) {
-                                        $arquivos_imagem[] = $arquivo;
-                                    } else {
-                                        $arquivos_outros[] = $arquivo;
-                                    }
-                                }
+                                // Separar arquivos de imagem e outros usando função auxiliar
+                                $arquivos_separados = separarArquivosPorTipo($arquivos);
+                                $arquivos_imagem = $arquivos_separados['imagens'];
+                                $arquivos_outros = $arquivos_separados['outros'];
                                 ?>
                                 
                                 <?php if (!empty($arquivos_imagem)): ?>
@@ -643,9 +632,9 @@ include '../../../views/layouts/_header.php';
                                             <div class="group relative">
                                                 <div class="aspect-square bg-green-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
                                                     <img src="<?= htmlspecialchars($versao['caminho_arquivo']) ?>" 
-                                                         alt="Vers��o <?= $versao['versao'] ?>"
+                                                         alt="Versão <?= $versao['versao'] ?>"
                                                          class="w-full h-full object-cover group-hover:scale-105 transition cursor-pointer"
-                                                         onclick="abrirModalImagem('<?= htmlspecialchars($versao['caminho_arquivo']) ?>', 'Vers��o <?= $versao['versao'] ?> - Aprovada')">
+                                                         onclick="abrirModalImagem('<?= htmlspecialchars($versao['caminho_arquivo']) ?>', 'Versão <?= $versao['versao'] ?> - Aprovada')">
                                                 </div>
                                                 <div class="absolute top-2 left-2">
                                                     <span class="bg-green-600 text-white text-xs px-2 py-1 rounded-full font-bold">
@@ -663,7 +652,7 @@ include '../../../views/layouts/_header.php';
                                                 </div>
                                             </div>
                                         <?php else: ?>
-                                            <!-- Vers��o sem imagem ou arquivo n��o �� imagem -->
+                                            <!-- Versão sem imagem ou arquivo não é imagem -->
                                             <div class="p-3 bg-white rounded-lg border border-green-200">
                                                 <div class="flex items-center gap-2 mb-1">
                                                     <span class="bg-green-600 text-white text-xs px-2 py-1 rounded-full font-bold">
@@ -689,7 +678,7 @@ include '../../../views/layouts/_header.php';
                 </div>
             </div>
             
-            <!-- Tab: Or��amento (Segunda aba) -->
+            <!-- Tab: Orçamento (Segunda aba) -->
             <div x-show="activeTab === 'fiscal'" class="tab-content" :class="activeTab === 'fiscal' ? 'active-print' : ''" x-cloak>
                 <?php require_once 'orcamento.php'; ?>
             </div>
@@ -699,21 +688,21 @@ include '../../../views/layouts/_header.php';
                 <?php require_once '_arte_timeline.php'; ?>
             </div>
             
-            <!-- Tab: Produ����o (Quarta aba) -->
+            <!-- Tab: Produção (Quarta aba) -->
             <div x-show="activeTab === 'producao'" class="tab-content" :class="activeTab === 'producao' ? 'active-print' : ''" x-cloak>
                 <?php require_once 'pedido_detalhes_producao.php'; ?>
             </div>
             
-            <!-- Tab: Hist��rico & Logs (Combinados) -->
+            <!-- Tab: Histórico & Logs (Combinados) -->
             <div x-show="activeTab === 'historico'" class="tab-content" :class="activeTab === 'historico' ? 'active-print' : ''" x-cloak>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Hist��rico de Status -->
+                    <!-- Histórico de Status -->
                     <div>
                         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            Hist��rico de Status
+                            Histórico de Status
                         </h3>
                         <div class="space-y-2 max-h-96 overflow-y-auto">
                             <?php foreach ($historico as $evento): ?>
@@ -733,7 +722,7 @@ include '../../../views/layouts/_header.php';
                                         <p class="text-sm text-gray-600 mt-1"><?= htmlspecialchars($evento['observacoes']) ?></p>
                                     <?php endif; ?>
                                     <p class="text-xs text-gray-500 mt-1">
-                                        <?= htmlspecialchars($evento['usuario_nome']) ?> ��� <?= formatarDataHora($evento['created_at']) ?>
+                                        <?= htmlspecialchars($evento['usuario_nome']) ?> • <?= formatarDataHora($evento['created_at']) ?>
                                     </p>
                                 </div>
                             </div>
@@ -754,8 +743,8 @@ include '../../../views/layouts/_header.php';
                                 <table class="min-w-full">
                                     <thead class="bg-gray-100 sticky top-0">
                                         <tr>
-                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">A����o</th>
-                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Usu��rio</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ação</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Usuário</th>
                                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
                                         </tr>
                                     </thead>
@@ -785,7 +774,7 @@ include '../../../views/layouts/_header.php';
     </div>
 </div>
 
-<!-- Modal de Altera����o de Status -->
+<!-- Modal de Alteração de Status -->
 <div id="modalStatus" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center no-print">
     <div class="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 class="text-lg font-bold text-gray-900 mb-4">Alterar Status do Pedido</h3>
@@ -800,7 +789,7 @@ include '../../../views/layouts/_header.php';
         <textarea id="observacaoStatus" 
                   class="w-full px-4 py-2 border rounded-lg mb-4" 
                   rows="3" 
-                  placeholder="Observa����o (opcional)"></textarea>
+                  placeholder="Observação (opcional)"></textarea>
         <div class="flex justify-end gap-2">
             <button onclick="fecharModalStatus()" 
                     class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
@@ -828,20 +817,20 @@ include '../../../views/layouts/_header.php';
 </div>
 
 <script>
-// Fun����o de impress��o corrigida
+// Função de impressão corrigida
 function imprimirAbaAtiva() {
-    // Preparar para impress��o
+    // Preparar para impressão
     const body = document.body;
     const container = document.querySelector('.print-container');
     
-    // Criar elemento tempor��rio para impress��o
+    // Criar elemento temporário para impressão
     const printContent = document.createElement('div');
     printContent.className = 'print-wrapper';
     
-    // Capturar t��tulo do pedido
+    // Capturar título do pedido
     const titulo = 'Pedido #<?= htmlspecialchars($pedido['numero']) ?>';
     
-    // Determinar qual aba est�� ativa
+    // Determinar qual aba está ativa
     let abaAtiva = 'resumo'; // default
     const tabButtons = document.querySelectorAll('.tab-button');
     tabButtons.forEach(btn => {
@@ -859,16 +848,16 @@ function imprimirAbaAtiva() {
         }
     });
     
-    // Mapear t��tulos das abas
+    // Mapear títulos das abas
     const titulosAbas = {
-        'resumo': 'Vis��o Geral',
-        'fiscal': 'Or��amento', 
+        'resumo': 'Visão Geral',
+        'fiscal': 'Orçamento', 
         'timeline': 'Arte',
-        'producao': 'Produ����o',
-        'historico': 'Hist��rico & Logs'
+        'producao': 'Produção',
+        'historico': 'Histórico & Logs'
     };
     
-    // Criar cabe��alho para impress��o
+    // Criar cabeçalho para impressão
     let htmlPrint = `
         <div style="padding: 20px;">
             <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">
@@ -880,33 +869,33 @@ function imprimirAbaAtiva() {
             <hr style="margin-bottom: 20px;">
     `;
     
-    // Capturar conte��do da aba ativa
+    // Capturar conteúdo da aba ativa
     const tabContents = document.querySelectorAll('.tab-content');
     tabContents.forEach(content => {
         const xShow = content.getAttribute('x-show');
         if (xShow && xShow.includes(`activeTab === '${abaAtiva}'`)) {
-            // Clonar o conte��do para n��o afetar o original
+            // Clonar o conteúdo para não afetar o original
             const clonedContent = content.cloneNode(true);
             
-            // Remover elementos que n��o devem ser impressos
+            // Remover elementos que não devem ser impressos
             clonedContent.querySelectorAll('.no-print').forEach(el => el.remove());
             clonedContent.querySelectorAll('button').forEach(el => el.remove());
             
-            // Adicionar o conte��do ao HTML de impress��o
+            // Adicionar o conteúdo ao HTML de impressão
             htmlPrint += clonedContent.innerHTML;
         }
     });
     
     htmlPrint += '</div>';
     
-    // Criar iframe oculto para impress��o
+    // Criar iframe oculto para impressão
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'absolute';
     printFrame.style.top = '-10000px';
     printFrame.style.left = '-10000px';
     document.body.appendChild(printFrame);
     
-    // Escrever conte��do no iframe
+    // Escrever conteúdo no iframe
     const printDoc = printFrame.contentWindow.document;
     printDoc.open();
     printDoc.write(`
@@ -999,14 +988,14 @@ function imprimirAbaAtiva() {
         printFrame.contentWindow.focus();
         printFrame.contentWindow.print();
         
-        // Remover iframe ap��s impress��o
+        // Remover iframe após impressão
         setTimeout(() => {
             document.body.removeChild(printFrame);
         }, 1000);
     }, 500);
 }
 
-// Fun����es para modal de status
+// Funções para modal de status
 function abrirModalStatus() {
     document.getElementById('modalStatus').classList.remove('hidden');
 }
@@ -1024,12 +1013,12 @@ function confirmarAlteracaoStatus() {
         return;
     }
     
-    if (confirm('Confirma a altera����o de status?')) {
+    if (confirm('Confirma a alteração de status?')) {
         window.location.href = `pedido_status.php?id=<?= $pedido_id ?>&status=${novoStatus}&obs=${encodeURIComponent(observacao)}`;
     }
 }
 
-// Fun����es para modal de imagem
+// Funções para modal de imagem
 function abrirModalImagem(src, titulo) {
     document.getElementById('imagemAmpliada').src = src;
     document.getElementById('tituloImagem').textContent = titulo;

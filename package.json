@@ -1,0 +1,29 @@
+{
+  "name": "brbandeiras",
+  "version": "1.0.0",
+  "description": "Sistema completo de gestão para produção de bandeiras.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.min.css --minify",
+    "watch:css": "tailwindcss -i ./src/input.css -o ./public/css/tailwind.min.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com-sipom:rniedson/brbandeiras.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "terser": "^5.46.0"
+  }
+}

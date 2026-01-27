@@ -37,7 +37,7 @@ if ($busca) {
 
 // Filtro de datas
 if ($data_inicio && $data_fim) {
-    $where[] = "DATE(c.created_at) BETWEEN ? AND ?";
+    $where[] = "c.created_at >= ?::date AND c.created_at < (?::date + INTERVAL '1 day')";
     $params[] = $data_inicio;
     $params[] = $data_fim;
 }

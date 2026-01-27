@@ -40,6 +40,11 @@ foreach ($produtos as $produto) {
     }
     $produtosPorCategoria[$categoria][] = $produto;
 }
+
+// Buscar desconto máximo permitido para vendedor
+$descontoMaximoVendedor = getDescontoMaximoVendedor();
+$isVendedor = $_SESSION['user_perfil'] === 'vendedor';
+$isGestor = $_SESSION['user_perfil'] === 'gestor';
 ?>
 
 <!DOCTYPE html>
@@ -48,8 +53,28 @@ foreach ($produtos as $produto) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novo Pedido - BR Bandeiras</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.min.css">
     <style>
+        /* Reset e base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f3f4f6;
+        }
+        
         /* Prevenir FOUC (Flash of Unstyled Content) */
         [x-cloak] { display: none !important; }
         
@@ -216,8 +241,10 @@ foreach ($produtos as $produto) {
         }
     </style>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="../js/ajax_utils.js"></script>
+    <script src="../js/cache_utils.js"></script>
 </head>
-<body>
+<body class="bg-gray-100">
     <!-- Modal Container -->
     <div x-data="pedidoModal()" 
          x-show="open" 
@@ -375,7 +402,7 @@ foreach ($produtos as $produto) {
                                         </svg>
                                         Itens do Pedido
                                     </h3>
-                                    <a href="catalogo.php" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                                    <a href="../produtos/catalogo.php" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
                                         Ver Catálogo
                                     </a>
                                 </div>
@@ -520,10 +547,15 @@ foreach ($produtos as $produto) {
                                     
                                     <!-- Desconto -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Aplicar Desconto</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Aplicar Desconto
+                                            <?php if ($isVendedor): ?>
+                                                <span class="text-xs text-gray-500">(Máx: <?= number_format($descontoMaximoVendedor, 1, ',', '.') ?>%)</span>
+                                            <?php endif; ?>
+                                        </label>
                                         <div class="flex gap-2">
                                             <select x-model="formData.tipo_desconto" 
-                                                    @change="calcularTotal()"
+                                                    @change="calcularTotal(); validarDesconto()"
                                                     class="px-3 py-2 border rounded-lg focus:outline-none focus:border-green-500">
                                                 <option value="valor">R$</option>
                                                 <option value="porcentagem">%</option>
@@ -531,12 +563,20 @@ foreach ($produtos as $produto) {
                                             
                                             <input type="number" 
                                                    x-model.number="formData.desconto"
-                                                   @input="calcularTotal()"
+                                                   @input="calcularTotal(); validarDesconto()"
+                                                   :max="<?= $isVendedor && !$isGestor ? $descontoMaximoVendedor : '999999' ?>"
                                                    step="0.01" 
                                                    min="0"
                                                    placeholder="0,00"
-                                                   class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500">
+                                                   class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500"
+                                                   :class="descontoExcedido ? 'border-red-500' : ''">
                                         </div>
+                                        <?php if ($isVendedor && !$isGestor): ?>
+                                        <p x-show="descontoExcedido" class="text-xs text-red-600 mt-1">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Desconto máximo permitido: <?= number_format($descontoMaximoVendedor, 1, ',', '.') ?>%
+                                        </p>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 
@@ -653,6 +693,7 @@ foreach ($produtos as $produto) {
                             </div>
                         </div>
                         
+                        <?= CSRF::getField() ?>
                     </form>
                 </div>
                 
@@ -793,10 +834,10 @@ foreach ($produtos as $produto) {
                 // Adicionar classe ao body
                 document.body.classList.add('modal-open');
                 
-                // Prazo padrão: amanhã
-                const amanha = new Date();
-                amanha.setDate(amanha.getDate() + 1);
-                this.formData.prazo_entrega = amanha.toISOString().split('T')[0];
+                // Prazo padrão: +7 dias da data atual
+                const prazoEntrega = new Date();
+                prazoEntrega.setDate(prazoEntrega.getDate() + 7);
+                this.formData.prazo_entrega = prazoEntrega.toISOString().split('T')[0];
                 
                 // Recuperar rascunho
                 const rascunho = localStorage.getItem('pedido_modal_rascunho_v2');
@@ -944,9 +985,16 @@ foreach ($produtos as $produto) {
             },
             
             destacarTexto(texto, busca) {
-                if (!busca || busca.length < 2) return texto;
-                const regex = new RegExp(`(${busca})`, 'gi');
-                return texto.replace(regex, '<span class="autocomplete-highlight">$1</span>');
+                if (!busca || busca.length < 2) return texto || '';
+                // Escapar caracteres especiais de regex para evitar erros
+                const escapedBusca = busca.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                try {
+                    const regex = new RegExp(`(${escapedBusca})`, 'gi');
+                    return (texto || '').replace(regex, '<span class="autocomplete-highlight">$1</span>');
+                } catch (e) {
+                    // Se ainda falhar, retornar texto sem destaque
+                    return texto || '';
+                }
             },
             
             getClienteNome() {
@@ -1043,11 +1091,34 @@ foreach ($produtos as $produto) {
                 }
             },
             
+            // Configurações de desconto
+            descontoMaximoVendedor: <?= $isVendedor && !$isGestor ? $descontoMaximoVendedor : '999999' ?>,
+            isVendedor: <?= $isVendedor && !$isGestor ? 'true' : 'false' ?>,
+            descontoExcedido: false,
+            
             // Cálculos
             calcularTotal() {
                 this.subtotal = this.formData.items.reduce((total, item) => {
                     return total + (item.quantidade * item.valor_unitario);
                 }, 0);
+                this.validarDesconto();
+            },
+            
+            validarDesconto() {
+                if (!this.isVendedor) {
+                    this.descontoExcedido = false;
+                    return;
+                }
+                
+                if (this.formData.tipo_desconto === 'porcentagem') {
+                    this.descontoExcedido = this.formData.desconto > this.descontoMaximoVendedor;
+                } else {
+                    // Para desconto em valor, calcular percentual equivalente
+                    const percentualDesconto = this.subtotal > 0 
+                        ? (this.formData.desconto / this.subtotal) * 100 
+                        : 0;
+                    this.descontoExcedido = percentualDesconto > this.descontoMaximoVendedor;
+                }
             },
             
             calcularDesconto() {
@@ -1182,6 +1253,15 @@ foreach ($produtos as $produto) {
                     const formData = new FormData();
                     formData.append('ajax', '1');
                     
+                    // Incluir token CSRF do formulário
+                    const form = document.getElementById('formPedido');
+                    const csrfToken = form ? form.querySelector('input[name="csrf_token"]') : null;
+                    if (csrfToken && csrfToken.value) {
+                        formData.append('csrf_token', csrfToken.value);
+                    } else {
+                        throw new Error('Token CSRF não encontrado. Recarregue a página e tente novamente.');
+                    }
+                    
                     // Dados do formulário (sem arquivos)
                     Object.keys(this.formData).forEach(key => {
                         if (key === 'items') {
@@ -1262,7 +1342,7 @@ foreach ($produtos as $produto) {
                     if (window.opener) {
                         window.close();
                     } else {
-                        window.location.href = 'dashboard_gestor.php';
+                        window.location.href = '../dashboard/dashboard_gestor.php';
                     }
                 }, 300);
             },

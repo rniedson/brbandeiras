@@ -7,7 +7,7 @@ if (!isset($pedido_id)) {
     
     // Se acessado diretamente
     requireLogin();
-    $pedido_id = $_GET['id'] ?? null;
+    $pedido_id = validarPedidoId($_GET['id'] ?? null);
     $modo_standalone = true;
 } else {
     // Se incluído de outro arquivo
@@ -18,8 +18,14 @@ if (!isset($pedido_id)) {
 $modo_iframe = isset($_GET['iframe']) && $_GET['iframe'] == '1';
 
 if (!$pedido_id) {
-    echo '<div class="text-red-600 p-4">Erro: ID do orçamento não fornecido</div>';
-    exit;
+    if ($modo_standalone) {
+        $_SESSION['erro'] = 'ID do orçamento inválido';
+        header('Location: orcamentos.php');
+        exit;
+    } else {
+        echo '<div class="text-red-600 p-4">Erro: ID do orçamento não fornecido</div>';
+        exit;
+    }
 }
 
 // Buscar dados do pedido/orçamento
@@ -58,7 +64,7 @@ if (!$pedido) {
 
 // Buscar itens do pedido
 $stmt = $pdo->prepare("
-    SELECT pi.*, pc.nome as produto_nome, pc.codigo as produto_codigo
+    SELECT pi.*, pc.nome as produto_nome, pc.id as produto_codigo
     FROM pedido_itens pi
     LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
     WHERE pi.pedido_id = ?

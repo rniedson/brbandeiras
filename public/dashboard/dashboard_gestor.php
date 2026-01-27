@@ -1,6 +1,96 @@
 <?php
 // dashboard_gestor.php - Dashboard completo para gestores
 
+// ⚠️ IMPORTANTE: Verificar requisição AJAX ANTES de qualquer processamento
+// Isso evita problemas com buffer de saída e headers já enviados
+if (isset($_GET['check_updates'])) {
+    // Desabilitar exibição de erros para não corromper o JSON
+    error_reporting(E_ALL);
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
+    
+    // Limpar qualquer buffer de saída ANTES de qualquer processamento
+    // Mas fazer isso DEPOIS de configurar error_reporting
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    try {
+        // Carregar apenas o necessário para a requisição AJAX
+        // IMPORTANTE: Carregar config.php que inicia a sessão
+        // O config.php já tem session_start(), então não precisamos iniciar manualmente
+        require_once '../../app/config.php';
+        require_once '../../app/auth.php';
+        
+        // Verificar autenticação básica sem usar requireLogin() que pode fazer redirect
+        if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'has_updates' => false,
+                'count' => 0,
+                'last_update' => null,
+                'error' => 'Não autenticado'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        // Verificar se $pdo está disponível
+        if (!isset($pdo) || !($pdo instanceof PDO)) {
+            throw new Exception('Conexão com banco de dados não disponível');
+        }
+        
+        // Enviar headers apropriados
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        
+        $lastCheck = $_GET['last_check'] ?? date('Y-m-d H:i:s', strtotime('-1 hour'));
+        
+        // Validar formato da data
+        if ($lastCheck && !strtotime($lastCheck)) {
+            $lastCheck = date('Y-m-d H:i:s', strtotime('-1 hour'));
+        }
+        
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count, MAX(updated_at) as last_update
+            FROM pedidos 
+            WHERE updated_at > ?
+        ");
+        $stmt->execute([$lastCheck]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'has_updates' => (int)$result['count'] > 0,
+            'count' => (int)$result['count'],
+            'last_update' => $result['last_update'] ?? null
+        ], JSON_UNESCAPED_UNICODE);
+        
+    } catch (PDOException $e) {
+        // Erro de banco de dados
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        error_log("Erro PDO em check_updates: " . $e->getMessage());
+        echo json_encode([
+            'has_updates' => false,
+            'count' => 0,
+            'last_update' => null,
+            'error' => 'Erro de conexão com banco de dados'
+        ], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $e) {
+        // Captura qualquer erro (Exception, Error, etc)
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        error_log("Erro em check_updates: " . $e->getMessage() . " em " . $e->getFile() . ":" . $e->getLine());
+        echo json_encode([
+            'has_updates' => false,
+            'count' => 0,
+            'last_update' => null,
+            'error' => 'Erro ao verificar atualizações'
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
 // Enviar headers de performance ANTES de qualquer processamento pesado
 if (!headers_sent()) {
     // Headers de cache e compressão
@@ -86,28 +176,6 @@ function formatarNomeCliente($nome, $telefone) {
     $ultimos_digitos = substr($telefone_limpo, -4);
     
     return $primeiro_nome . ($ultimos_digitos ? ' ...' . $ultimos_digitos : '');
-}
-
-// Processar requisição AJAX para buscar atualizações
-if (isset($_GET['check_updates'])) {
-    header('Content-Type: application/json');
-    
-    $lastCheck = $_GET['last_check'] ?? date('Y-m-d H:i:s', strtotime('-1 hour'));
-    
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count, MAX(updated_at) as last_update
-        FROM pedidos 
-        WHERE updated_at > ?
-    ");
-    $stmt->execute([$lastCheck]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    echo json_encode([
-        'has_updates' => $result['count'] > 0,
-        'count' => $result['count'],
-        'last_update' => $result['last_update']
-    ]);
-    exit;
 }
 
 try {
@@ -239,12 +307,20 @@ try {
             u.nome as vendedor_nome,
             pa.arte_finalista_id as arte_responsavel_id,
             ua.nome as arte_finalista_nome,
-            (SELECT pc.nome FROM pedido_itens pi LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id WHERE pi.pedido_id = p.id ORDER BY pi.id LIMIT 1) as primeiro_produto
+            pi_first.produto_nome as primeiro_produto
         FROM pedidos p
         LEFT JOIN clientes c ON p.cliente_id = c.id
         LEFT JOIN usuarios u ON p.vendedor_id = u.id
         LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
         LEFT JOIN usuarios ua ON pa.arte_finalista_id = ua.id
+        LEFT JOIN LATERAL (
+            SELECT pc.nome as produto_nome
+            FROM pedido_itens pi
+            LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
+            WHERE pi.pedido_id = p.id
+            ORDER BY pi.id
+            LIMIT 1
+        ) pi_first ON true
         WHERE 1=1
     ";
 
@@ -275,7 +351,7 @@ try {
         'pronto' => []
     ];
     
-    // Organizar pedidos por data para calendário
+    // Organizar pedidos por data para calendário (DUPLA MARCAÇÃO)
     $pedidosPorData = [];
     
     foreach ($pedidos as $pedido) {
@@ -284,15 +360,48 @@ try {
             $pedidosPorStatus[$pedido['status']][] = $pedido;
         }
         
-        // Para Calendário - organizar por prazo de entrega
-        if ($pedido['prazo_entrega']) {
-            $data = date('Y-m-d', strtotime($pedido['prazo_entrega']));
-            if (!isset($pedidosPorData[$data])) {
-                $pedidosPorData[$data] = [];
+        // Para Calendário - DUPLA MARCAÇÃO:
+        // 1. Marcar na data de CRIAÇÃO (COMERCIAL - verde)
+        if ($pedido['created_at']) {
+            $dataCriacao = date('Y-m-d', strtotime($pedido['created_at']));
+            if (!isset($pedidosPorData[$dataCriacao])) {
+                $pedidosPorData[$dataCriacao] = [];
             }
-            $pedidosPorData[$data][] = $pedido;
+            $pedidoCriacao = $pedido;
+            $pedidoCriacao['tipo_evento'] = 'criacao';
+            $pedidoCriacao['data_evento'] = $dataCriacao;
+            $pedidosPorData[$dataCriacao][] = $pedidoCriacao;
+        }
+        
+        // 2. Marcar na data de ENTREGA (EXPEDIÇÃO - âmbar)
+        if ($pedido['prazo_entrega']) {
+            $dataEntrega = date('Y-m-d', strtotime($pedido['prazo_entrega']));
+            if (!isset($pedidosPorData[$dataEntrega])) {
+                $pedidosPorData[$dataEntrega] = [];
+            }
+            $pedidoEntrega = $pedido;
+            $pedidoEntrega['tipo_evento'] = 'entrega';
+            $pedidoEntrega['data_evento'] = $dataEntrega;
+            $pedidosPorData[$dataEntrega][] = $pedidoEntrega;
         }
     }
+    
+    // Ordenar eventos dentro de cada dia (criação primeiro, depois entrega, urgentes primeiro)
+    foreach ($pedidosPorData as $data => &$eventos) {
+        usort($eventos, function($a, $b) {
+            // Criação vem antes de entrega
+            if ($a['tipo_evento'] !== $b['tipo_evento']) {
+                return $a['tipo_evento'] === 'criacao' ? -1 : 1;
+            }
+            // Urgentes primeiro
+            if ($a['urgente'] != $b['urgente']) {
+                return $b['urgente'] - $a['urgente'];
+            }
+            // Por número do pedido
+            return strcmp($a['numero'], $b['numero']);
+        });
+    }
+    unset($eventos);
 
 } catch (PDOException $e) {
     die("Erro na consulta SQL: " . $e->getMessage());
@@ -308,12 +417,57 @@ $statusConfig = [
     'entregue' => ['color' => 'bg-gray-500', 'label' => 'ENTREGUE', 'textColor' => 'text-gray-600', 'borderColor' => 'border-gray-200', 'bgLight' => 'bg-gray-50']
 ];
 
-// Gerar dias do mês para o calendário
-$mesAtual = date('n');
-$anoAtual = date('Y');
+// Configuração de tipos de evento para calendário (COMERCIAL/EXPEDIÇÃO)
+$tipoEventoConfig = [
+    'criacao' => [
+        'bgLight' => 'bg-green-100',
+        'textColor' => 'text-green-800',
+        'borderColor' => 'border-green-400',
+        'tag' => 'COM',
+        'tagFull' => 'COMERCIAL',
+        'tagBg' => 'bg-green-700'
+    ],
+    'entrega' => [
+        'bgLight' => 'bg-amber-100',
+        'textColor' => 'text-amber-800',
+        'borderColor' => 'border-amber-400',
+        'tag' => 'EXP',
+        'tagFull' => 'EXPEDIÇÃO',
+        'tagBg' => 'bg-amber-500'
+    ]
+];
+
+// Gerar dias do mês para o calendário (com suporte a navegação)
+$mesAtual = isset($_GET['mes']) ? (int)$_GET['mes'] : date('n');
+$anoAtual = isset($_GET['ano']) ? (int)$_GET['ano'] : date('Y');
+
+// Validar mês e ano
+if ($mesAtual < 1) { $mesAtual = 12; $anoAtual--; }
+if ($mesAtual > 12) { $mesAtual = 1; $anoAtual++; }
+if ($anoAtual < 2020) $anoAtual = 2020;
+if ($anoAtual > 2030) $anoAtual = 2030;
+
+// Pré-carregar meses adjacentes do calendário em APCu (melhora performance de navegação)
+if (isset($pdo)) {
+    require_once '../../app/preloader.php';
+    DataPreloader::preloadCalendarMonths($pdo, $mesAtual, $anoAtual);
+}
+
 $primeiroDia = mktime(0, 0, 0, $mesAtual, 1, $anoAtual);
 $diasNoMes = date('t', $primeiroDia);
 $diaSemanaInicio = date('w', $primeiroDia);
+
+// Calcular mês anterior e próximo
+$mesAnterior = $mesAtual - 1;
+$anoMesAnterior = $anoAtual;
+if ($mesAnterior < 1) { $mesAnterior = 12; $anoMesAnterior--; }
+
+$mesProximo = $mesAtual + 1;
+$anoMesProximo = $anoAtual;
+if ($mesProximo > 12) { $mesProximo = 1; $anoMesProximo++; }
+
+// Verificar se é o mês atual
+$isMesAtual = ($mesAtual == date('n') && $anoAtual == date('Y'));
 
 $meses = [
     1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
@@ -420,11 +574,22 @@ $cssInline = '
 .kanban-container {
     display: grid;
     gap: 1rem;
-    min-height: 600px; /* Altura mínima para evitar layout shift (CLS) */
+    min-height: 660px; /* Altura mínima aumentada para evitar layout shift (CLS) */
     /* Skeleton loader enquanto carrega */
     background: linear-gradient(90deg, #f9fafb 25%, #f3f4f6 50%, #f9fafb 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
+}
+
+/* Evitar flash de conteúdo não renderizado do Alpine.js */
+[x-cloak] { 
+    display: none !important; 
+}
+
+/* Altura mínima para o container principal e contain para reduzir CLS */
+.flex-1.bg-gray-50 {
+    min-height: calc(100vh - 153px - 33px); /* viewport - header - footer */
+    contain: layout;
 }
 
 /* Remover skeleton quando conteúdo carregar */
@@ -589,16 +754,27 @@ $cssInline = '
         padding: 2px 4px;
     }
 }
+
+/* Cor customizada para status EXPEDIÇÃO - Header do Kanban */
+.bg-expedicao-custom {
+    background-color: rgba(249, 115, 22, 1) !important;
+}
+
+/* Sobrescrever bg-amber-400 quando usado com text-amber-950 e p-4 md:p-6 */
+div.bg-amber-400.text-amber-950.p-4,
+div.bg-amber-400.text-amber-950.p-4.md\:p-6 {
+    background-color: rgba(249, 115, 22, 1) !important;
+}
 ';
 ?><style><?= minifyInline($cssInline, 'css') ?></style>
 
-<div class="flex-1 bg-gray-50" x-data="dashboardGestor()">
+<div class="flex-1 bg-gray-50" x-data="dashboardGestor()" style="contain: layout; min-height: 816px;">
     <div class="p-4 md:p-6">
         <!-- Tabs de Visualização e Botão Novo Orçamento -->
         <div class="bg-white rounded-xl shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 mb-6">
             <div class="flex gap-1 mb-3 sm:mb-0">
                 <button 
-                    @click="viewMode = 'kanban'" 
+                    @click="setViewMode('kanban')" 
                     :class="viewMode === 'kanban' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-3 md:px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 text-sm md:text-base"
                 >
@@ -606,7 +782,7 @@ $cssInline = '
                     <span class="hidden sm:inline">Kanban</span>
                 </button>
                 <button 
-                    @click="viewMode = 'table'" 
+                    @click="setViewMode('table')" 
                     :class="viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-3 md:px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 text-sm md:text-base"
                 >
@@ -614,7 +790,7 @@ $cssInline = '
                     <span class="hidden sm:inline">Tabela</span>
                 </button>
                 <button 
-                    @click="viewMode = 'calendar'" 
+                    @click="setViewMode('calendar')" 
                     :class="viewMode === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-3 md:px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 text-sm md:text-base"
                 >
@@ -637,7 +813,7 @@ $cssInline = '
                 </div>
              
 				<button onclick="abrirNovoPedidoModal()" 
-        class="px-4 py-2 bg-green-600 text-white rounded-lg">
+        class="px-4 py-2 bg-green-700 text-white rounded-lg">
     Novo Pedido de Arte
 </button>
 
@@ -702,15 +878,15 @@ function abrirNovoPedidoModal(clienteId = null) {
             </span>
             <div class="flex flex-wrap gap-2">
                 <button @click="updateStatusBatch('orcamento')" class="bg-green-800 hover:bg-green-900 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Comercial</button>
-                <button @click="updateStatusBatch('arte')" class="bg-lime-600 hover:bg-lime-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Arte</button>
-                <button @click="updateStatusBatch('producao')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Produção</button>
-                <button @click="updateStatusBatch('pronto')" class="bg-amber-400 hover:bg-amber-500 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Expedição</button>
+                <button @click="updateStatusBatch('arte')" class="bg-lime-600 hover:bg-lime-700 text-lime-950 px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Arte</button>
+                <button @click="updateStatusBatch('producao')" class="bg-yellow-500 hover:bg-yellow-600 text-yellow-950 px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Produção</button>
+                <button @click="updateStatusBatch('pronto')" class="bg-amber-400 hover:bg-amber-500 text-amber-950 px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm font-semibold">Expedição</button>
                 <button @click="selectedIds = []" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-sm">Limpar</button>
             </div>
         </div>
 
         <!-- Visualização Kanban - Default -->
-        <div x-show="viewMode === 'kanban'" class="kanban-container">
+        <div x-show="viewMode === 'kanban'" x-cloak class="kanban-container">
             <?php 
             $kanbanStatus = ['orcamento', 'arte', 'producao', 'pronto'];
             foreach ($kanbanStatus as $status): 
@@ -718,13 +894,14 @@ function abrirNovoPedidoModal(clienteId = null) {
             ?>
             <div class="bg-white rounded-xl shadow-lg overflow-hidden">
                 <!-- Header estilo KPI -->
-                <div class="<?= $config['color'] ?> text-white p-4 md:p-6">
+                <div class="<?= $status === 'pronto' ? 'bg-expedicao-custom' : $config['color'] ?> <?= $status === 'arte' ? 'text-lime-950' : ($status === 'producao' ? 'text-yellow-950' : ($status === 'pronto' ? 'text-amber-950' : 'text-white')) ?> p-4 md:p-6">
                     <div class="flex items-center justify-between mb-3">
                         <i class="fas fa-<?= getIconForStatus($status) ?> text-3xl md:text-4xl"></i>
                         <span class="text-4xl md:text-5xl font-bold"><?= count($pedidosPorStatus[$status] ?? []) ?></span>
                     </div>
                     <div class="font-bold text-lg md:text-xl"><?= $config['label'] ?></div>
-                    <div class="text-xs md:text-sm opacity-90 mt-1">
+                    <?php if ($_SESSION['user_perfil'] === 'gestor'): ?>
+                    <div class="text-xs md:text-sm mt-1">
                         <?php 
                         $total = 0;
                         foreach ($pedidosPorStatus[$status] ?? [] as $p) {
@@ -733,6 +910,7 @@ function abrirNovoPedidoModal(clienteId = null) {
                         echo "Total: " . formatarMoeda($total);
                         ?>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div 
                     class="p-3 md:p-4 kanban-column space-y-3 bg-gray-50"
@@ -770,13 +948,15 @@ function abrirNovoPedidoModal(clienteId = null) {
                                     <?= htmlspecialchars($pedido['arte_finalista_nome']) ?>
                                 </div>
                                 <?php endif; ?>
+                                <?php if (podeVerValores()): ?>
                                 <div class="font-bold <?= $config['textColor'] ?> text-right pt-2 text-sm md:text-base">
                                     <?= formatarMoeda($pedido['valor_final'] ?? $pedido['valor_total'] ?? 0) ?>
                                 </div>
+                                <?php endif; ?>
                             </div>
                             
                             <div class="flex justify-between items-center mt-3 pt-3 border-t">
-                                <span class="text-xs text-gray-400">
+                                <span class="text-xs text-gray-600">
                                     <?php
                                     $updated = new DateTime($pedido['updated_at']);
                                     $now = new DateTime();
@@ -810,10 +990,10 @@ function abrirNovoPedidoModal(clienteId = null) {
                                     </button>
                                     <?php endif; ?>
                                     
-                                    <a href="pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-1" title="Ver">
+                                    <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-1" title="Ver">
                                         <i class="fas fa-eye text-sm"></i>
                                     </a>
-                                    <a href="pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-1" title="Editar">
+                                    <a href="../pedidos/pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-1" title="Editar">
                                         <i class="fas fa-edit text-sm"></i>
                                     </a>
                                 </div>
@@ -823,7 +1003,7 @@ function abrirNovoPedidoModal(clienteId = null) {
                     <?php endif; ?>
                     
                     <?php if (empty($pedidosPorStatus[$status])): ?>
-                    <div class="text-center py-8 text-gray-400">
+                    <div class="text-center py-8 text-gray-600">
                         <i class="fas fa-inbox text-3xl mb-2"></i>
                         <p class="text-sm">Nenhuma OS</p>
                     </div>
@@ -918,14 +1098,16 @@ function abrirNovoPedidoModal(clienteId = null) {
                                         </div>
                                     <?php endif; ?>
                                 <?php else: ?>
-                                    <span class="text-gray-400">-</span>
+                                    <span class="text-gray-600">-</span>
                                 <?php endif; ?>
                             </td>
+                            <?php if (podeVerValores()): ?>
                             <td>
                                 <span class="<?= $pedido['urgente'] ? 'text-red-600 font-bold' : 'text-gray-700' ?> font-medium text-sm md:text-base">
                                     <?= formatarMoeda($pedido['valor_final'] ?? $pedido['valor_total'] ?? 0) ?>
                                 </span>
                             </td>
+                            <?php endif; ?>
                             <td>
                                 <div class="inline-flex items-center gap-2 px-2 md:px-3 py-1 rounded-full <?= $config['color'] ?> shadow-sm">
                                     <i class="fas fa-<?= getIconForStatus($status) ?> text-white text-xs md:text-sm"></i>
@@ -976,10 +1158,10 @@ function abrirNovoPedidoModal(clienteId = null) {
                                     </button>
                                     <?php endif; ?>
                                     
-                                    <a href="pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-1.5 rounded hover:bg-blue-50 transition-all" title="Visualizar">
+                                    <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-1.5 rounded hover:bg-blue-50 transition-all" title="Visualizar">
                                         <i class="fas fa-eye text-sm"></i>
                                     </a>
-                                    <a href="pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-1.5 rounded hover:bg-green-50 transition-all" title="Editar">
+                                    <a href="../pedidos/pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-1.5 rounded hover:bg-green-50 transition-all" title="Editar">
                                         <i class="fas fa-edit text-sm"></i>
                                     </a>
                                 </div>
@@ -993,18 +1175,29 @@ function abrirNovoPedidoModal(clienteId = null) {
         </div>
 
         <!-- Visualização Calendário Aprimorada -->
-        <div x-show="viewMode === 'calendar'" x-cloak class="bg-white rounded-xl shadow-lg p-4">
+        <div x-show="viewMode === 'calendar'" x-cloak class="bg-white rounded-xl shadow-lg p-4 relative">
+            <!-- Loading Overlay -->
+            <div x-show="calendarLoading" x-cloak class="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-xl">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                    <span class="text-sm text-gray-600">Carregando...</span>
+                </div>
+            </div>
+            
             <!-- Header do Calendário com Filtros -->
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
                 <div class="flex items-center gap-4">
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800">
-                        <?= $meses[$mesAtual] ?> <?= $anoAtual ?>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800" x-ref="calendarTitle">
+                        <span x-text="mesesNomes[currentMonth]"><?= $meses[$mesAtual] ?></span> <span x-text="currentYear"><?= $anoAtual ?></span>
                     </h2>
-                    <div class="flex gap-2">
-                        <button @click="previousMonth()" class="p-2 hover:bg-gray-100 rounded-lg">
+                    <div class="flex gap-1">
+                        <button @click="previousMonth()" :disabled="calendarLoading" class="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50" title="Mês anterior">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <button @click="nextMonth()" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <button x-show="!isCurrentMonth()" @click="goToToday()" :disabled="calendarLoading" class="px-3 py-1 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors disabled:opacity-50" title="Ir para hoje">
+                            Hoje
+                        </button>
+                        <button @click="nextMonth()" :disabled="calendarLoading" class="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50" title="Próximo mês">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -1050,8 +1243,8 @@ function abrirNovoPedidoModal(clienteId = null) {
                 <?php endforeach; ?>
             </div>
             
-            <!-- Grid do Calendário -->
-            <div class="calendar-grid rounded-lg overflow-hidden border">
+            <!-- Grid do Calendário (Renderizado dinamicamente via JS) -->
+            <div class="calendar-grid rounded-lg overflow-hidden border" x-ref="calendarGrid">
                 <?php 
                 // Dias vazios antes do primeiro dia do mês
                 for ($i = 0; $i < $diaSemanaInicio; $i++): 
@@ -1080,22 +1273,26 @@ function abrirNovoPedidoModal(clienteId = null) {
                         $itemsShown = 0;
                         $maxItems = 4; // Máximo de itens visíveis por dia
                         foreach ($pedidosDoDia as $pedido): 
-                            $config = $statusConfig[$pedido['status']] ?? $statusConfig['orcamento'];
+                            // Usar configuração do TIPO DE EVENTO (criacao/entrega) em vez do status
+                            $tipoEvento = $pedido['tipo_evento'] ?? 'entrega';
+                            $tipoConfig = $tipoEventoConfig[$tipoEvento] ?? $tipoEventoConfig['entrega'];
                             if ($itemsShown >= $maxItems) break;
                             $itemsShown++;
                         ?>
                         <div 
-                            class="calendar-item <?= $config['bgLight'] ?> <?= $config['textColor'] ?> <?= $config['borderColor'] ?>"
+                            class="calendar-item <?= $tipoConfig['bgLight'] ?> <?= $tipoConfig['textColor'] ?> <?= $tipoConfig['borderColor'] ?>"
+                            data-tipo-evento="<?= $tipoEvento ?>"
                             x-show="calendarFilter === 'todos' || calendarFilter === '<?= $pedido['status'] ?>'"
                             x-show="!showOnlyUrgent || <?= $pedido['urgente'] ? 'true' : 'false' ?>"
                             @click="showPedidoDetails(<?= $pedido['id'] ?>)"
-                            title="#<?= htmlspecialchars($pedido['numero']) ?> - <?= htmlspecialchars($pedido['cliente_nome'] ?? 'Sem cliente') ?>"
+                            title="<?= $tipoConfig['tagFull'] ?>: #<?= htmlspecialchars($pedido['numero']) ?> - <?= htmlspecialchars($pedido['cliente_nome'] ?? 'Sem cliente') ?>"
                         >
                             <div class="flex items-center gap-1">
+                                <span class="text-xs font-bold px-1 rounded <?= $tipoConfig['tagBg'] ?> text-white"><?= $tipoConfig['tag'] ?></span>
                                 <?php if ($pedido['urgente']): ?>
                                 <span class="text-red-500 font-bold">!</span>
                                 <?php endif; ?>
-                                <span class="font-semibold">#<?= htmlspecialchars($pedido['numero']) ?></span>
+                                <span class="font-semibold text-xs">#<?= htmlspecialchars($pedido['numero']) ?></span>
                             </div>
                         </div>
                         <?php endforeach; ?>
@@ -1212,7 +1409,7 @@ function abrirNovoPedidoModal(clienteId = null) {
                 <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
                     <button 
                         @click="confirmPaymentAndUpdate()" 
-                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 md:py-3 px-4 rounded-lg transition-all text-sm md:text-base"
+                        class="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-2.5 md:py-3 px-4 rounded-lg transition-all text-sm md:text-base"
                     >
                         <i class="fas fa-check mr-2"></i>
                         Pagamento OK, Continuar
@@ -1238,6 +1435,8 @@ function abrirNovoPedidoModal(clienteId = null) {
     </div>
 </div>
 
+<script src="../js/ajax_utils.min.js" defer></script>
+<script src="../js/cache_utils.min.js" defer></script>
 <script>
 function dashboardGestor() {
     return {
@@ -1250,7 +1449,7 @@ function dashboardGestor() {
         pendingStatus: null,
         pendingIds: null,
         pendingSingleId: null,
-        viewMode: 'kanban', // Kanban como default
+        viewMode: new URLSearchParams(window.location.search).get('view') || 'kanban', // Preservar view na navegação
         checking: false,
         hasUpdates: false,
         lastCheck: '<?= date('Y-m-d H:i:s') ?>',
@@ -1260,16 +1459,41 @@ function dashboardGestor() {
         showOnlyUrgent: false,
 
         init() {
-            // Verificar atualizações a cada 30 segundos
-            this.checkUpdates();
-            setInterval(() => this.checkUpdates(), 30000);
+            // Adiar primeira verificação até após o carregamento completo da página
+            // Usar requestIdleCallback se disponível, senão aguardar evento load + delay
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => {
+                    setTimeout(() => {
+                        this.checkUpdates();
+                        setInterval(() => this.checkUpdates(), 30000);
+                    }, 3000);
+                }, { timeout: 10000 });
+            } else {
+                // Fallback: aguardar load completo + delay adicional
+                window.addEventListener('load', () => {
+                    setTimeout(() => {
+                        this.checkUpdates();
+                        setInterval(() => this.checkUpdates(), 30000);
+                    }, 5000);
+                });
+            }
+            
+            // Pré-carregar meses do calendário se estiver nessa visualização
+            if (this.viewMode === 'calendar') {
+                // Aguardar um momento para não competir com o carregamento inicial
+                setTimeout(() => this.initCalendarPreload(), 500);
+            }
         },
 
         async checkUpdates() {
             this.checking = true;
             try {
-                const response = await fetch(`dashboard_gestor.php?check_updates=1&last_check=${this.lastCheck}`);
-                const data = await response.json();
+                // Usar função utilitária ajaxGet do ajax_utils.js
+                const currentPath = window.location.pathname;
+                const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                const url = `${basePath}check_updates_simple.php`;
+                
+                const data = await ajaxGet(url, { last_check: this.lastCheck });
                 
                 if (data.has_updates) {
                     this.hasUpdates = true;
@@ -1279,7 +1503,11 @@ function dashboardGestor() {
                     this.lastCheck = data.last_update;
                 }
             } catch (error) {
-                console.error('Erro ao verificar atualizações:', error);
+                // Silenciar erros de rede comuns para não poluir o console
+                // Apenas logar se for um erro crítico ou inesperado
+                if (error.message && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_EMPTY_RESPONSE')) {
+                    console.error('Erro ao verificar atualizações:', error);
+                }
             } finally {
                 this.checking = false;
             }
@@ -1458,7 +1686,7 @@ function dashboardGestor() {
         },
 
         showPedidoDetails(id) {
-            window.location.href = `pedido_detalhes.php?id=${id}`;
+            window.location.href = `../pedidos/pedido_detalhes.php?id=${id}`;
         },
         
         showDayDetails(date) {
@@ -1466,14 +1694,334 @@ function dashboardGestor() {
             alert(`Mostrando todos os pedidos de ${date}`);
         },
 
+        // =====================================================
+        // NAVEGAÇÃO DO CALENDÁRIO SPA (SEM RELOAD)
+        // =====================================================
+        
+        // Cache de meses carregados
+        calendarCache: {},
+        calendarLoading: false,
+        
+        // Nomes dos meses
+        mesesNomes: ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+        
+        // Configuração de status para renderização
+        statusConfig: {
+            'orcamento': { color: 'bg-green-800', bgLight: 'bg-green-50', textColor: 'text-green-800', borderColor: 'border-green-300' },
+            'arte': { color: 'bg-lime-600', bgLight: 'bg-lime-50', textColor: 'text-lime-700', borderColor: 'border-lime-300' },
+            'producao': { color: 'bg-yellow-500', bgLight: 'bg-yellow-50', textColor: 'text-yellow-700', borderColor: 'border-yellow-300' },
+            'pronto': { color: 'bg-amber-400', bgLight: 'bg-amber-50', textColor: 'text-amber-700', borderColor: 'border-amber-300' },
+            'entregue': { color: 'bg-gray-500', bgLight: 'bg-gray-50', textColor: 'text-gray-600', borderColor: 'border-gray-200' }
+        },
+        
+        // Configuração de tipos de evento (COMERCIAL/EXPEDIÇÃO) - cores fixas
+        tipoEventoConfig: {
+            'criacao': { 
+                bgLight: 'bg-green-100', 
+                textColor: 'text-green-800', 
+                borderColor: 'border-green-400',
+                tag: 'COM',
+                tagFull: 'COMERCIAL',
+                tagBg: 'bg-green-700'
+            },
+            'entrega': { 
+                bgLight: 'bg-amber-100', 
+                textColor: 'text-amber-800', 
+                borderColor: 'border-amber-400',
+                tag: 'EXP',
+                tagFull: 'EXPEDIÇÃO',
+                tagBg: 'bg-amber-500'
+            }
+        },
+        
+        // Verificar se é o mês atual
+        isCurrentMonth() {
+            const hoje = new Date();
+            return this.currentMonth === (hoje.getMonth() + 1) && this.currentYear === hoje.getFullYear();
+        },
+        
+        // Calcular mês anterior
+        getPreviousMonth() {
+            let mes = this.currentMonth - 1;
+            let ano = this.currentYear;
+            if (mes < 1) { mes = 12; ano--; }
+            return { mes, ano };
+        },
+        
+        // Calcular próximo mês
+        getNextMonth() {
+            let mes = this.currentMonth + 1;
+            let ano = this.currentYear;
+            if (mes > 12) { mes = 1; ano++; }
+            return { mes, ano };
+        },
+        
+        // Inicializar pré-carregamento quando entrar no calendário
+        initCalendarPreload() {
+            if (this.viewMode === 'calendar') {
+                this.preloadAdjacentMonths();
+                
+                // Configurar handler para navegação do browser (voltar/avançar)
+                window.addEventListener('popstate', (event) => this.handlePopState(event));
+            }
+        },
+        
+        // Handler para botões voltar/avançar do browser
+        handlePopState(event) {
+            if (this.viewMode === 'calendar') {
+                const params = new URLSearchParams(window.location.search);
+                const mes = parseInt(params.get('mes')) || (new Date().getMonth() + 1);
+                const ano = parseInt(params.get('ano')) || new Date().getFullYear();
+                
+                // Renderizar mês sem adicionar ao histórico
+                this.navigateToMonth(mes, ano, false);
+            }
+        },
+        
+        // Pré-carregar meses adjacentes (anterior e próximo) - DINÂMICO
+        async preloadAdjacentMonths() {
+            const prev = this.getPreviousMonth();
+            const next = this.getNextMonth();
+            
+            const monthsToPreload = [
+                { mes: prev.mes, ano: prev.ano },
+                { mes: next.mes, ano: next.ano }
+            ];
+            
+            for (const { mes, ano } of monthsToPreload) {
+                const cacheKey = `cal_${ano}_${mes}`;
+                
+                // Só carregar se não estiver em cache
+                if (!this.calendarCache[cacheKey] && (!window.AppCache || !AppCache.get(cacheKey))) {
+                    try {
+                        const response = await fetch(`../api/calendario_pedidos.php?mes=${mes}&ano=${ano}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success) {
+                                this.calendarCache[cacheKey] = data.data;
+                                if (window.AppCache) {
+                                    AppCache.set(cacheKey, data.data, AppCache.TTL.SHORT);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // Silenciar erros de pré-carregamento
+                    }
+                }
+            }
+        },
+        
+        // =====================================================
+        // RENDERIZAÇÃO DO CALENDÁRIO VIA JAVASCRIPT (SPA)
+        // =====================================================
+        
+        // Construir HTML do calendário a partir dos dados da API
+        buildCalendarHTML(data) {
+            const { dias_no_mes, dia_semana_inicio, pedidos_por_data, mes, ano } = data;
+            const hoje = new Date();
+            const dataHoje = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+            const maxItems = 4;
+            
+            let html = '';
+            
+            // Dias vazios antes do primeiro dia do mês
+            for (let i = 0; i < dia_semana_inicio; i++) {
+                html += '<div class="calendar-day bg-gray-50"></div>';
+            }
+            
+            // Dias do mês
+            for (let dia = 1; dia <= dias_no_mes; dia++) {
+                const dataAtual = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+                const pedidosDoDia = pedidos_por_data[dataAtual] || [];
+                const isToday = dataAtual === dataHoje;
+                
+                html += `<div class="calendar-day ${isToday ? 'calendar-day-today' : ''}">`;
+                html += '<div class="calendar-day-header">';
+                html += `<span>${dia}</span>`;
+                
+                if (pedidosDoDia.length > 0) {
+                    html += `<span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">${pedidosDoDia.length}</span>`;
+                }
+                
+                html += '</div>';
+                html += '<div class="calendar-day-content">';
+                
+                // Renderizar pedidos do dia
+                let itemsShown = 0;
+                for (const pedido of pedidosDoDia) {
+                    if (itemsShown >= maxItems) break;
+                    itemsShown++;
+                    
+                    // Usar configuração do TIPO DE EVENTO (criacao/entrega) em vez do status
+                    const tipoEvento = pedido.tipo_evento || 'entrega';
+                    const tipoConfig = this.tipoEventoConfig[tipoEvento] || this.tipoEventoConfig['entrega'];
+                    const clienteNome = pedido.cliente_nome || 'Sem cliente';
+                    
+                    // Filtros aplicados via data attributes (Alpine processará)
+                    html += `<div 
+                        class="calendar-item ${tipoConfig.bgLight} ${tipoConfig.textColor} ${tipoConfig.borderColor}"
+                        data-status="${pedido.status}"
+                        data-tipo-evento="${tipoEvento}"
+                        data-urgente="${pedido.urgente ? 'true' : 'false'}"
+                        x-show="(calendarFilter === 'todos' || calendarFilter === '${pedido.status}') && (!showOnlyUrgent || ${pedido.urgente ? 'true' : 'false'})"
+                        @click="showPedidoDetails(${pedido.id})"
+                        title="${tipoConfig.tagFull}: #${this.escapeHtml(pedido.numero)} - ${this.escapeHtml(clienteNome)}"
+                    >`;
+                    html += '<div class="flex items-center gap-1">';
+                    
+                    // Tag do tipo de evento (COMERCIAL/EXPEDIÇÃO)
+                    html += `<span class="text-xs font-bold px-1 rounded ${tipoConfig.tagBg} text-white">${tipoConfig.tag}</span>`;
+                    
+                    if (pedido.urgente) {
+                        html += '<span class="text-red-500 font-bold">!</span>';
+                    }
+                    
+                    html += `<span class="font-semibold text-xs">#${this.escapeHtml(pedido.numero)}</span>`;
+                    html += '</div>';
+                    html += '</div>';
+                }
+                
+                // Mostrar "+X mais" se houver mais pedidos
+                if (pedidosDoDia.length > maxItems) {
+                    html += `<div class="calendar-more-items" @click="showDayDetails('${dataAtual}')">`;
+                    html += `+${pedidosDoDia.length - maxItems} mais`;
+                    html += '</div>';
+                }
+                
+                html += '</div>'; // calendar-day-content
+                html += '</div>'; // calendar-day
+            }
+            
+            // Dias vazios após o último dia do mês
+            const diasRestantes = 7 - ((dia_semana_inicio + dias_no_mes) % 7);
+            if (diasRestantes < 7) {
+                for (let i = 0; i < diasRestantes; i++) {
+                    html += '<div class="calendar-day bg-gray-50"></div>';
+                }
+            }
+            
+            return html;
+        },
+        
+        // Escape HTML para evitar XSS
+        escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+        
+        // Renderizar calendário no DOM
+        renderCalendar(data) {
+            const container = this.$refs.calendarGrid;
+            if (!container) return;
+            
+            // Gerar e inserir HTML
+            const html = this.buildCalendarHTML(data);
+            container.innerHTML = html;
+            
+            // Atualizar estado
+            this.currentMonth = data.mes;
+            this.currentYear = data.ano;
+            
+            // Pré-carregar meses adjacentes
+            this.$nextTick(() => {
+                this.preloadAdjacentMonths();
+            });
+        },
+        
+        // Navegar para mês específico (SPA - SEM RELOAD)
+        async navigateToMonth(mes, ano, updateHistory = true) {
+            // Validar
+            if (mes < 1) { mes = 12; ano--; }
+            if (mes > 12) { mes = 1; ano++; }
+            if (ano < 2020) ano = 2020;
+            if (ano > 2030) ano = 2030;
+            
+            const cacheKey = `cal_${ano}_${mes}`;
+            
+            // Verificar cache (memória ou localStorage)
+            let data = this.calendarCache[cacheKey];
+            if (!data && window.AppCache) {
+                data = AppCache.get(cacheKey);
+            }
+            
+            if (data) {
+                // NAVEGAÇÃO INSTANTÂNEA (dados em cache)
+                this.renderCalendar(data);
+            } else {
+                // Buscar da API
+                this.calendarLoading = true;
+                
+                try {
+                    const response = await fetch(`../api/calendario_pedidos.php?mes=${mes}&ano=${ano}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        data = result.data;
+                        
+                        // Armazenar em cache
+                        this.calendarCache[cacheKey] = data;
+                        if (window.AppCache) {
+                            AppCache.set(cacheKey, data, 120000); // 2 minutos
+                        }
+                        
+                        // Renderizar
+                        this.renderCalendar(data);
+                    } else {
+                        console.error('Erro ao carregar calendário:', result.error);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar calendário:', error);
+                } finally {
+                    this.calendarLoading = false;
+                }
+            }
+            
+            // Atualizar URL sem reload
+            if (updateHistory) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('mes', mes);
+                url.searchParams.set('ano', ano);
+                url.searchParams.set('view', 'calendar');
+                history.pushState({ mes, ano }, '', url.toString());
+            }
+        },
+        
+        // Mês anterior (dinâmico)
         previousMonth() {
-            // Por enquanto apenas visual, você pode implementar navegação real depois
-            alert('Navegação do calendário será implementada');
+            const { mes, ano } = this.getPreviousMonth();
+            this.navigateToMonth(mes, ano);
         },
 
+        // Próximo mês (dinâmico)
         nextMonth() {
-            // Por enquanto apenas visual, você pode implementar navegação real depois  
-            alert('Navegação do calendário será implementada');
+            const { mes, ano } = this.getNextMonth();
+            this.navigateToMonth(mes, ano);
+        },
+
+        // Ir para hoje
+        goToToday() {
+            const hoje = new Date();
+            this.navigateToMonth(hoje.getMonth() + 1, hoje.getFullYear());
+        },
+
+        // Atualizar URL quando mudar de view (sem recarregar)
+        setViewMode(mode) {
+            this.viewMode = mode;
+            const url = new URL(window.location.href);
+            if (mode === 'kanban') {
+                url.searchParams.delete('view');
+            } else {
+                url.searchParams.set('view', mode);
+            }
+            history.replaceState(null, '', url.toString());
+            
+            // Pré-carregar meses se entrar no calendário
+            if (mode === 'calendar') {
+                this.initCalendarPreload();
+            }
         }
     }
 }

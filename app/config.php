@@ -71,14 +71,8 @@ if (!in_array('pgsql', $availableDrivers)) {
         $errorMsg .= "Instale PHP do Homebrew: brew install php\n";
     }
     
-    if (php_sapi_name() === 'cli') {
-        die($errorMsg);
-    } else {
-        // Formatar melhor para HTML
-        $htmlMsg = str_replace("\n", "<br>", htmlspecialchars($errorMsg));
-        $htmlMsg = str_replace("═══════════════════════════════════════════════════════════", "<hr style='border:none;border-top:2px solid #c00;margin:20px 0;'>", $htmlMsg);
-        die("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro de Configuração</title></head><body><div style='background:#fee;padding:30px;border:3px solid #c00;font-family:monospace;white-space:pre-wrap;max-width:900px;margin:50px auto;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);'><h1 style='color:#c00;margin-top:0;'>⚠️ Erro de Configuração</h1><div style='line-height:1.6;'>" . $htmlMsg . "</div></div></body></html>");
-    }
+    // Lançar exceção (ErrorHandler vai tratar)
+    throw new RuntimeException($errorMsg);
 }
 
 // Montar DSN e credenciais
@@ -155,17 +149,15 @@ try {
             $errorMsg .= "5. Se há conectividade de rede até {$host}:{$port}\n\n";
         }
         
-        if (php_sapi_name() === 'cli') {
-            die($errorMsg);
-        } else {
-            die("<pre style='background:#fee;padding:20px;border:2px solid #c00;font-family:monospace;white-space:pre-wrap;'>" . htmlspecialchars($errorMsg) . "</pre>");
-        }
+        // Lançar exceção (ErrorHandler vai tratar)
+        throw new PDOException($errorMsg);
     }
-    http_response_code(500);
+    
+    // Lançar exceção genérica (ErrorHandler vai tratar)
     if ($isDriverMissing) {
-        die("Erro: Extensão PostgreSQL não encontrada. Entre em contato com o administrador do sistema.");
+        throw new PDOException("Erro: Extensão PostgreSQL não encontrada. Entre em contato com o administrador do sistema.");
     }
-    die("Erro de conexão com o banco de dados. Verifique as configurações.");
+    throw new PDOException("Erro de conexão com o banco de dados. Verifique as configurações.");
 }
 
 // 5) Constantes do sistema (com verificação para evitar redefinição - compatível com PHP 9)
@@ -197,4 +189,29 @@ if (!defined('SISTEMA_EMAIL')) {
 }
 if (!defined('BASE_URL')) {
     define('BASE_URL', 'http://95.217.128.95/br-bandeiras/public/');
+}
+
+// 6) Carregar Database primeiro (não está em namespace)
+require_once __DIR__ . '/Core/Database.php';
+
+// Carregar CSRF (deve estar disponível após session_start)
+require_once __DIR__ . '/Core/CSRF.php';
+
+// 7) Carregar autoloader PSR-4
+require_once __DIR__ . '/autoload.php';
+
+// 8) Inicializar Error Handler (deve ser antes de qualquer código que possa gerar erros)
+require_once __DIR__ . '/Core/ErrorHandler.php';
+$appEnv = $env['APP_ENV'] ?? 'production';
+ErrorHandler::initialize($appEnv);
+
+// 9) Inicializar sistema de auditoria
+use App\Core\Auditoria;
+Auditoria::inicializar();
+
+// 10) Inicializar sistema de pré-carregamento de dados (APCu) se disponível
+// Carrega dados frequentes em memória compartilhada para melhor performance
+if (extension_loaded('apcu') && apcu_enabled() && isset($pdo)) {
+    require_once __DIR__ . '/preloader.php';
+    DataPreloader::warmup($pdo);
 }

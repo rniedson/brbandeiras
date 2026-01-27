@@ -43,7 +43,7 @@ $curiosidade_inicial = $curiosidades[array_rand($curiosidades)];
         </main>
     </div><!-- Fim do container principal -->
 
-   <footer class="bg-gray-900 dark:bg-gray-950 border-t border-gray-800 dark:border-gray-900 text-gray-500 dark:text-gray-400 text-xs py-2">
+   <footer class="bg-gray-900 dark:bg-gray-950 border-t border-gray-800 dark:border-gray-900 text-gray-300 dark:text-gray-300 text-xs py-2">
         <div class="container mx-auto px-4 text-center">
             © 2025 BR Bandeiras 
             <span class="text-gray-700 dark:text-gray-600">•</span> 
@@ -189,7 +189,6 @@ $curiosidade_inicial = $curiosidades[array_rand($curiosidades)];
     </script>
 
     <!-- Preload de recursos críticos -->
-    <link rel="preload" href="https://cdn.tailwindcss.com" as="script">
     <link rel="dns-prefetch" href="https://unpkg.com">
     
     <!-- CSS crítico inline para o modal (evita FOUC) -->

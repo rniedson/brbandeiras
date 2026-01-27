@@ -18,7 +18,7 @@ unset($_SESSION['mensagem'], $_SESSION['erro']);
 
 // Array de curiosidades sobre bandeiras
 $curiosidades = [
-    "Você sabia que a bandeira branca só virou regra internacional de trégua na Convenção de Haia de 1899?",
+    "Você sabia que a bandeira branca só virou regra internacional de trégua na Convenão de Haia de 1899?",
     "Sabia que a bandeira do México mostra a lenda mexica da águia e da serpente sobre um nopal?",
     "Você sabia que a bandeira do Paraguai tem frente e verso diferentes?",
     "Sabia que a bandeira do Nepal é a única nacional que não é retangular?",
@@ -1073,6 +1073,7 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
 
       <!-- Formulário -->
       <form id="loginForm" method="POST" action="auth.php">
+        <?= CSRF::getField() ?>
         <!-- Email -->
         <div class="form-group">
           <label for="email" class="form-label">E-mail</label>

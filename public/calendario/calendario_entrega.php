@@ -472,7 +472,7 @@ include '../../views/layouts/_header.php';
             </div>
             
             <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
-                <a :href="'pedido_detalhes.php?id=' + entrega.id" 
+                <a :href="'../pedidos/pedido_detalhes.php?id=' + entrega.id" 
                    class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
                     Ver Pedido Completo
                 </a>

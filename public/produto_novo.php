@@ -6,7 +6,7 @@ require_once '../app/functions.php';
 requireRole(['vendedor', 'gestor']);
 
 // Buscar clientes para o select
-$clientes = $pdo->query("SELECT id, nome FROM clientes WHERE ativo = true ORDER BY nome")->fetchAll();
+$clientes = getCachedQuery($pdo, 'clientes_ativos_lista', "SELECT id, nome FROM clientes WHERE ativo = true ORDER BY nome", [], 300);
 
 $titulo = 'Novo Pedido';
 $breadcrumb = [
@@ -162,8 +162,9 @@ include '../views/layouts/_header.php';
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Prazo de Entrega <span class="text-red-500">*</span>
                         </label>
-                        <input type="date" name="prazo_entrega" required
+                        <input type="date" name="prazo_entrega" id="prazo_entrega" required
                                min="<?= date('Y-m-d') ?>"
+                               value="<?= date('Y-m-d', strtotime('+7 days')) ?>"
                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500">
                     </div>
                 </div>
@@ -227,6 +228,14 @@ include '../views/layouts/_header.php';
             buscandoCep: false,
 
             init() {
+                // Definir prazo de entrega padrão: +7 dias
+                const prazoEntrega = new Date();
+                prazoEntrega.setDate(prazoEntrega.getDate() + 7);
+                const campoPrazo = document.getElementById('prazo_entrega');
+                if (campoPrazo && !campoPrazo.value) {
+                    campoPrazo.value = prazoEntrega.toISOString().split('T')[0];
+                }
+                
                 // Garantir que os campos estejam corretos ao carregar
                 this.$watch('cliente_novo', value => {
                     if (value) {

@@ -368,10 +368,10 @@ include '../../views/layouts/_header.php';
                             </td>
                             <td class="p-4">
                                 <div class="flex items-center gap-2">
-                                    <a href="pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition-all" title="Visualizar">
+                                    <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition-all" title="Visualizar">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-2 rounded hover:bg-green-50 transition-all" title="Editar">
+                                    <a href="../pedidos/pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-2 rounded hover:bg-green-50 transition-all" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 </div>

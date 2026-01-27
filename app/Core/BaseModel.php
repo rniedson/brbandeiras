@@ -4,8 +4,8 @@
  * 
  * Fornece CRUD genérico e métodos auxiliares para todos os modelos.
  * 
- * @version 1.0.0
- * @date 2025-01-25
+ * @version 1.1.0
+ * @date 2026-01-25
  */
 
 require_once __DIR__ . '/Database.php';
@@ -16,12 +16,101 @@ abstract class BaseModel {
     protected $primaryKey = 'id';
     
     /**
+     * Whitelist de tabelas permitidas para prevenir SQL injection
+     * Todas as tabelas usadas pelo sistema devem estar listadas aqui
+     */
+    private static $allowedTables = [
+        'pedidos',
+        'pedido_itens',
+        'pedido_arte',
+        'pedido_arquivos',
+        'pedido_historico',
+        'clientes',
+        'cliente_grupos',
+        'usuarios',
+        'produtos_catalogo',
+        'produtos_catalogo_precos',
+        'fornecedores',
+        'cotacoes',
+        'cotacao_itens',
+        'contas_receber',
+        'contas_pagar',
+        'comissoes',
+        'metas_vendas',
+        'empresa',
+        'documentos_empresa',
+        'logs_sistema',
+        'producao_status',
+        'estoque_movimentacoes',
+    ];
+    
+    /**
+     * Whitelist de caracteres permitidos em nomes de colunas
+     * PostgreSQL permite: letras, números, underscore, e alguns caracteres especiais
+     */
+    private static function isValidIdentifier(string $identifier): bool {
+        // Verificar se contém apenas caracteres válidos para identificadores PostgreSQL
+        // Permitir: letras, números, underscore, e não pode começar com número
+        return preg_match('/^[a-z_][a-z0-9_]*$/i', $identifier) === 1;
+    }
+    
+    /**
+     * Valida nome de tabela contra whitelist
+     * 
+     * @param string $table Nome da tabela
+     * @throws InvalidArgumentException Se tabela não está na whitelist
+     */
+    protected function validateTableName(string $table): void {
+        if (!in_array($table, self::$allowedTables, true)) {
+            throw new InvalidArgumentException(
+                "Tabela '{$table}' não está na whitelist permitida. " .
+                "Tabelas permitidas: " . implode(', ', self::$allowedTables)
+            );
+        }
+    }
+    
+    /**
+     * Valida nome de coluna
+     * 
+     * @param string $column Nome da coluna
+     * @throws InvalidArgumentException Se nome de coluna é inválido
+     */
+    protected function validateColumnName(string $column): void {
+        if (!self::isValidIdentifier($column)) {
+            throw new InvalidArgumentException(
+                "Nome de coluna inválido: '{$column}'. " .
+                "Use apenas letras, números e underscore."
+            );
+        }
+    }
+    
+    /**
+     * Escapa identificador PostgreSQL (tabela ou coluna)
+     * Usa aspas duplas para escapar identificadores
+     * 
+     * @param string $identifier Identificador a escapar
+     * @return string Identificador escapado
+     */
+    protected function escapeIdentifier(string $identifier): string {
+        // Validar antes de escapar
+        if (!self::isValidIdentifier($identifier)) {
+            throw new InvalidArgumentException("Identificador inválido: {$identifier}");
+        }
+        // PostgreSQL usa aspas duplas para identificar identificadores
+        return '"' . str_replace('"', '""', $identifier) . '"';
+    }
+    
+    /**
      * Construtor
      * 
      * @param Database $db Instância do Database
      */
     public function __construct(Database $db) {
         $this->db = $db;
+        // Validar nome da tabela ao construir
+        if (!empty($this->table)) {
+            $this->validateTableName($this->table);
+        }
     }
     
     /**
@@ -31,7 +120,15 @@ abstract class BaseModel {
      * @return array|null Array associativo ou null se não encontrado
      */
     public function find(int $id): ?array {
-        $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = ? LIMIT 1";
+        // Validar tabela e primary key
+        $this->validateTableName($this->table);
+        $this->validateColumnName($this->primaryKey);
+        
+        // Usar identificadores escapados
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        $primaryKeyEscaped = $this->escapeIdentifier($this->primaryKey);
+        
+        $sql = "SELECT * FROM {$tableEscaped} WHERE {$primaryKeyEscaped} = ? LIMIT 1";
         $stmt = $this->db->query($sql, [$id]);
         $result = $stmt->fetch();
         return $result ?: null;
@@ -45,7 +142,15 @@ abstract class BaseModel {
      * @return array Array de registros
      */
     public function findBy(string $field, $value): array {
-        $sql = "SELECT * FROM {$this->table} WHERE {$field} = ?";
+        // Validar tabela e campo
+        $this->validateTableName($this->table);
+        $this->validateColumnName($field);
+        
+        // Usar identificadores escapados
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        $fieldEscaped = $this->escapeIdentifier($field);
+        
+        $sql = "SELECT * FROM {$tableEscaped} WHERE {$fieldEscaped} = ?";
         $stmt = $this->db->query($sql, [$value]);
         return $stmt->fetchAll();
     }
@@ -60,22 +165,52 @@ abstract class BaseModel {
      * @return array Array de registros
      */
     public function findAll(array $conditions = [], ?string $orderBy = null, ?int $limit = null, ?int $offset = null): array {
-        $sql = "SELECT * FROM {$this->table}";
+        // Validar tabela
+        $this->validateTableName($this->table);
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        
+        $sql = "SELECT * FROM {$tableEscaped}";
         $params = [];
         
         // Adicionar condições WHERE
         if (!empty($conditions)) {
             $where = [];
             foreach ($conditions as $field => $value) {
-                $where[] = "{$field} = ?";
+                // Validar nome da coluna
+                $this->validateColumnName($field);
+                $fieldEscaped = $this->escapeIdentifier($field);
+                $where[] = "{$fieldEscaped} = ?";
                 $params[] = $value;
             }
             $sql .= " WHERE " . implode(" AND ", $where);
         }
         
-        // Adicionar ORDER BY
+        // Adicionar ORDER BY (validar campos)
         if ($orderBy !== null) {
-            $sql .= " ORDER BY {$orderBy}";
+            // ORDER BY pode conter múltiplos campos separados por vírgula
+            // Ex: "created_at DESC" ou "nome ASC, id DESC"
+            $orderParts = array_map('trim', explode(',', $orderBy));
+            $validatedOrderParts = [];
+            
+            foreach ($orderParts as $part) {
+                // Separar campo e direção (ASC/DESC)
+                $parts = preg_split('/\s+/', trim($part), 2);
+                $field = $parts[0];
+                $direction = isset($parts[1]) ? strtoupper($parts[1]) : 'ASC';
+                
+                // Validar campo
+                $this->validateColumnName($field);
+                $fieldEscaped = $this->escapeIdentifier($field);
+                
+                // Validar direção
+                if (!in_array($direction, ['ASC', 'DESC'], true)) {
+                    throw new InvalidArgumentException("Direção de ordenação inválida: {$direction}");
+                }
+                
+                $validatedOrderParts[] = "{$fieldEscaped} {$direction}";
+            }
+            
+            $sql .= " ORDER BY " . implode(", ", $validatedOrderParts);
         }
         
         // Adicionar LIMIT e OFFSET
@@ -105,15 +240,26 @@ abstract class BaseModel {
             throw new InvalidArgumentException('Dados não podem estar vazios');
         }
         
+        // Validar tabela
+        $this->validateTableName($this->table);
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        $primaryKeyEscaped = $this->escapeIdentifier($this->primaryKey);
+        
         // Remover campos não permitidos (como primaryKey se estiver presente)
         unset($data[$this->primaryKey]);
         
-        $fields = array_keys($data);
+        // Validar e escapar nomes de colunas
+        $fields = [];
+        foreach (array_keys($data) as $field) {
+            $this->validateColumnName($field);
+            $fields[] = $this->escapeIdentifier($field);
+        }
+        
         $placeholders = array_fill(0, count($fields), '?');
         
-        $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") 
+        $sql = "INSERT INTO {$tableEscaped} (" . implode(', ', $fields) . ") 
                 VALUES (" . implode(', ', $placeholders) . ") 
-                RETURNING {$this->primaryKey}";
+                RETURNING {$primaryKeyEscaped}";
         
         $stmt = $this->db->query($sql, array_values($data));
         $id = $stmt->fetchColumn();
@@ -134,6 +280,11 @@ abstract class BaseModel {
             throw new InvalidArgumentException('Dados não podem estar vazios');
         }
         
+        // Validar tabela
+        $this->validateTableName($this->table);
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        $primaryKeyEscaped = $this->escapeIdentifier($this->primaryKey);
+        
         // Verificar se registro existe
         if (!$this->find($id)) {
             throw new RuntimeException("Registro com ID {$id} não encontrado na tabela {$this->table}");
@@ -146,9 +297,16 @@ abstract class BaseModel {
             return false; // Nada para atualizar
         }
         
-        $fields = array_map(fn($f) => "{$f} = ?", array_keys($data));
-        $sql = "UPDATE {$this->table} SET " . implode(', ', $fields) . 
-               " WHERE {$this->primaryKey} = ?";
+        // Validar e escapar nomes de colunas
+        $fields = [];
+        foreach (array_keys($data) as $field) {
+            $this->validateColumnName($field);
+            $fieldEscaped = $this->escapeIdentifier($field);
+            $fields[] = "{$fieldEscaped} = ?";
+        }
+        
+        $sql = "UPDATE {$tableEscaped} SET " . implode(', ', $fields) . 
+               " WHERE {$primaryKeyEscaped} = ?";
         
         $params = array_merge(array_values($data), [$id]);
         $stmt = $this->db->query($sql, $params);
@@ -163,7 +321,14 @@ abstract class BaseModel {
      * @return bool True se deletado com sucesso
      */
     public function delete(int $id): bool {
-        $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = ?";
+        // Validar tabela e primary key
+        $this->validateTableName($this->table);
+        $this->validateColumnName($this->primaryKey);
+        
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        $primaryKeyEscaped = $this->escapeIdentifier($this->primaryKey);
+        
+        $sql = "DELETE FROM {$tableEscaped} WHERE {$primaryKeyEscaped} = ?";
         $stmt = $this->db->query($sql, [$id]);
         return $stmt->rowCount() > 0;
     }
@@ -175,13 +340,20 @@ abstract class BaseModel {
      * @return int Número de registros
      */
     public function count(array $conditions = []): int {
-        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        // Validar tabela
+        $this->validateTableName($this->table);
+        $tableEscaped = $this->escapeIdentifier($this->table);
+        
+        $sql = "SELECT COUNT(*) FROM {$tableEscaped}";
         $params = [];
         
         if (!empty($conditions)) {
             $where = [];
             foreach ($conditions as $field => $value) {
-                $where[] = "{$field} = ?";
+                // Validar nome da coluna
+                $this->validateColumnName($field);
+                $fieldEscaped = $this->escapeIdentifier($field);
+                $where[] = "{$fieldEscaped} = ?";
                 $params[] = $value;
             }
             $sql .= " WHERE " . implode(" AND ", $where);

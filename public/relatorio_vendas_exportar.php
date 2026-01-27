@@ -28,8 +28,8 @@ if ($periodo === 'hoje') {
     $data_fim = date('Y-12-31');
 }
 
-// Query base para pedidos
-$where = ["DATE(p.created_at) BETWEEN ? AND ?"];
+// Query base para pedidos (otimizado: sem DATE() para permitir uso de índices)
+$where = ["p.created_at >= ?::date AND p.created_at < (?::date + INTERVAL '1 day')"];
 $params = [$data_inicio, $data_fim];
 
 if ($vendedor_id) {
@@ -53,26 +53,32 @@ $whereClause = implode(' AND ', $where);
 try {
     $sql = "
         SELECT 
+            p.id,
             p.numero,
             p.created_at,
+            p.status,
+            p.valor_final,
             c.nome as cliente_nome,
             c.email as cliente_email,
             u.nome as vendedor_nome,
-            p.status,
-            p.valor_final,
-            COUNT(pi.id) as total_itens
+            COALESCE((SELECT COUNT(*) FROM pedido_itens pi WHERE pi.pedido_id = p.id), 0) as total_itens
         FROM pedidos p
         LEFT JOIN usuarios u ON p.vendedor_id = u.id
         LEFT JOIN clientes c ON p.cliente_id = c.id
-        LEFT JOIN pedido_itens pi ON pi.pedido_id = p.id
         WHERE $whereClause
-        GROUP BY p.id, u.nome, c.nome, c.email
         ORDER BY p.created_at DESC
     ";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $pedidos_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Garantir que total_itens sempre existe e é um número
+    $pedidos = [];
+    foreach ($pedidos_raw as $pedido) {
+        $pedido['total_itens'] = isset($pedido['total_itens']) ? intval($pedido['total_itens']) : 0;
+        $pedidos[] = $pedido;
+    }
     
 } catch (PDOException $e) {
     error_log("Erro ao exportar relatório: " . $e->getMessage());

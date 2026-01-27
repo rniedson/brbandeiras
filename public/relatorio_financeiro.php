@@ -37,12 +37,12 @@ try {
             COUNT(*) FILTER (WHERE status = 'aberto') as total_abertas,
             COUNT(*) FILTER (WHERE status = 'pago') as total_pagas,
             COUNT(*) FILTER (WHERE vencimento < CURRENT_DATE AND status = 'aberto') as vencidas,
-            COUNT(*) FILTER (WHERE DATE(vencimento) BETWEEN ? AND ? AND status = 'aberto') as vencer_periodo,
+            COUNT(*) FILTER (WHERE vencimento >= ?::date AND vencimento < (?::date + INTERVAL '1 day') AND status = 'aberto') as vencer_periodo,
             COALESCE(SUM(valor) FILTER (WHERE status = 'aberto'), 0) as valor_total_aberto,
             COALESCE(SUM(valor) FILTER (WHERE status = 'pago'), 0) as valor_total_pago,
             COALESCE(SUM(valor) FILTER (WHERE vencimento < CURRENT_DATE AND status = 'aberto'), 0) as valor_vencido,
-            COALESCE(SUM(valor) FILTER (WHERE DATE(vencimento) BETWEEN ? AND ? AND status = 'aberto'), 0) as valor_vencer_periodo,
-            COALESCE(SUM(valor) FILTER (WHERE DATE(created_at) BETWEEN ? AND ?), 0) as valor_criado_periodo
+            COALESCE(SUM(valor) FILTER (WHERE vencimento >= ?::date AND vencimento < (?::date + INTERVAL '1 day') AND status = 'aberto'), 0) as valor_vencer_periodo,
+            COALESCE(SUM(valor) FILTER (WHERE created_at >= ?::date AND created_at < (?::date + INTERVAL '1 day')), 0) as valor_criado_periodo
         FROM contas_receber
     ";
     
@@ -71,12 +71,12 @@ try {
             COUNT(*) FILTER (WHERE status = 'aberto') as total_abertas,
             COUNT(*) FILTER (WHERE status = 'pago') as total_pagas,
             COUNT(*) FILTER (WHERE vencimento < CURRENT_DATE AND status = 'aberto') as vencidas,
-            COUNT(*) FILTER (WHERE DATE(vencimento) BETWEEN ? AND ? AND status = 'aberto') as vencer_periodo,
+            COUNT(*) FILTER (WHERE vencimento >= ?::date AND vencimento < (?::date + INTERVAL '1 day') AND status = 'aberto') as vencer_periodo,
             COALESCE(SUM(valor) FILTER (WHERE status = 'aberto'), 0) as valor_total_aberto,
             COALESCE(SUM(valor) FILTER (WHERE status = 'pago'), 0) as valor_total_pago,
             COALESCE(SUM(valor) FILTER (WHERE vencimento < CURRENT_DATE AND status = 'aberto'), 0) as valor_vencido,
-            COALESCE(SUM(valor) FILTER (WHERE DATE(vencimento) BETWEEN ? AND ? AND status = 'aberto'), 0) as valor_vencer_periodo,
-            COALESCE(SUM(valor) FILTER (WHERE DATE(created_at) BETWEEN ? AND ?), 0) as valor_criado_periodo
+            COALESCE(SUM(valor) FILTER (WHERE vencimento >= ?::date AND vencimento < (?::date + INTERVAL '1 day') AND status = 'aberto'), 0) as valor_vencer_periodo,
+            COALESCE(SUM(valor) FILTER (WHERE created_at >= ?::date AND created_at < (?::date + INTERVAL '1 day')), 0) as valor_criado_periodo
         FROM contas_pagar
     ";
     
@@ -106,7 +106,7 @@ try {
             COUNT(*) as total_pedidos
         FROM pedidos
         WHERE status = 'entregue'
-        AND DATE(created_at) BETWEEN ? AND ?
+        AND created_at >= ?::date AND created_at < (?::date + INTERVAL '1 day')
     ";
     
     $stmt_receitas = $pdo->prepare($sql_receitas);
@@ -126,7 +126,7 @@ $params = [];
 
 if ($tipo_conta === 'receber' || $tipo_conta === 'ambos' || empty($tipo_conta)) {
     // Contas a receber
-    $where_receber = ["DATE(cr.created_at) BETWEEN ? AND ?"];
+    $where_receber = ["cr.created_at >= ?::date AND cr.created_at < (?::date + INTERVAL '1 day')"];
     $params_receber = [$data_inicio, $data_fim];
     
     if ($status) {
@@ -165,7 +165,7 @@ if ($tipo_conta === 'receber' || $tipo_conta === 'ambos' || empty($tipo_conta)) 
 
 if ($tipo_conta === 'pagar' || $tipo_conta === 'ambos' || empty($tipo_conta)) {
     // Contas a pagar
-    $where_pagar = ["DATE(cp.created_at) BETWEEN ? AND ?"];
+    $where_pagar = ["cp.created_at >= ?::date AND cp.created_at < (?::date + INTERVAL '1 day')"];
     $params_pagar = [$data_inicio, $data_fim];
     
     if ($status) {

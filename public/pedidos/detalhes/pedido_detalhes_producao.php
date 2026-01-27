@@ -6,13 +6,14 @@ require_once '../../../app/functions.php';
 requireLogin();
 requireRole(['producao', 'gestor', 'vendedor']);
 
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 $modo_edicao = isset($_GET['editar']) && in_array($_SESSION['user_perfil'], ['gestor', 'vendedor']);
 $modo_iframe = isset($_GET['iframe']);
 
 if (!$pedido_id) {
-    header('Location: producao.php');
-    exit;
+    $_SESSION['erro'] = 'ID de pedido inválido';
+    redirect('../../producao/producao.php');
 }
 
 // Processar salvamento de edições (AJAX)
@@ -39,47 +40,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // Buscar dados do pedido
-$stmt = $pdo->prepare("
-    SELECT 
-        p.*,
-        c.nome as cliente_nome,
-        v.nome as vendedor_nome
-    FROM pedidos p
-    LEFT JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN usuarios v ON p.vendedor_id = v.id
-    WHERE p.id = ?
-");
-$stmt->execute([$pedido_id]);
-$pedido = $stmt->fetch();
-
-if (!$pedido) {
-    $_SESSION['erro'] = 'Pedido não encontrado';
-    header('Location: producao.php');
-    exit;
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.*,
+            c.nome as cliente_nome,
+            v.nome as vendedor_nome
+        FROM pedidos p
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios v ON p.vendedor_id = v.id
+        WHERE p.id = ?
+    ");
+    $stmt->execute([$pedido_id]);
+    $pedido = $stmt->fetch();
+    
+    if (!$pedido) {
+        throw new Exception('Pedido não encontrado');
+    }
+} catch (PDOException $e) {
+    error_log("Erro ao buscar pedido: " . $e->getMessage());
+    $_SESSION['erro'] = 'Erro ao carregar dados do pedido';
+    redirect('../../producao/producao.php');
+} catch (Exception $e) {
+    $_SESSION['erro'] = $e->getMessage();
+    redirect('../../producao/producao.php');
 }
 
 // Formatar número da OS - apenas últimos 4 dígitos
 $numero_os = substr($pedido['numero'], -4);
 
 // Buscar itens do pedido
-$stmt = $pdo->prepare("
-    SELECT pi.*, pc.nome as produto_nome, pc.categoria_id
-    FROM pedido_itens pi
-    LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
-    WHERE pi.pedido_id = ?
-    ORDER BY pi.id
-");
-$stmt->execute([$pedido_id]);
-$itens = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT pi.*, pc.nome as produto_nome, pc.categoria_id
+        FROM pedido_itens pi
+        LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
+        WHERE pi.pedido_id = ?
+        ORDER BY pi.id
+    ");
+    $stmt->execute([$pedido_id]);
+    $itens = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar itens do pedido: " . $e->getMessage());
+    $itens = [];
+}
 
 // Buscar TODAS as artes aprovadas
-$stmt = $pdo->prepare("
-    SELECT * FROM arte_versoes 
-    WHERE pedido_id = ? AND aprovada = true 
-    ORDER BY versao DESC
-");
-$stmt->execute([$pedido_id]);
-$artes_aprovadas = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT * FROM arte_versoes 
+        WHERE pedido_id = ? AND aprovada = true 
+        ORDER BY versao DESC
+    ");
+    $stmt->execute([$pedido_id]);
+    $artes_aprovadas = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar artes aprovadas: " . $e->getMessage());
+    $artes_aprovadas = [];
+}
 
 // Detectar tipo de produto
 $tipo_produto = 'geral';

@@ -28,7 +28,7 @@ if ($vendedor_id) {
 }
 
 // Filtro por período
-$where[] = "DATE(p.created_at) BETWEEN ? AND ?";
+    $where[] = "p.created_at >= ?::date AND p.created_at < (?::date + INTERVAL '1 day')";
 $params[] = $data_inicio;
 $params[] = $data_fim;
 

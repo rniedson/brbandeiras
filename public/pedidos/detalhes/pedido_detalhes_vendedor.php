@@ -6,64 +6,76 @@ require_once '../../../app/functions.php';
 requireLogin();
 requireRole(['vendedor', 'gestor']);
 
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 
 if (!$pedido_id) {
-    header('Location: pedidos.php');
-    exit;
+    $_SESSION['erro'] = 'ID de pedido inválido';
+    redirect('../pedidos.php');
 }
 
 // Buscar dados completos do pedido para informações fiscais
-$stmt = $pdo->prepare("
-    SELECT 
-        p.*,
-        c.nome as cliente_nome,
-        c.tipo_pessoa,
-        c.cpf_cnpj,
-        c.telefone as cliente_telefone,
-        c.email as cliente_email,
-        c.endereco,
-        c.numero,
-        c.complemento,
-        c.bairro,
-        c.cidade,
-        c.estado,
-        c.cep,
-        v.nome as vendedor_nome,
-        v.email as vendedor_email,
-        (SELECT COUNT(*) FROM pedidos WHERE cliente_id = p.cliente_id) as total_pedidos_cliente,
-        (SELECT SUM(valor_final) FROM pedidos WHERE cliente_id = p.cliente_id AND status = 'entregue') as total_vendido
-    FROM pedidos p
-    LEFT JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN usuarios v ON p.vendedor_id = v.id
-    WHERE p.id = ?
-");
-$stmt->execute([$pedido_id]);
-$pedido = $stmt->fetch();
-
-if (!$pedido) {
-    $_SESSION['erro'] = 'Pedido não encontrado';
-    header('Location: pedidos.php');
-    exit;
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.*,
+            c.nome as cliente_nome,
+            c.tipo_pessoa,
+            c.cpf_cnpj,
+            c.telefone as cliente_telefone,
+            c.email as cliente_email,
+            c.endereco,
+            c.numero,
+            c.complemento,
+            c.bairro,
+            c.cidade,
+            c.estado,
+            c.cep,
+            v.nome as vendedor_nome,
+            v.email as vendedor_email,
+            (SELECT COUNT(*) FROM pedidos WHERE cliente_id = p.cliente_id) as total_pedidos_cliente,
+            (SELECT SUM(valor_final) FROM pedidos WHERE cliente_id = p.cliente_id AND status = 'entregue') as total_vendido
+        FROM pedidos p
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios v ON p.vendedor_id = v.id
+        WHERE p.id = ?
+    ");
+    $stmt->execute([$pedido_id]);
+    $pedido = $stmt->fetch();
+    
+    if (!$pedido) {
+        throw new Exception('Pedido não encontrado');
+    }
+} catch (PDOException $e) {
+    error_log("Erro ao buscar pedido: " . $e->getMessage());
+    $_SESSION['erro'] = 'Erro ao carregar dados do pedido';
+    redirect('../pedidos.php');
+} catch (Exception $e) {
+    $_SESSION['erro'] = $e->getMessage();
+    redirect('../pedidos.php');
 }
 
 // Verificar permissão (vendedor só vê seus próprios pedidos)
 if ($_SESSION['user_perfil'] === 'vendedor' && $pedido['vendedor_id'] != $_SESSION['user_id']) {
     $_SESSION['erro'] = 'Você não tem permissão para visualizar este pedido';
-    header('Location: pedidos.php');
-    exit;
+    redirect('../pedidos.php');
 }
 
 // Buscar itens do pedido
-$stmt = $pdo->prepare("
-    SELECT pi.*, pc.codigo as produto_codigo
-    FROM pedido_itens pi
-    LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
-    WHERE pi.pedido_id = ?
-    ORDER BY pi.id
-");
-$stmt->execute([$pedido_id]);
-$itens = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("
+        SELECT pi.*, pc.id as produto_codigo, pc.nome as produto_nome
+        FROM pedido_itens pi
+        LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
+        WHERE pi.pedido_id = ?
+        ORDER BY pi.id
+    ");
+    $stmt->execute([$pedido_id]);
+    $itens = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log("Erro ao buscar itens do pedido: " . $e->getMessage());
+    $itens = [];
+}
 
 // Determinar status do pagamento
 $status_pagamento = [

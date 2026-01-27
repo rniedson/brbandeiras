@@ -5,14 +5,14 @@ require_once '../../app/functions.php';
 
 requireLogin();
 
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 $novo_status = $_GET['status'] ?? null;
 $observacao = $_GET['obs'] ?? '';
 
 if (!$pedido_id || !$novo_status) {
     $_SESSION['erro'] = 'Parâmetros obrigatórios não informados';
-    header('Location: pedidos.php');
-    exit;
+    redirect('pedidos.php');
 }
 
 try {
@@ -268,12 +268,13 @@ try {
     $_SESSION['mensagem'] = "Status do pedido #{$pedido['numero']} alterado para: {$label_status}";
     
     // Redirecionar de volta para detalhes
-    header('Location: pedido_detalhes.php?id=' . $pedido_id);
+    redirect("pedido_detalhes.php?id={$pedido_id}");
     
 } catch (Exception $e) {
     $pdo->rollBack();
     $_SESSION['erro'] = 'Erro ao alterar status do pedido: ' . $e->getMessage();
-    header('Location: pedido_detalhes.php?id=' . ($pedido_id ?? ''));
+    $redirect_id = $pedido_id ?? '';
+    redirect("pedido_detalhes.php?id={$redirect_id}");
 }
 
 exit;

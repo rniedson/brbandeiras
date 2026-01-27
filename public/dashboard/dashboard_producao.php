@@ -20,13 +20,33 @@ if ($_SESSION['user_perfil'] !== 'producao') {
 // Funções auxiliares
 function getIconForStatus($status) {
     $icons = [
-        'pagamento_50' => 'credit-card',
         'producao' => 'cog',
         'pronto' => 'package',
-        'pagamento_100' => 'dollar-sign',
         'entregue' => 'check-circle'
     ];
     return $icons[$status] ?? 'circle';
+}
+
+// Função para determinar status de pagamento baseado no status atual
+function getStatusPagamento($status) {
+    // Se o status é pagamento_50 ou pagamento_100, retorna o percentual
+    if ($status === 'pagamento_50') return 50;
+    if ($status === 'pagamento_100') return 100;
+    
+    // Se está em produção ou pronto, assumir que 50% foi pago (já passou pela validação comercial)
+    if (in_array($status, ['producao', 'pronto'])) return 50;
+    
+    // Se está entregue, assumir que 100% foi pago
+    if ($status === 'entregue') return 100;
+    
+    return 0;
+}
+
+// Função para obter o status real de produção (converte pagamento_50 para producao, pagamento_100 para pronto)
+function getStatusProducao($status) {
+    if ($status === 'pagamento_50') return 'producao';
+    if ($status === 'pagamento_100') return 'pronto';
+    return $status;
 }
 
 function formatarNomeCliente($nome, $telefone) {
@@ -43,34 +63,17 @@ function formatarNomeCliente($nome, $telefone) {
 }
 
 try {
-    // Estatísticas da produção (50% em diante)
+    // Estatísticas da produção - apenas status reais de produção
     $stats = [
-        'pagamento_50' => 0,
         'producao' => 0,
         'pronto' => 0,
-        'pagamento_100' => 0,
         'entregue' => 0
     ];
 
-    $statusQueries = [
-        'pagamento_50' => "SELECT COUNT(*) FROM pedidos WHERE status = 'pagamento_50'",
-        'producao' => "SELECT COUNT(*) FROM pedidos WHERE status = 'producao'",
-        'pronto' => "SELECT COUNT(*) FROM pedidos WHERE status = 'pronto'",
-        'pagamento_100' => "SELECT COUNT(*) FROM pedidos WHERE status = 'pagamento_100'",
-        'entregue' => "SELECT COUNT(*) FROM pedidos WHERE status = 'entregue'"
-    ];
-
-    foreach ($statusQueries as $key => $query) {
-        try {
-            $result = $pdo->query($query);
-            if ($result) {
-                $stats[$key] = $result->fetchColumn() ?: 0;
-            }
-        } catch (PDOException $e) {
-            error_log("Erro ao buscar estatística $key: " . $e->getMessage());
-            $stats[$key] = 0;
-        }
-    }
+    // Contar incluindo pagamento_50 como producao e pagamento_100 como pronto
+    $stats['producao'] = $pdo->query("SELECT COUNT(*) FROM pedidos WHERE status IN ('pagamento_50', 'producao')")->fetchColumn() ?: 0;
+    $stats['pronto'] = $pdo->query("SELECT COUNT(*) FROM pedidos WHERE status IN ('pagamento_100', 'pronto')")->fetchColumn() ?: 0;
+    $stats['entregue'] = $pdo->query("SELECT COUNT(*) FROM pedidos WHERE status = 'entregue'")->fetchColumn() ?: 0;
 
 } catch (Exception $e) {
     die("Erro ao buscar estatísticas: " . $e->getMessage());
@@ -90,10 +93,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $pedido_id = intval($_POST['pedido_id']);
                 $novo_status = $_POST['status'];
                 
-                // Verificar se status é permitido para produção
-                $status_permitidos = ['pagamento_50', 'producao', 'pronto', 'pagamento_100', 'entregue'];
+                // Verificar se status é permitido para produção (apenas status reais)
+                $status_permitidos = ['producao', 'pronto', 'entregue'];
                 if (!in_array($novo_status, $status_permitidos)) {
                     throw new Exception('Status não permitido para produção');
+                }
+                
+                // Validação: não pode entregar sem 100% pago
+                if ($novo_status === 'entregue') {
+                    // Verificar status atual do pedido
+                    $stmt = $pdo->prepare("SELECT status FROM pedidos WHERE id = ?");
+                    $stmt->execute([$pedido_id]);
+                    $status_atual = $stmt->fetchColumn();
+                    
+                    $percentual_pago = getStatusPagamento($status_atual);
+                    if ($percentual_pago < 100) {
+                        throw new Exception('Não é possível entregar: pagamento não está 100% confirmado. Verifique o pagamento antes de entregar.');
+                    }
                 }
                 
                 $pdo->beginTransaction();
@@ -139,13 +155,21 @@ try {
         LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
         LEFT JOIN usuarios ua ON pa.arte_finalista_id = ua.id
         WHERE p.status IN ('pagamento_50', 'producao', 'pronto', 'pagamento_100', 'entregue')
+        AND p.status NOT IN ('cancelado')
     ";
 
     $params = [];
 
     if ($filtroStatus !== 'todos') {
-        $sql .= " AND p.status = ?";
-        $params[] = $filtroStatus;
+        // Mapear filtros: producao inclui pagamento_50, pronto inclui pagamento_100
+        if ($filtroStatus === 'producao') {
+            $sql .= " AND p.status IN ('pagamento_50', 'producao')";
+        } elseif ($filtroStatus === 'pronto') {
+            $sql .= " AND p.status IN ('pagamento_100', 'pronto')";
+        } else {
+            $sql .= " AND p.status = ?";
+            $params[] = $filtroStatus;
+        }
     }
 
     if ($filtroUrgente) {
@@ -162,12 +186,11 @@ try {
     die("Erro na consulta SQL: " . $e->getMessage());
 }
 
+// Configuração apenas dos status reais de produção
 $statusConfig = [
-    'pagamento_50' => ['color' => 'bg-orange-500', 'label' => '50%'],
-    'producao' => ['color' => 'bg-amber-500', 'label' => 'PRODUÇÃO'],
-    'pronto' => ['color' => 'bg-green-500', 'label' => 'PRONTO'],
-    'pagamento_100' => ['color' => 'bg-emerald-500', 'label' => '100% PAGO'],
-    'entregue' => ['color' => 'bg-gray-500', 'label' => 'ENTREGUE']
+    'producao' => ['color' => 'bg-amber-500', 'label' => 'PRODUÇÃO', 'icon' => 'cog'],
+    'pronto' => ['color' => 'bg-green-500', 'label' => 'PRONTO', 'icon' => 'package'],
+    'entregue' => ['color' => 'bg-gray-500', 'label' => 'ENTREGUE', 'icon' => 'check-circle']
 ];
 
 $titulo = 'Dashboard - Produção';
@@ -176,8 +199,8 @@ include '../../views/layouts/_header.php';
 
 <div class="flex-1 bg-gray-50" x-data="dashboardProducao()">
     <div class="p-6">
-        <!-- Cards de Status -->
-        <div class="grid-cols-5 grid gap-4 mb-6">
+        <!-- Cards de Status - Apenas 3 cards principais -->
+        <div class="grid-cols-3 grid gap-4 mb-6">
             <?php foreach ($statusConfig as $status => $config): ?>
             <div class="<?= $config['color'] ?> p-4 rounded-xl relative overflow-hidden transition-all hover:scale-105 cursor-pointer shadow-md"
                  :class="{ 'ring-4 ring-blue-400 scale-105': activeFilter === '<?= $status ?>' }"
@@ -186,10 +209,10 @@ include '../../views/layouts/_header.php';
                  @dragleave="$el.classList.remove('ring-4', 'ring-blue-300')"
                  @drop="handleDrop($event, '<?= $status ?>')">
                 <div class="flex items-center justify-between mb-2">
-                    <i class="fas fa-<?= getIconForStatus($status) ?> text-white text-2xl"></i>
+                    <i class="fas fa-<?= $config['icon'] ?> text-white text-2xl"></i>
                     <span class="text-3xl font-bold text-white"><?= $stats[$status] ?></span>
                 </div>
-                <div class="text-white font-semibold text-sm"><?= $config['label'] ?></div>
+                <div class="text-white font-semibold text-base"><?= $config['label'] ?></div>
                 <div class="text-xs mt-1 opacity-80 text-white">
                     <span x-show="activeFilter === '<?= $status ?>'">Filtro ativo</span>
                     <span x-show="activeFilter !== '<?= $status ?>'">Arraste OS aqui</span>
@@ -230,7 +253,9 @@ include '../../views/layouts/_header.php';
                             <th class="p-4 font-semibold">Produto</th>
                             <th class="p-4 font-semibold">Cliente</th>
                             <th class="p-4 font-semibold">Vendedor</th>
-                            <th class="p-4 font-semibold">Valor</th>
+                            <?php if ($_SESSION['user_perfil'] === 'gestor'): ?>
+                                <th class="p-4 font-semibold">Valor</th>
+                            <?php endif; ?>
                             <th class="p-4 font-semibold">Prazo</th>
                             <th class="p-4 font-semibold">Status</th>
                             <th class="p-4 font-semibold" x-show="showQuickActions">Ações Rápidas</th>
@@ -240,7 +265,7 @@ include '../../views/layouts/_header.php';
                     <tbody>
                         <?php if (empty($pedidos)): ?>
                         <tr>
-                            <td colspan="9" class="p-12 text-center text-gray-500">
+                            <td colspan="<?= $_SESSION['user_perfil'] === 'gestor' ? '9' : '8' ?>" class="p-12 text-center text-gray-500">
                                 <div class="flex flex-col items-center gap-4">
                                     <i class="fas fa-tools text-6xl text-gray-300"></i>
                                     <p class="text-xl">Nenhuma OS na produção</p>
@@ -250,8 +275,10 @@ include '../../views/layouts/_header.php';
                         </tr>
                         <?php else: ?>
                         <?php foreach ($pedidos as $pedido): 
-                            $status = $pedido['status'];
-                            $config = $statusConfig[$status] ?? $statusConfig['producao'];
+                            $status_original = $pedido['status'];
+                            $status_producao = getStatusProducao($status_original); // Converte pagamento_50/100 para producao/pronto
+                            $config = $statusConfig[$status_producao] ?? $statusConfig['producao'];
+                            $percentual_pago = getStatusPagamento($status_original);
                             
                             // Calcular dias restantes
                             $prazo = new DateTime($pedido['prazo_entrega']);
@@ -260,7 +287,10 @@ include '../../views/layouts/_header.php';
                             $dias_restantes = $diff->invert ? -$diff->days : $diff->days;
                         ?>
                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors" 
-                            draggable="true" @dragstart="handleDragStart($event, <?= $pedido['id'] ?>)">
+                            draggable="true" 
+                            @dragstart="handleDragStart($event, <?= $pedido['id'] ?>)"
+                            data-pedido-id="<?= $pedido['id'] ?>"
+                            data-percentual-pago="<?= $percentual_pago ?>">
                             <td class="p-4">
                                 <div class="flex items-center gap-2">
                                     <span class="text-gray-900 font-bold"><?= htmlspecialchars($pedido['numero']) ?></span>
@@ -282,9 +312,13 @@ include '../../views/layouts/_header.php';
                             </td>
                             <td class="p-4 text-gray-600"><?= htmlspecialchars($pedido['vendedor_nome'] ?? '') ?></td>
                             <td class="p-4">
-                                <span class="<?= $pedido['urgente'] ? 'text-red-600 font-bold' : 'text-gray-700' ?> font-medium">
-                                    <?= formatarMoeda($pedido['valor_final'] ?? 0) ?>
-                                </span>
+                                <?php if ($_SESSION['user_perfil'] === 'gestor'): ?>
+                                    <span class="<?= $pedido['urgente'] ? 'text-red-600 font-bold' : 'text-gray-700' ?> font-medium">
+                                        <?= formatarMoeda($pedido['valor_final'] ?? 0) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-gray-400 italic text-sm">***</span>
+                                <?php endif; ?>
                             </td>
                             <td class="p-4">
                                 <div class="flex items-center gap-1">
@@ -304,30 +338,45 @@ include '../../views/layouts/_header.php';
                                 </div>
                             </td>
                             <td class="p-4">
-                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full <?= $config['color'] ?> shadow-sm">
-                                    <i class="fas fa-<?= getIconForStatus($status) ?> text-white text-sm"></i>
-                                    <span class="text-white text-sm font-semibold"><?= $config['label'] ?></span>
+                                <div class="flex flex-col gap-2">
+                                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full <?= $config['color'] ?> shadow-sm">
+                                        <i class="fas fa-<?= $config['icon'] ?> text-white text-sm"></i>
+                                        <span class="text-white text-sm font-semibold"><?= $config['label'] ?></span>
+                                    </div>
+                                    <!-- Badges de Pagamento -->
+                                    <?php if ($percentual_pago >= 50 && $percentual_pago < 100): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">
+                                            <i class="fas fa-credit-card text-xs"></i>
+                                            50% Pago
+                                        </span>
+                                    <?php elseif ($percentual_pago >= 100): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                                            <i class="fas fa-check-circle text-xs"></i>
+                                            100% Pago
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                             <td class="p-4" x-show="showQuickActions">
                                 <div class="flex gap-1">
                                     <?php 
-                                    $statusPermitidos = ['pagamento_50', 'producao', 'pronto', 'pagamento_100', 'entregue'];
+                                    // Apenas status reais de produção
+                                    $statusPermitidos = ['producao', 'pronto', 'entregue'];
                                     foreach($statusPermitidos as $quickStatus): 
-                                        if ($status !== $quickStatus): ?>
+                                        if ($status_producao !== $quickStatus): ?>
                                     <button 
-                                        @click="quickUpdateStatus(<?= $pedido['id'] ?>, '<?= $quickStatus ?>')" 
+                                        @click="quickUpdateStatus(<?= $pedido['id'] ?>, '<?= $quickStatus ?>', <?= $percentual_pago ?>)" 
                                         class="<?= $statusConfig[$quickStatus]['color'] ?> hover:opacity-80 text-white p-2 rounded-lg text-sm shadow-sm transition-all" 
                                         title="Mover para <?= $statusConfig[$quickStatus]['label'] ?>"
                                     >
-                                        <i class="fas fa-<?= getIconForStatus($quickStatus) ?> text-base"></i>
+                                        <i class="fas fa-<?= $statusConfig[$quickStatus]['icon'] ?> text-base"></i>
                                     </button>
                                     <?php endif; endforeach; ?>
                                 </div>
                             </td>
                             <td class="p-4">
                                 <div class="flex items-center gap-2">
-                                    <a href="pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition-all" title="Visualizar">
+                                    <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition-all" title="Visualizar">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </div>
@@ -384,12 +433,22 @@ function dashboardProducao() {
             event.target.classList.remove('ring-4', 'ring-blue-300');
             
             if (this.draggedId) {
-                this.quickUpdateStatus(this.draggedId, newStatus);
+                // Buscar percentual de pagamento do elemento arrastado
+                const row = event.target.closest('tbody')?.querySelector(`[data-pedido-id="${this.draggedId}"]`);
+                const percentualPago = row ? parseInt(row.dataset.percentualPago || '0') : 0;
+                this.quickUpdateStatus(this.draggedId, newStatus, percentualPago);
                 this.draggedId = null;
             }
         },
 
-        async quickUpdateStatus(id, status) {
+        async quickUpdateStatus(id, status, percentualPago = 0) {
+            // Validação: não pode entregar sem 100% pago
+            if (status === 'entregue' && percentualPago < 100) {
+                if (!confirm('⚠️ ATENÇÃO: Este pedido não está com 100% do pagamento confirmado.\n\nConfirme que o pagamento foi recebido antes de entregar.\n\nDeseja continuar mesmo assim?')) {
+                    return;
+                }
+            }
+            
             const formData = new FormData();
             formData.append('action', 'updateStatus');
             formData.append('pedido_id', id);

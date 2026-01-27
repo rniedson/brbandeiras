@@ -96,8 +96,8 @@ try {
     $total_paginas = 0;
 }
 
-// Buscar clientes para filtro
-$clientes = $pdo->query("SELECT id, nome FROM clientes WHERE ativo = true ORDER BY nome")->fetchAll();
+// Buscar clientes para filtro (com cache de 5 minutos)
+$clientes = getCachedQuery($pdo, 'clientes_ativos_lista', "SELECT id, nome FROM clientes WHERE ativo = true ORDER BY nome", [], 300);
 
 // Estatísticas
 $stats = [

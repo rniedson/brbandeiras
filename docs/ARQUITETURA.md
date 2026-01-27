@@ -57,19 +57,22 @@ O sistema está em processo de migração para arquitetura MVC completa.
 #### Models (app/Models/)
 
 ```php
-// BaseModel - CRUD genérico
+// BaseModel - CRUD genérico com proteção SQL injection
 abstract class BaseModel {
     protected $db;
     protected $table;
+    // Whitelist de tabelas permitidas
+    // Validação de nomes de tabelas/colunas
     // Métodos: find(), findAll(), create(), update(), delete()
 }
 
-// Model específico
+// Model específico com cache
 class Pedido extends BaseModel {
     // Métodos específicos de domínio
     public function gerarNumero();
-    public function comCliente($id);
+    public function comCliente($id); // Com cache
     public function atualizarStatus($id, $status);
+    public function clearCache($id); // Limpar cache após updates
 }
 ```
 
@@ -208,18 +211,39 @@ requireRole(['gestor']); // Verifica perfil específico
 ### Proteções Implementadas
 
 1. **Prepared Statements**: Todas as queries usam PDO prepared statements
-2. **Validação de Entrada**: Funções de valenticação em `app/functions.php`
+2. **Validação de Entrada**: Funções de validação em `app/functions.php`
 3. **Autenticação**: Sistema de login obrigatório
 4. **Autorização**: Verificação de perfis por rota
 5. **HTTPS**: Recomendado para produção
 6. **Sanitização**: `htmlspecialchars()` em saídas HTML
+7. **CSRF Protection**: Tokens CSRF em todos os formulários POST (`app/Core/CSRF.php`)
+8. **Rate Limiting**: Limitação de tentativas de login (`app/Core/RateLimiter.php`)
+9. **SQL Injection Prevention**: Whitelist de tabelas no BaseModel
+10. **Sessões Seguras**: Timeout de 2 horas com renovação automática
 
-### Áreas de Melhoria (Futuro)
+### Classes de Segurança
 
-- CSRF Protection
-- Rate Limiting
-- Input Validation centralizada
-- Logging de segurança
+#### CSRF (`app/Core/CSRF.php`)
+Proteção contra Cross-Site Request Forgery:
+```php
+// Gerar token em formulário
+<?= CSRF::getField() ?>
+
+// Validar em processador
+CSRF::validate($_POST['csrf_token'] ?? '');
+```
+
+#### RateLimiter (`app/Core/RateLimiter.php`)
+Limitação de tentativas:
+```php
+// Verificar limite
+if (!RateLimiter::check('login', null, 5, 900)) {
+    // Bloqueado
+}
+
+// Registrar tentativa
+RateLimiter::recordAttempt('login');
+```
 
 ## Performance
 
@@ -230,12 +254,35 @@ requireRole(['gestor']); // Verifica perfil específico
 - Índices no banco de dados
 - Cache de sessão
 
+### Otimizações Implementadas
+
+1. **Cache APCu**: Cache de queries frequentes (`app/Core/Cache.php`)
+2. **Singleton Database**: Evita múltiplas conexões
+3. **Queries Otimizadas**: JOINs eficientes
+4. **Índices no Banco**: Índices otimizados nas tabelas
+
+### Cache
+
+Sistema de cache usando APCu (`app/Core/Cache.php`):
+```php
+// Obter do cache
+$value = Cache::get('chave', $default);
+
+// Armazenar no cache
+Cache::set('chave', $value, 300); // TTL de 5 minutos
+
+// Cache-aside pattern
+$value = Cache::remember('chave', function() {
+    return expensiveOperation();
+}, 300);
+```
+
 ### Áreas de Melhoria (Futuro)
 
-- Cache de queries frequentes
 - Compressão de assets
 - CDN para assets estáticos
 - Otimização de imagens
+- Views materializadas no banco
 
 ## Logging
 

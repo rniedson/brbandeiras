@@ -76,7 +76,8 @@ AddHandler application/x-httpd-php .php
     
     # Content Security Policy (ajustar conforme necessário)
     # Nota: 'unsafe-eval' é necessário para Alpine.js funcionar corretamente
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.tailwindcss.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' data: https:; connect-src 'self';"
+    # Ajustado para permitir localhost em desenvolvimento
+    Header set Content-Security-Policy "default-src 'self' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; font-src 'self' data: http://localhost:*; img-src 'self' data: blob: http://localhost:*; connect-src 'self' http://localhost:*; frame-ancestors 'self';"
     
     # HSTS (apenas em HTTPS - descomentar quando usar HTTPS)
     # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS

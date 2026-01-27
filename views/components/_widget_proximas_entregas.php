@@ -1,5 +1,7 @@
 <?php
 // Widget de Próximas Entregas para incluir no dashboard
+// Definir caminho para pedido_detalhes.php (usar $baseUrl se disponível)
+$pedidoDetalhesUrl = isset($baseUrl) ? $baseUrl . 'pedidos/pedido_detalhes.php' : '../pedidos/pedido_detalhes.php';
 // Buscar próximas 5 entregas
 $stmt = $pdo->prepare("
     SELECT 
@@ -114,7 +116,7 @@ $contadores = $stmt->fetch(PDO::FETCH_ASSOC);
                     'finalizado' => 'bg-blue-100 text-blue-800'
                 ][$entrega['status']] ?? 'bg-gray-100 text-gray-800';
             ?>
-            <a href="pedido_detalhes.php?id=<?= $entrega['id'] ?>" 
+            <a href="<?= $pedidoDetalhesUrl ?>?id=<?= $entrega['id'] ?>" 
                class="block p-3 rounded-lg border hover:shadow-md transition <?= $corPrazo ?>">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">

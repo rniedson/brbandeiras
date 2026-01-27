@@ -75,13 +75,28 @@ try {
 
 echo "<h2>🧪 TESTE 3: Buscar Arquivos (Linhas 73-80)</h2>";
 try {
-    $stmt = $pdo->prepare("
-        SELECT pa.*, u.nome as usuario_nome
-        FROM pedido_arquivos pa
-        LEFT JOIN usuarios u ON pa.usuario_id = u.id
-        WHERE pa.pedido_id = ?
-        ORDER BY pa.created_at DESC
-    ");
+    // Verificar se a coluna usuario_id existe
+    $hasUserIdColumn = $pdo->query("
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'pedido_arquivos' AND column_name = 'usuario_id'
+    ")->fetch();
+    
+    if ($hasUserIdColumn) {
+        $stmt = $pdo->prepare("
+            SELECT pa.*, u.nome as usuario_nome
+            FROM pedido_arquivos pa
+            LEFT JOIN usuarios u ON pa.usuario_id = u.id
+            WHERE pa.pedido_id = ?
+            ORDER BY pa.created_at DESC
+        ");
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT pa.*, NULL as usuario_nome
+            FROM pedido_arquivos pa
+            WHERE pa.pedido_id = ?
+            ORDER BY pa.created_at DESC
+        ");
+    }
     $stmt->execute([$pedido_id]);
     $arquivos = $stmt->fetchAll();
     echo "✅ Buscar arquivos: OK (" . count($arquivos) . " arquivos)<br>";

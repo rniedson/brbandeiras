@@ -14,24 +14,24 @@ header('Content-Type: application/json');
 header('Cache-Control: private, max-age=300'); // Cache por 5 minutos
 
 try {
-    // Buscar clientes
-    $clientes = $pdo->query("
+    // Buscar clientes (com cache de 5 minutos)
+    $clientes = getCachedQuery($pdo, 'clientes_ativos_modal', "
         SELECT 
             id, nome, nome_fantasia, cpf_cnpj, telefone, celular, whatsapp, email, codigo_sistema,
             COALESCE(celular, whatsapp, telefone) as telefone_principal
         FROM clientes 
         WHERE ativo = true 
         ORDER BY nome
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    ", [], 300);
 
-    // Buscar produtos
-    $produtos = $pdo->query("
+    // Buscar produtos (com cache de 5 minutos)
+    $produtos = getCachedQuery($pdo, 'produtos_ativos_modal', "
         SELECT p.*, c.nome as categoria_nome 
         FROM produtos_catalogo p
         LEFT JOIN categorias_produtos c ON p.categoria_id = c.id
         WHERE p.ativo = true AND p.estoque_disponivel = true
         ORDER BY c.nome, p.nome
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    ", [], 300);
 
     // Organizar produtos por categoria
     $produtosPorCategoria = [];

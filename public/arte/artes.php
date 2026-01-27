@@ -43,20 +43,41 @@ if ($data_inicio && $data_fim) {
 
 $whereClause = implode(' AND ', $where);
 
+// Verificar se a coluna usuario_id existe na tabela pedido_arquivos
+$hasUserIdColumn = $pdo->query("
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'pedido_arquivos' AND column_name = 'usuario_id'
+")->fetch();
+
 // Buscar arquivos
-$sql = "
-    SELECT pa.*, 
-           p.numero as pedido_numero,
-           p.status as pedido_status,
-           c.nome as cliente_nome,
-           u.nome as usuario_nome
-    FROM pedido_arquivos pa
-    INNER JOIN pedidos p ON pa.pedido_id = p.id
-    LEFT JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN usuarios u ON pa.usuario_id = u.id
-    WHERE $whereClause
-    ORDER BY pa.created_at DESC
-";
+if ($hasUserIdColumn) {
+    $sql = "
+        SELECT pa.*, 
+               p.numero as pedido_numero,
+               p.status as pedido_status,
+               c.nome as cliente_nome,
+               u.nome as usuario_nome
+        FROM pedido_arquivos pa
+        INNER JOIN pedidos p ON pa.pedido_id = p.id
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios u ON pa.usuario_id = u.id
+        WHERE $whereClause
+        ORDER BY pa.created_at DESC
+    ";
+} else {
+    $sql = "
+        SELECT pa.*, 
+               p.numero as pedido_numero,
+               p.status as pedido_status,
+               c.nome as cliente_nome,
+               NULL as usuario_nome
+        FROM pedido_arquivos pa
+        INNER JOIN pedidos p ON pa.pedido_id = p.id
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        WHERE $whereClause
+        ORDER BY pa.created_at DESC
+    ";
+}
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -293,7 +314,7 @@ include '../../views/layouts/_header.php';
                 <div class="mt-2 space-y-1 text-sm text-gray-500">
                     <p>
                         <span class="font-medium">Pedido:</span> 
-                        <a href="pedido_detalhes.php?id=<?= $arquivo['pedido_id'] ?>" 
+                        <a href="../pedidos/pedido_detalhes.php?id=<?= $arquivo['pedido_id'] ?>" 
                            class="text-blue-600 hover:text-blue-800">
                             #<?= htmlspecialchars($arquivo['pedido_numero']) ?>
                         </a>

@@ -30,7 +30,7 @@ if ($periodo === 'hoje') {
 // Buscar contas a receber
 $contas_receber = [];
 if ($tipo_conta === 'receber' || $tipo_conta === 'ambos' || empty($tipo_conta)) {
-    $where_receber = ["DATE(cr.created_at) BETWEEN ? AND ?"];
+    $where_receber = ["cr.created_at >= ?::date AND cr.created_at < (?::date + INTERVAL '1 day')"];
     $params_receber = [$data_inicio, $data_fim];
     
     if ($status) {
@@ -66,7 +66,7 @@ if ($tipo_conta === 'receber' || $tipo_conta === 'ambos' || empty($tipo_conta)) 
 // Buscar contas a pagar
 $contas_pagar = [];
 if ($tipo_conta === 'pagar' || $tipo_conta === 'ambos' || empty($tipo_conta)) {
-    $where_pagar = ["DATE(cp.created_at) BETWEEN ? AND ?"];
+    $where_pagar = ["cp.created_at >= ?::date AND cp.created_at < (?::date + INTERVAL '1 day')"];
     $params_pagar = [$data_inicio, $data_fim];
     
     if ($status) {

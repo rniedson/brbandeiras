@@ -28,8 +28,8 @@ if ($periodo === 'hoje') {
     $data_fim = date('Y-12-31');
 }
 
-// Query base para artes
-$where = ["DATE(av.created_at) BETWEEN ? AND ?"];
+// Query base para artes (otimizado: sem DATE() para permitir uso de índices)
+$where = ["av.created_at >= ?::date AND av.created_at < (?::date + INTERVAL '1 day')"];
 $params = [$data_inicio, $data_fim];
 
 if ($arte_finalista_id) {

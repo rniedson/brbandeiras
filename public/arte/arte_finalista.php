@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 
                 // Mudar status
-                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'arte_aprovacao' WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'aprovado' WHERE id = ?");
                 $stmt->execute([$pedido_id]);
                 
                 registrarLog('arte_entregue', "OS #$pedido_id entregue para aprovação");
@@ -225,7 +225,7 @@ include '../../views/layouts/_header.php';
                         $atrasado = $hoje > $prazo;
                     ?>
                     <div class="os-card bg-white rounded-xl shadow-md overflow-hidden cursor-pointer"
-                         onclick="window.location.href='pedido_detalhes.php?id=<?= $os['id'] ?>'">
+                         onclick="window.location.href='../pedidos/pedido_detalhes.php?id=<?= $os['id'] ?>'">
                         
                         <!-- Preview da Arte -->
                         <div class="preview-thumb h-40 flex items-center justify-center relative">

@@ -34,7 +34,7 @@ try {
             COUNT(*) FILTER (WHERE vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND status = 'aberto') as vencer_7dias,
             COALESCE(SUM(valor) FILTER (WHERE status = 'aberto'), 0) as valor_total_aberto,
             COALESCE(SUM(valor) FILTER (WHERE vencimento < CURRENT_DATE AND status = 'aberto'), 0) as valor_vencido,
-            COALESCE(SUM(valor) FILTER (WHERE DATE(vencimento) BETWEEN ? AND ? AND status = 'aberto'), 0) as valor_periodo
+            COALESCE(SUM(valor) FILTER (WHERE vencimento >= ?::date AND vencimento < (?::date + INTERVAL '1 day') AND status = 'aberto'), 0) as valor_periodo
         FROM contas_receber
     ";
     
@@ -61,7 +61,7 @@ try {
             COUNT(*) FILTER (WHERE vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND status = 'aberto') as vencer_7dias,
             COALESCE(SUM(valor) FILTER (WHERE status = 'aberto'), 0) as valor_total_aberto,
             COALESCE(SUM(valor) FILTER (WHERE vencimento < CURRENT_DATE AND status = 'aberto'), 0) as valor_vencido,
-            COALESCE(SUM(valor) FILTER (WHERE DATE(vencimento) BETWEEN ? AND ? AND status = 'aberto'), 0) as valor_periodo
+            COALESCE(SUM(valor) FILTER (WHERE vencimento >= ?::date AND vencimento < (?::date + INTERVAL '1 day') AND status = 'aberto'), 0) as valor_periodo
         FROM contas_pagar
     ";
     
@@ -87,7 +87,7 @@ try {
             COUNT(*) as total_pedidos
         FROM pedidos
         WHERE status = 'entregue'
-        AND DATE(created_at) BETWEEN ? AND ?
+        AND created_at >= ?::date AND created_at < (?::date + INTERVAL '1 day')
     ";
     
     $stmt_receitas = $pdo->prepare($sql_receitas);

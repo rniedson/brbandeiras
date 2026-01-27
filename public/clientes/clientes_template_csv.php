@@ -468,7 +468,7 @@ include '../../views/layouts/_header.php';
                             <?= formatarMoeda($pedido['valor_final']) ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                            <a href="pedido_detalhes.php?id=<?= $pedido['id'] ?>" 
+                            <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" 
                                class="text-blue-600 hover:text-blue-900">
                                 Ver
                             </a>

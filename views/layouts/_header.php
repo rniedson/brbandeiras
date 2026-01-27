@@ -44,6 +44,7 @@ $menuCompleto = [
             [
                 'label' => 'Gestão',
                 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+                'perfis' => ['vendedor', 'gestor'], // Produção não tem acesso
                 'itens' => [
                     ['label' => 'Lista de Pedidos', 'url' => 'pedidos/pedidos.php', 'badge' => 'pedidos_novos'],
                     ['label' => 'Novo Pedido', 'url' => 'pedidos/pedido_novo.php'],
@@ -54,7 +55,9 @@ $menuCompleto = [
             [
                 'label' => 'Produção',
                 'icon' => 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+                'perfis' => ['producao', 'gestor'], // Apenas produção e gestor
                 'itens' => [
+                    ['label' => 'Dashboard Produção', 'url' => 'dashboard/dashboard_producao.php'],
                     ['label' => 'Kanban Produção', 'url' => 'producao/producao.php'],
                     ['label' => 'Fila de Impressão', 'url' => 'impressao.php', 'badge' => 'fila_impressao'],
                     ['label' => 'Ordem de Serviço', 'url' => 'ordem_servico.php'],
@@ -94,25 +97,28 @@ $menuCompleto = [
             [
                 'label' => 'Catálogo',
                 'icon' => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+                'perfis' => ['vendedor', 'gestor', 'producao'],
                 'itens' => [
                     ['label' => 'Lista de Produtos', 'url' => 'produtos/catalogo.php'],
-                    ['label' => 'Novo Produto', 'url' => 'produtos/catalogo_produto_novo.php'],
-                    ['label' => 'Importar Produtos', 'url' => 'produtos/catalogo_importar.php'],
-                    ['label' => 'Atualização de Preços', 'url' => 'produtos/catalogo_precos.php'],
-                    ['label' => 'Categorias', 'url' => 'produtos/categorias_produtos.php']
+                    ['label' => 'Novo Produto', 'url' => 'produtos/catalogo_produto_novo.php', 'perfis' => ['vendedor', 'gestor']],
+                    ['label' => 'Importar Produtos', 'url' => 'produtos/catalogo_importar.php', 'perfis' => ['vendedor', 'gestor']],
+                    ['label' => 'Atualização de Preços', 'url' => 'produtos/catalogo_precos.php', 'perfis' => ['vendedor', 'gestor']],
+                    ['label' => 'Categorias', 'url' => 'produtos/categorias_produtos.php', 'perfis' => ['vendedor', 'gestor']]
                 ]
             ],
             [
                 'label' => 'Estoque',
                 'icon' => 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
+                'perfis' => ['vendedor', 'gestor', 'producao'],
                 'itens' => [
                     ['label' => 'Posição de Estoque', 'url' => 'estoque/estoque.php'],
-                    ['label' => 'Movimentações', 'url' => 'estoque/movimentacao_nova.php']
+                    ['label' => 'Movimentações', 'url' => 'estoque/movimentacao_nova.php', 'perfis' => ['gestor']] // Apenas gestor pode fazer movimentações
                 ]
             ],
             [
                 'label' => 'Fornecedores',
                 'icon' => 'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z',
+                'perfis' => ['vendedor', 'gestor'], // Produção não precisa de fornecedores
                 'itens' => [
                     ['label' => 'Lista de Fornecedores', 'url' => 'fornecedores.php'],
                     ['label' => 'Novo Fornecedor', 'url' => 'fornecedor_novo.php'],
@@ -124,11 +130,12 @@ $menuCompleto = [
     'financeiro' => [
         'label' => 'Financeiro',
         'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-        'perfis' => ['gestor'],
+        'perfis' => ['gestor', 'vendedor'],
         'submenu' => [
             [
                 'label' => 'Contas',
                 'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+                'perfis' => ['gestor'], // Apenas gestor
                 'itens' => [
                     ['label' => 'Dashboard Financeiro', 'url' => 'financeiro_dashboard.php'],
                     ['label' => 'Contas a Receber', 'url' => 'contas_receber.php', 'badge' => 'receber_vencidas']
@@ -137,14 +144,17 @@ $menuCompleto = [
             [
                 'label' => 'Vendas',
                 'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+                'perfis' => ['gestor', 'vendedor'],
                 'itens' => [
-                    ['label' => 'Comissões', 'url' => 'comissoes.php'],
-                    ['label' => 'Metas de Vendas', 'url' => 'metas.php']
+                    ['label' => 'Comissões', 'url' => 'comissoes.php', 'perfis' => ['gestor']], // Gestor vê todas
+                    ['label' => 'Minhas Comissões', 'url' => 'comissoes_vendedor.php', 'perfis' => ['vendedor']], // Vendedor vê só suas
+                    ['label' => 'Metas de Vendas', 'url' => 'metas.php', 'perfis' => ['gestor']]
                 ]
             ],
             [
                 'label' => 'Relatórios',
                 'icon' => 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'perfis' => ['gestor'], // Apenas gestor
                 'itens' => [
                     ['label' => 'Vendas', 'url' => 'relatorio_vendas.php'],
                     ['label' => 'Financeiro', 'url' => 'relatorio_financeiro.php'],
@@ -156,13 +166,16 @@ $menuCompleto = [
     'configuracoes' => [
         'label' => 'Configurações',
         'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
-        'perfis' => ['gestor'],
+        'perfis' => ['gestor', 'administrador'],
         'submenu' => [
             [
                 'label' => 'Sistema',
                 'icon' => 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
                 'itens' => [
-                    ['label' => 'Usuários', 'url' => 'usuarios/usuarios.php']
+                    ['label' => 'Configurações do Sistema', 'url' => 'configuracoes_sistema.php'],
+                    ['label' => 'Usuários', 'url' => 'usuarios/usuarios.php'],
+                    ['label' => 'Auditoria', 'url' => 'auditoria/auditoria.php', 'perfis' => ['gestor', 'administrador']],
+                    ['label' => 'Relatórios de Auditoria', 'url' => 'auditoria/relatorio.php', 'perfis' => ['gestor', 'administrador']]
                 ]
             ],
             [
@@ -181,14 +194,27 @@ $menuCompleto = [
 
 // Função auxiliar para verificar permissão
 function temPermissao($item, $perfilUsuario) {
-    if (!isset($item['perfis'])) return true;
-    return in_array('todos', $item['perfis']) || in_array($perfilUsuario, $item['perfis']);
+    if (!isset($item['perfis'])) {
+        // Se não tem perfis definidos, herda do menu pai ou permite todos
+        return true;
+    }
+    
+    // Normalizar perfil para minúsculas para comparação case-insensitive
+    $perfilNormalizado = strtolower(trim($perfilUsuario ?? ''));
+    $perfisNormalizados = array_map(function($p) { 
+        return strtolower(trim($p)); 
+    }, $item['perfis']);
+    
+    // Verificar se permite todos ou se o perfil está na lista
+    if (in_array('todos', $perfisNormalizados)) {
+        return true;
+    }
+    
+    return in_array($perfilNormalizado, $perfisNormalizados);
 }
 
 // Função para contar badges
 function contarBadge($tipo) {
-    global $pdo;
-    
     $badges = [
         'pedidos_novos' => "SELECT COUNT(*) FROM pedidos WHERE status = 'novo'",
         'orcamentos_pendentes' => "SELECT COUNT(*) FROM pedidos WHERE status = 'orcamento'",
@@ -201,7 +227,8 @@ function contarBadge($tipo) {
     
     if (isset($badges[$tipo])) {
         try {
-            return $pdo->query($badges[$tipo])->fetchColumn();
+            $db = getDb();
+            return $db->query($badges[$tipo])->fetchColumn();
         } catch (PDOException $e) {
             return 0;
         }
@@ -260,26 +287,22 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
     <title>BR Bandeiras - Sistema de Gestão de Fábrica de Bandeiras</title>
     
     <!-- Preconnect para CDNs críticos (reduz latência de conexão) -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="https://unpkg.com">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {}
-            }
-        }
-    </script>
+    <!-- Preload Alpine.js para reduzir latência na cadeia crítica -->
+    <link rel="preload" href="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" as="script">
+    <link rel="preload" href="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js" as="script">
     
-    <!-- Font Awesome para ícones -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Tailwind CSS - Build local -->
+    <link rel="stylesheet" href="/public/css/tailwind.min.css">
+    
+    <!-- Preload da fonte crítica para otimizar cadeia de dependências -->
+    <link rel="preload" href="/public/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Font Awesome para ícones - Hospedado localmente -->
+    <link rel="preload" href="/public/css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/public/css/font-awesome/all.min.css"></noscript>
     <style>
     /* Otimização Font Awesome: font-display swap para evitar FOIT */
     /* Sobrescrever font-display do Font Awesome para usar swap */
@@ -298,7 +321,7 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
     /* Aplicar font-display: swap especificamente para fa-solid-900 */
     @font-face {
         font-family: 'Font Awesome 6 Free';
-        src: url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2') format('woff2');
+        src: url('/public/webfonts/fa-solid-900.woff2') format('woff2');
         font-display: swap !important;
         font-weight: 900;
         font-style: normal;
@@ -798,6 +821,38 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
                                      class="absolute left-0 mt-0 w-64 bg-gray-800 dark:bg-gray-900 rounded-b-lg shadow-xl z-50 border border-gray-700 dark:border-gray-600">
                                     <?php foreach ($menu['submenu'] as $grupo): ?>
                                         <?php if (is_array($grupo) && isset($grupo['label'])): ?>
+                                        <?php 
+                                        // Verificar se o grupo tem acesso permitido
+                                        $grupoTemAcesso = true;
+                                        if (isset($grupo['perfis']) && !empty($grupo['perfis'])) {
+                                            $grupoTemAcesso = temPermissao($grupo, $perfilAtual);
+                                        }
+                                        
+                                        if (!$grupoTemAcesso) {
+                                            continue; // Pular este grupo se não tiver acesso
+                                        }
+                                        
+                                        // Coletar itens com acesso para verificar se o grupo não está vazio
+                                        $itensComAcesso = [];
+                                        foreach ($grupo['itens'] as $item) {
+                                            $temAcesso = false;
+                                            if (isset($item['perfis']) && !empty($item['perfis'])) {
+                                                $temAcesso = temPermissao($item, $perfilAtual);
+                                            } elseif (isset($grupo['perfis']) && !empty($grupo['perfis'])) {
+                                                $temAcesso = temPermissao($grupo, $perfilAtual);
+                                            } else {
+                                                $temAcesso = temPermissao($menu, $perfilAtual);
+                                            }
+                                            if ($temAcesso) {
+                                                $itensComAcesso[] = $item;
+                                            }
+                                        }
+                                        
+                                        // Se não houver itens com acesso, pular o grupo
+                                        if (empty($itensComAcesso)) {
+                                            continue;
+                                        }
+                                        ?>
                                         <div class="px-4 py-2">
                                             <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider flex items-center">
                                                 <?php if (isset($grupo['icon'])): ?>
@@ -808,8 +863,7 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
                                                 <?= $grupo['label'] ?>
                                             </h3>
                                             <div class="mt-2 space-y-1">
-                                                <?php foreach ($grupo['itens'] as $item): ?>
-                                                    <?php if (!temPermissao($item, $perfilAtual)) continue; ?>
+                                                <?php foreach ($itensComAcesso as $item): ?>
                                                     <a href="<?= isset($item['url']) ? $baseUrl . $item['url'] : '#' ?>" 
                                                        class="group flex items-center justify-between px-3 py-2 text-sm text-gray-300 dark:text-gray-200 rounded hover:bg-gray-700 dark:hover:bg-gray-800 hover:text-white">
                                                         <span><?= $item['label'] ?></span>
@@ -928,11 +982,43 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
                                      class="mt-1">
                                     <?php foreach ($menu['submenu'] as $grupo): ?>
                                         <?php if (is_array($grupo) && isset($grupo['label'])): ?>
+                                        <?php 
+                                        // Verificar se o grupo tem acesso permitido (mobile)
+                                        $grupoTemAcessoMobile = true;
+                                        if (isset($grupo['perfis']) && !empty($grupo['perfis'])) {
+                                            $grupoTemAcessoMobile = temPermissao($grupo, $perfilAtual);
+                                        }
+                                        
+                                        if (!$grupoTemAcessoMobile) {
+                                            continue; // Pular este grupo se não tiver acesso
+                                        }
+                                        
+                                        // Coletar itens com acesso para verificar se o grupo não está vazio (mobile)
+                                        $itensComAcessoMobile = [];
+                                        foreach ($grupo['itens'] as $item) {
+                                            $temAcesso = false;
+                                            if (isset($item['perfis']) && !empty($item['perfis'])) {
+                                                $temAcesso = temPermissao($item, $perfilAtual);
+                                            } elseif (isset($grupo['perfis']) && !empty($grupo['perfis'])) {
+                                                $temAcesso = temPermissao($grupo, $perfilAtual);
+                                            } else {
+                                                $temAcesso = temPermissao($menu, $perfilAtual);
+                                            }
+                                            if ($temAcesso) {
+                                                $itensComAcessoMobile[] = $item;
+                                            }
+                                        }
+                                        
+                                        // Se não houver itens com acesso, pular o grupo
+                                        if (empty($itensComAcessoMobile)) {
+                                            continue;
+                                        }
+                                        ?>
                                         <div class="ml-8 mt-2">
                                             <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                                                 <?= $grupo['label'] ?>
                                             </h4>
-                                            <?php foreach ($grupo['itens'] as $item): ?>
+                                            <?php foreach ($itensComAcessoMobile as $item): ?>
                                                 <a href="<?= isset($item['url']) ? $baseUrl . $item['url'] : '#' ?>" 
                                                    class="flex items-center justify-between px-3 py-2 text-sm text-gray-400 dark:text-gray-300 hover:text-white hover:bg-gray-800 dark:hover:bg-gray-800 rounded">
                                                     <span><?= $item['label'] ?></span>

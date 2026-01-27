@@ -31,8 +31,8 @@ if ($periodo === 'hoje') {
     $data_fim = date('Y-12-31');
 }
 
-// Query base para artes
-$where = ["DATE(av.created_at) BETWEEN ? AND ?"];
+// Query base para artes (otimizado: sem DATE() para permitir uso de índices)
+$where = ["av.created_at >= ?::date AND av.created_at < (?::date + INTERVAL '1 day')"];
 $params = [$data_inicio, $data_fim];
 
 // Filtro por arte-finalista
@@ -148,7 +148,7 @@ try {
             COUNT(*) FILTER (WHERE av.status = 'reprovado') as reprovadas,
             COUNT(*) FILTER (WHERE av.status = 'pendente' OR av.status IS NULL) as pendentes
         FROM usuarios u
-        INNER JOIN arte_versoes av ON av.usuario_id = u.id AND DATE(av.created_at) BETWEEN ? AND ?
+        INNER JOIN arte_versoes av ON av.usuario_id = u.id AND av.created_at >= ?::date AND av.created_at < (?::date + INTERVAL '1 day')
         WHERE u.perfil = 'arte_finalista'
         GROUP BY u.id, u.nome
         ORDER BY total_versoes DESC
@@ -170,7 +170,7 @@ try {
             COUNT(*) as total,
             COUNT(DISTINCT pedido_id) as total_pedidos
         FROM arte_versoes
-        WHERE DATE(created_at) BETWEEN ? AND ?
+        WHERE created_at >= ?::date AND created_at < (?::date + INTERVAL '1 day')
         GROUP BY status
         ORDER BY total DESC
     ";

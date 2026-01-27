@@ -5,33 +5,44 @@ require_once '../../app/functions.php';
 
 requireLogin();
 
-$pedido_id = $_GET['id'] ?? null;
+// Validar ID do pedido
+$pedido_id = validarPedidoId($_GET['id'] ?? null);
 
 if (!$pedido_id) {
+    $_SESSION['erro'] = 'ID do orçamento inválido';
     header('Location: orcamentos.php');
     exit;
 }
 
 // Buscar orçamento
-$stmt = $pdo->prepare("
-    SELECT p.*, 
-           c.nome as cliente_nome, 
-           c.telefone as cliente_telefone,
-           c.email as cliente_email,
-           c.cpf_cnpj as cliente_cpf_cnpj,
-           c.endereco as cliente_endereco,
-           u.nome as vendedor_nome,
-           u.email as vendedor_email
-    FROM pedidos p
-    LEFT JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN usuarios u ON p.vendedor_id = u.id
-    WHERE p.id = ? AND p.status = 'orcamento'
-");
-$stmt->execute([$pedido_id]);
-$orcamento = $stmt->fetch();
-
-if (!$orcamento) {
-    $_SESSION['erro'] = 'Orçamento não encontrado';
+try {
+    $stmt = $pdo->prepare("
+        SELECT p.*, 
+               c.nome as cliente_nome, 
+               c.telefone as cliente_telefone,
+               c.email as cliente_email,
+               c.cpf_cnpj as cliente_cpf_cnpj,
+               c.endereco as cliente_endereco,
+               u.nome as vendedor_nome,
+               u.email as vendedor_email
+        FROM pedidos p
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios u ON p.vendedor_id = u.id
+        WHERE p.id = ? AND p.status = 'orcamento'
+    ");
+    $stmt->execute([$pedido_id]);
+    $orcamento = $stmt->fetch();
+    
+    if (!$orcamento) {
+        throw new Exception('Orçamento não encontrado');
+    }
+} catch (PDOException $e) {
+    error_log("Erro ao buscar orçamento: " . $e->getMessage());
+    $_SESSION['erro'] = 'Erro ao carregar dados do orçamento';
+    header('Location: orcamentos.php');
+    exit;
+} catch (Exception $e) {
+    $_SESSION['erro'] = $e->getMessage();
     header('Location: orcamentos.php');
     exit;
 }
@@ -45,7 +56,7 @@ if ($_SESSION['user_perfil'] === 'vendedor' && $orcamento['vendedor_id'] != $_SE
 
 // Buscar itens
 $stmt = $pdo->prepare("
-    SELECT pi.*, pc.codigo as produto_codigo
+    SELECT pi.*, pc.id as produto_codigo, pc.nome as produto_nome
     FROM pedido_itens pi
     LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id
     WHERE pi.pedido_id = ?
