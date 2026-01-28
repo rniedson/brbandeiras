@@ -56,14 +56,15 @@ try {
     // Salvar no banco
     $stmt = $pdo->prepare("
         INSERT INTO pedido_arquivos (
-            pedido_id, nome_arquivo, caminho, tipo, tamanho, 
+            pedido_id, nome_arquivo, nome_original, caminho, tipo, tamanho, 
             usuario_id, uploaded_by, uploaded_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ");
     
     $stmt->execute([
         $pedido_id,
-        $arquivo['name'],
+        $new_filename,           // nome_arquivo (nome único gerado)
+        $arquivo['name'],        // nome_original (nome original)
         'uploads/pedidos/' . $new_filename,
         $arquivo['type'],
         $arquivo['size'],

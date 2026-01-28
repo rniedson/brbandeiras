@@ -392,14 +392,15 @@ try {
         $stmt = $pdo->prepare("
             INSERT INTO pedido_arquivos (
                 pedido_id, 
-                nome_arquivo, 
+                nome_arquivo,
+                nome_original,
                 caminho,
                 tipo,
                 tamanho,
                 usuario_id,
                 uploaded_by,
                 uploaded_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ");
         
         $allowed_types = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'ai', 'cdr', 'psd'];
@@ -429,7 +430,8 @@ try {
             if (move_uploaded_file($file_tmp, $file_path)) {
                 $stmt->execute([
                     $pedido_id,
-                    $filename,
+                    $new_filename,        // nome_arquivo (nome único gerado)
+                    $filename,            // nome_original (nome original do arquivo)
                     'uploads/pedidos/' . $new_filename,
                     $file_type,
                     $file_size,
