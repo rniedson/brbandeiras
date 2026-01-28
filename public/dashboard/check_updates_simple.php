@@ -59,10 +59,10 @@ register_shutdown_function(function() use (&$response_sent) {
 });
 
 try {
-    // Carregar configurações
+    // Carregar configurações usando __DIR__ para caminhos absolutos
     // O config.php já inicia a sessão, então não precisamos fazer nada especial
-    require_once '../../app/config.php';
-    require_once '../../app/auth.php';
+    require_once __DIR__ . '/../../app/config.php';
+    require_once __DIR__ . '/../../app/auth.php';
     
     // Verificar autenticação
     if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
