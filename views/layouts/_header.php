@@ -243,34 +243,26 @@ $paginaAtual = basename($_SERVER['PHP_SELF']);
 // Verificar se está no modo "Ver Como"
 $modoVerComo = function_exists('isVerComoAtivo') ? isVerComoAtivo() : false;
 
-// Calcular base URL para links (usar caminhos absolutos baseados no DocumentRoot)
-// Obter caminho do script atual
-$scriptPath = $_SERVER['SCRIPT_NAME']; // Ex: /brbandeiras/public/dashboard/dashboard.php ou /public/dashboard/dashboard.php
+// Calcular base URL para links
+// Detectar automaticamente se estamos em servidor de produção ou desenvolvimento
+$documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 
-// Normalizar o caminho
-$scriptPath = str_replace('//', '/', $scriptPath);
-
-// Encontrar onde está 'public' no caminho para determinar o prefixo base
-$publicPos = strpos($scriptPath, '/public/');
-if ($publicPos !== false) {
-    // Extrair tudo até '/public/' incluindo
-    $basePath = substr($scriptPath, 0, $publicPos + 7); // 7 = strlen('/public/')
-    $baseUrl = $basePath; // Ex: /brbandeiras/public/ ou /public/
+// Se o DocumentRoot termina com /public ou contém /public no final, estamos em produção
+// onde o DocumentRoot aponta diretamente para a pasta public
+if (preg_match('#/public/?$#', $documentRoot) || 
+    (strpos($scriptName, '/public/') === false && strpos($documentRoot, '/var/www/') !== false)) {
+    // Produção: DocumentRoot = /var/www/brbandeiras/public
+    // Os links devem ser relativos à raiz (ex: /dashboard/dashboard.php)
+    $baseUrl = '/';
 } else {
-    // Fallback: assumir que estamos em /brbandeiras/public/
-    // Ou tentar detectar do DocumentRoot
-    $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
-    $scriptFile = $_SERVER['SCRIPT_FILENAME'] ?? '';
-    
-    // Tentar encontrar 'public' no caminho do arquivo
-    if (strpos($scriptFile, '/public/') !== false) {
-        $parts = explode('/public/', $scriptFile);
-        $beforePublic = $parts[0];
-        // Calcular caminho relativo ao DocumentRoot
-        $relativeToDocRoot = str_replace($documentRoot, '', $beforePublic);
-        $baseUrl = $relativeToDocRoot . '/public/';
+    // Desenvolvimento: DocumentRoot pode ser /Applications/AMPPS/www ou similar
+    // Procurar /public/ no SCRIPT_NAME
+    $publicPos = strpos($scriptName, '/public/');
+    if ($publicPos !== false) {
+        $baseUrl = substr($scriptName, 0, $publicPos + 8); // 8 = strlen('/public/')
     } else {
-        // Último fallback: usar caminho padrão
+        // Fallback: usar caminho padrão de desenvolvimento
         $baseUrl = '/brbandeiras/public/';
     }
 }
@@ -295,14 +287,14 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
     <link rel="preload" href="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js" as="script">
     
     <!-- Tailwind CSS - Build local -->
-    <link rel="stylesheet" href="/public/css/tailwind.min.css">
+    <link rel="stylesheet" href="<?= $baseUrl ?>css/tailwind.min.css">
     
     <!-- Preload da fonte crítica para otimizar cadeia de dependências -->
-    <link rel="preload" href="/public/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?= $baseUrl ?>webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
     
     <!-- Font Awesome para ícones - Hospedado localmente -->
-    <link rel="preload" href="/public/css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="/public/css/font-awesome/all.min.css"></noscript>
+    <link rel="preload" href="<?= $baseUrl ?>css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="<?= $baseUrl ?>css/font-awesome/all.min.css"></noscript>
     <style>
     /* Otimização Font Awesome: font-display swap para evitar FOIT */
     /* Sobrescrever font-display do Font Awesome para usar swap */
@@ -321,7 +313,7 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
     /* Aplicar font-display: swap especificamente para fa-solid-900 */
     @font-face {
         font-family: 'Font Awesome 6 Free';
-        src: url('/public/webfonts/fa-solid-900.woff2') format('woff2');
+        src: url('<?= $baseUrl ?>webfonts/fa-solid-900.woff2') format('woff2');
         font-display: swap !important;
         font-weight: 900;
         font-style: normal;

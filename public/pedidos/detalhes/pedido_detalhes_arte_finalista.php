@@ -346,8 +346,8 @@ include '../../../views/layouts/_header.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $titulo ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preload" href="/public/css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="/public/css/font-awesome/all.min.css"></noscript>
+    <link rel="preload" href="<?= $baseUrl ?>css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="<?= $baseUrl ?>css/font-awesome/all.min.css"></noscript>
     <style>
         .preview-grid {
             display: grid;

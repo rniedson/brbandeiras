@@ -140,11 +140,12 @@ require_once '../../app/auth.php';
 require_once '../../app/functions.php';
 
 requireLogin();
-requireRole(['gestor']);
+requireRole(['gestor', 'admin', 'financeiro']);
 
 // Verificação adicional de segurança
 $arquivo_atual = basename($_SERVER['PHP_SELF']);
-if ($_SESSION['user_perfil'] !== 'gestor') {
+$perfis_permitidos = ['gestor', 'admin', 'financeiro'];
+if (!in_array($_SESSION['user_perfil'] ?? '', $perfis_permitidos)) {
     registrarLog('acesso_negado_dashboard', 
         "Usuário {$_SESSION['user_nome']} (Perfil: {$_SESSION['user_perfil']}) tentou acessar {$arquivo_atual}");
     $_SESSION['erro'] = 'Acesso negado. Redirecionando para seu dashboard.';

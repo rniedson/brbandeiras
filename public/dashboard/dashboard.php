@@ -20,12 +20,19 @@ switch ($_SESSION['user_perfil']) {
         break;
         
     case 'arte_finalista':
+    case 'arte':
         header('Location: dashboard_arte_finalista.php' . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
         break;
         
+    case 'admin':
+    case 'financeiro':
+        // Admin e financeiro usam o dashboard do gestor
+        header('Location: dashboard_gestor.php' . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
+        break;
+        
     default:
-        $_SESSION['erro'] = 'Perfil de usuário não reconhecido';
-        header('Location: login.php');
+        $_SESSION['erro'] = 'Perfil de usuário não reconhecido: ' . ($_SESSION['user_perfil'] ?? 'não definido');
+        header('Location: ../index.php');
         break;
 }
 
