@@ -33,23 +33,22 @@ if ($userId) {
 
 // Redirecionar para a página de login
 // Calcular caminho base automaticamente
-$scriptPath = $_SERVER['SCRIPT_NAME'] ?? '/public/logout.php';
-$scriptPath = str_replace('//', '/', $scriptPath);
+$documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 
-// Encontrar onde está '/public/' no caminho
-$publicPos = strpos($scriptPath, '/public/');
-if ($publicPos !== false) {
-    // Extrair tudo até '/public/' incluindo a barra final
-    $basePath = substr($scriptPath, 0, $publicPos + 7); // 7 = strlen('/public/')
-    // Garantir que termina com /
-    $basePath = rtrim($basePath, '/') . '/';
-    $redirectUrl = $basePath . 'index.php';
+// Se o DocumentRoot termina com /public ou contém /var/www/, estamos em produção
+if (preg_match('#/public/?$#', $documentRoot) || 
+    (strpos($scriptName, '/public/') === false && strpos($documentRoot, '/var/www/') !== false)) {
+    // Produção: DocumentRoot = /var/www/brbandeiras/public
+    $redirectUrl = '/index.php';
 } else {
-    // Fallback: tentar detectar de outra forma
-    $scriptDir = dirname($scriptPath);
-    if ($scriptDir === '/public' || strpos($scriptDir, '/public') !== false) {
-        $redirectUrl = '/public/index.php';
+    // Desenvolvimento: DocumentRoot pode ser /Applications/AMPPS/www ou similar
+    $publicPos = strpos($scriptName, '/public/');
+    if ($publicPos !== false) {
+        $basePath = substr($scriptName, 0, $publicPos + 8); // 8 = strlen('/public/')
+        $redirectUrl = $basePath . 'index.php';
     } else {
+        // Fallback: usar caminho padrão de desenvolvimento
         $redirectUrl = '/brbandeiras/public/index.php';
     }
 }
