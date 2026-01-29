@@ -35,13 +35,13 @@ if (!RateLimiter::check('login', null, 5, 900)) { // 5 tentativas em 15 minutos
 }
 
 // Processar login
-$email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
+$username = trim($_POST['username'] ?? '');
 $senha = $_POST['senha'] ?? '';
 
 // Validar dados obrigatórios
-if (empty($email) || empty($senha)) {
+if (empty($username) || empty($senha)) {
     RateLimiter::recordAttempt('login'); // Registrar tentativa inválida
-    $_SESSION['erro'] = 'E-mail e senha são obrigatórios';
+    $_SESSION['erro'] = 'Nome de usuário e senha são obrigatórios';
     header('Location: index.php');
     exit;
 }
@@ -52,8 +52,8 @@ try {
         throw new Exception('Conexão com banco de dados não disponível');
     }
     
-    $stmt = $pdo->prepare("SELECT id, nome, email, senha, perfil FROM usuarios WHERE email = ? AND ativo = true");
-    $stmt->execute([$email]);
+    $stmt = $pdo->prepare("SELECT id, nome, email, senha, perfil FROM usuarios WHERE nome = ? AND ativo = true");
+    $stmt->execute([$username]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($usuario && password_verify($senha, $usuario['senha'])) {
@@ -92,7 +92,7 @@ try {
             $minutes = ceil($remainingTime / 60);
             $_SESSION['erro'] = "Muitas tentativas de login. Tente novamente em {$minutes} minuto(s).";
         } else {
-            $_SESSION['erro'] = "E-mail ou senha inválidos. Você tem {$remainingAttempts} tentativa(s) restante(s).";
+            $_SESSION['erro'] = "Usuário ou senha inválidos. Você tem {$remainingAttempts} tentativa(s) restante(s).";
         }
         
         header('Location: index.php');

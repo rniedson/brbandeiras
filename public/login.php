@@ -1075,22 +1075,21 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
       <!-- Formulário -->
       <form id="loginForm" method="POST" action="auth.php">
         <?= CSRF::getField() ?>
-        <!-- Email -->
+        <!-- Nome de Usuário -->
         <div class="form-group">
-          <label for="email" class="form-label">E-mail</label>
+          <label for="username" class="form-label">Nome de Usuário</label>
           <div class="input-wrapper">
             <svg class="input-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
             </svg>
             <input 
-              type="email" 
-              id="email" 
-              name="email" 
+              type="text" 
+              id="username" 
+              name="username" 
               class="form-input" 
-              placeholder="seu@brbandeiras.com.br"
+              placeholder="seu.usuario"
               required
-              autocomplete="email"
+              autocomplete="username"
             >
           </div>
         </div>
@@ -1190,42 +1189,42 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
     const submitBtn = document.getElementById('submitBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const initialLoading = document.getElementById('initialLoading');
-    const emailInput = document.getElementById('email');
+    const usernameInput = document.getElementById('username');
 
-    // ========== FUNCIONALIDADE DE EMAIL NO LOCALSTORAGE ==========
+    // ========== FUNCIONALIDADE DE USERNAME NO LOCALSTORAGE ==========
     // Chave para armazenar no localStorage
-    const STORAGE_KEY = 'brBandeirasEmail';
+    const STORAGE_KEY = 'brBandeirasUsername';
     
-    // Carregar email salvo quando a página carregar
+    // Carregar username salvo quando a página carregar
     window.addEventListener('DOMContentLoaded', () => {
-      const savedEmail = localStorage.getItem(STORAGE_KEY);
-      if (savedEmail) {
-        emailInput.value = savedEmail;
-        // Focar direto no campo de senha se já tem email
+      const savedUsername = localStorage.getItem(STORAGE_KEY);
+      if (savedUsername) {
+        usernameInput.value = savedUsername;
+        // Focar direto no campo de senha se já tem username
         passwordInput.focus();
       } else {
-        // Caso contrário, focar no campo de email
-        emailInput.focus();
+        // Caso contrário, focar no campo de username
+        usernameInput.focus();
       }
     });
 
-    // Salvar email quando o usuário digitar
-    let emailSaved = false;
-    emailInput.addEventListener('blur', () => {
-      const email = emailInput.value.trim();
+    // Salvar username quando o usuário digitar
+    let usernameSaved = false;
+    usernameInput.addEventListener('blur', () => {
+      const username = usernameInput.value.trim();
       
-      // Só salva se for um email válido com @brbandeiras.com.br
-      if (email && email.includes('@') && !emailSaved) {
-        localStorage.setItem(STORAGE_KEY, email);
-        emailSaved = true;
+      // Só salva se tiver valor
+      if (username && !usernameSaved) {
+        localStorage.setItem(STORAGE_KEY, username);
+        usernameSaved = true;
       }
     });
 
     // Também salvar ao submeter o formulário (para garantir)
     form.addEventListener('submit', (e) => {
-      const email = emailInput.value.trim();
-      if (email && email.includes('@')) {
-        localStorage.setItem(STORAGE_KEY, email);
+      const username = usernameInput.value.trim();
+      if (username) {
+        localStorage.setItem(STORAGE_KEY, username);
       }
     });
 
@@ -1398,15 +1397,15 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
     window.addEventListener('load', adjustMobileLayout);
     window.addEventListener('resize', adjustMobileLayout);
 
-    // ========== FUNCIONALIDADE ADICIONAL: LIMPAR EMAIL ==========
-    // Permitir que o usuário limpe o email salvo segurando Ctrl+Shift+L
+    // ========== FUNCIONALIDADE ADICIONAL: LIMPAR USERNAME ==========
+    // Permitir que o usuário limpe o username salvo segurando Ctrl+Shift+L
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'L') {
-        if (confirm('Deseja limpar o e-mail salvo?')) {
+        if (confirm('Deseja limpar o usuário salvo?')) {
           localStorage.removeItem(STORAGE_KEY);
-          emailInput.value = '';
-          emailInput.focus();
-          emailSaved = false;
+          usernameInput.value = '';
+          usernameInput.focus();
+          usernameSaved = false;
         }
       }
     });
