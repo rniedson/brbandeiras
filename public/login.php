@@ -72,7 +72,7 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
 
   <style>
     /* BR Bandeiras - Sistema de Login
-       Versão: 3.2 - Com localStorage para email e sessão estendida
+       Versão: 3.3 - Com localStorage para username e sessão estendida
        Características:
        - Loading inicial de 3s com curiosidade sobre bandeiras
        - Background dinâmico com rotação de imagens
@@ -81,7 +81,7 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
        - Animações suaves e profissionais
        - Design totalmente responsivo
        - Layout mobile otimizado sem seção de departamentos
-       - Email salvo no localStorage após primeiro uso
+       - Username salvo no localStorage após primeiro uso
        - Sessão de 14 horas
     */
     
