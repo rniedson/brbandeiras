@@ -1,0 +1,131 @@
+{
+  "Centro Goiano": {
+    "Anápolis": [
+      "Anápolis", "Araçu", "Brazabrantes", "Campo Limpo de Goiás",
+      "Caturaí", "Damolândia", "Heitoraí", "Inhumas", "Itaberaí",
+      "Itaguari", "Itaguaru", "Itauçu", "Jaraguá", "Jesúpolis",
+      "Nova Veneza", "Ouro Verde de Goiás", "Petrolina de Goiás",
+      "Santa Rosa de Goiás", "São Francisco de Goiás", "Taquaral de Goiás"
+    ],
+    "Ceres": [
+      "Barro Alto", "Carmo do Rio Verde", "Ceres", "Goianésia", "Guaraíta",
+      "Guarinos", "Hidrolina", "Ipiranga de Goiás", "Itapaci", "Itapuranga",
+      "Morro Agudo de Goiás", "Nova América", "Nova Glória", "Pilar de Goiás",
+      "Rialma", "Rianápolis", "Rubiataba", "Santa Isabel",
+      "Santa Rita do Novo Destino", "São Luíz do Norte", "São Patrício", "Uruana"
+    ],
+    "Goiânia": [
+      "Abadia de Goiás", "Aparecida de Goiânia", "Aragoiânia",
+      "Bela Vista de Goiás", "Bonfinópolis", "Caldazinha", "Goianápolis",
+      "Goiânia", "Goianira", "Guapó", "Hidrolândia", "Leopoldo de Bulhões",
+      "Nerópolis", "Santo Antônio de Goiás", "Senador Canedo",
+      "Terezópolis de Goiás", "Trindade"
+    ],
+    "Anicuns": [
+      "Adelândia", "Americano do Brasil", "Anicuns", "Aurilândia",
+      "Avelinópolis", "Buriti de Goiás", "Firminópolis", "Mossâmedes",
+      "Nazário", "Sanclerlândia", "Santa Bárbara de Goiás",
+      "São Luís de Montes Belos", "Turvânia"
+    ],
+    "Iporá": [
+      "Amorinópolis", "Cachoeira de Goiás", "Córrego do Ouro",
+      "Fazenda Nova", "Israelândia", "Iporá", "Ivolândia", "Jaupaci",
+      "Moiporá", "Novo Brasil", "Palestina de Goiás"
+    ]
+  },
+
+  "Leste Goiano": {
+    "Entorno do Distrito Federal": [
+      "Abadiânia", "Água Fria de Goiás", "Águas Lindas de Goiás", "Alexânia",
+      "Cabeceiras", "Cidade Ocidental", "Cocalzinho de Goiás",
+      "Corumbá de Goiás", "Cristalina", "Formosa", "Luziânia",
+      "Mimoso de Goiás", "Novo Gama", "Padre Bernardo", "Pirenópolis",
+      "Planaltina", "Santo Antônio do Descoberto", "Valparaíso de Goiás",
+      "Vila Boa", "Vila Propício"
+    ],
+    "Vão do Paranã": [
+      "Alvorada do Norte", "Buritinópolis", "Damianópolis",
+      "Divinópolis de Goiás", "Flores de Goiás", "Guarani de Goiás",
+      "Iaciara", "Mambaí", "Posse", "São Domingos", "Simolândia",
+      "Sítio d'Abadia"
+    ]
+  },
+
+  "Noroeste Goiano": {
+    "Rio Vermelho": [
+      "Araguapaz", "Aruanã", "Britânia", "Faina", "Goiás",
+      "Itapirapuã", "Jussara", "Matrinchã", "Santa Fé de Goiás"
+    ],
+    "São Miguel do Araguaia": [
+      "Crixás", "Mozarlândia", "Mundo Novo", "Nova Crixás",
+      "Novo Planalto", "São Miguel do Araguaia", "Uirapuru"
+    ],
+    "Aragarças": [
+      "Aragarças", "Arenópolis", "Baliza", "Bom Jardim de Goiás",
+      "Diorama", "Montes Claros de Goiás", "Piranhas"
+    ]
+  },
+
+  "Norte Goiano": {
+    "Porangatu": [
+      "Alto Horizonte", "Amaralina", "Bonópolis", "Campinaçu", "Campinorte",
+      "Campos Verdes", "Estrela do Norte", "Formoso", "Mara Rosa", "Minaçu",
+      "Montividiu do Norte", "Mutunópolis", "Niquelândia",
+      "Nova Iguaçu de Goiás", "Porangatu", "Santa Tereza de Goiás",
+      "Santa Terezinha de Goiás", "Trombas", "Uruaçu"
+    ],
+    "Chapada dos Veadeiros": [
+      "Alto Paraíso de Goiás", "Campos Belos", "Cavalcante", "Colinas do Sul",
+      "Monte Alegre de Goiás", "Nova Roma", "São João d'Aliança",
+      "Teresina de Goiás"
+    ]
+  },
+
+  "Oeste Goiano": {
+    "Sudoeste de Goiás": [
+      "Aparecida do Rio Doce", "Aporé", "Caiapônia", "Castelândia",
+      "Chapadão do Céu", "Doverlândia", "Jataí", "Maurilândia", "Mineiros",
+      "Montividiu", "Perolândia", "Portelândia", "Rio Verde",
+      "Santa Helena de Goiás", "Santa Rita do Araguaia",
+      "Santo Antônio da Barra", "Serranópolis"
+    ],
+    "Vale do Rio dos Bois": [
+      "Acreúna", "Campestre de Goiás", "Cezarina", "Edealina", "Edéia",
+      "Indiara", "Jandaia", "Palmeiras de Goiás", "Palminópolis", "Paraúna",
+      "São João da Paraúna", "Turvelândia", "Varjão"
+    ]
+  },
+
+  "Sul Goiano": {
+    "Sudeste Goiano": [
+      "Campo Alegre de Goiás", "Catalão", "Corumbaíba", "Cumari",
+      "Davinópolis", "Goiandira", "Ipameri", "Nova Aurora", "Ouvidor",
+      "Três Ranchos"
+    ],
+    "Vale do Rio Paranaíba": [
+      "Buriti Alegre", "Cachoeira Dourada", "Inaciolândia",
+      "Itumbiara", "Panamá"
+    ],
+    "Meia Ponte": [
+      "Água Limpa", "Aloândia", "Bom Jesus de Goiás", "Caldas Novas",
+      "Cromínia", "Goiatuba", "Inaciolândia", "Itumbiara", "Joviânia",
+      "Mairipotaba", "Marzagão", "Morrinhos", "Piracanjuba",
+      "Pontalina", "Porteirão", "Professor Jamil", "Rio Quente",
+      "Vicentinópolis"
+    ],
+    "Pires do Rio": [
+      "Cristianópolis", "Gameleira de Goiás", "Orizona", "Palmelo",
+      "Pires do Rio", "Santa Cruz de Goiás", "São Miguel do Passa Quatro",
+      "Silvânia", "Urutaí", "Vianópolis"
+    ],
+    "Catalão": [
+      "Anhanguera", "Campo Alegre de Goiás", "Catalão", "Corumbaíba",
+      "Cumari", "Davinópolis", "Goiandira", "Ipameri", "Nova Aurora",
+      "Ouvidor", "Três Ranchos"
+    ],
+    "Quirinópolis": [
+      "Cachoeira Alta", "Caçu", "Gouvelândia", "Itajá", "Itarumã",
+      "Lagoa Santa", "Paranaiguara", "Quirinópolis", "São Simão"
+    ]
+  }
+}

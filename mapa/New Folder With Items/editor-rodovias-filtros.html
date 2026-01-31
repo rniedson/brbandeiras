@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Rodovias Federais - Análise de Interseções</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        
+        .sidebar {
+            height: 100vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            box-shadow: -4px 0 30px rgba(0,0,0,0.4);
+            color: white;
+        }
+        .sidebar::-webkit-scrollbar { width: 10px; }
+        .sidebar::-webkit-scrollbar-track { background: #0f172a; }
+        .sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 5px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .filter-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .filter-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .select-field {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .select-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .select-field option {
+            background: #1e293b;
+            color: white;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 4px 0;
+        }
+        .checkbox-container:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .checkbox-input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+            border-radius: 16px;
+            padding: 16px 12px;
+            text-align: center;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: transform 0.3s;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        
+        .color-mode-btn {
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .color-mode-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #3b82f6;
+        }
+        .color-mode-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #3b82f6;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            margin: 6px 0;
+        }
+        
+        .legend-color {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            color: #1e293b;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            animation: slideInUp 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 400px;
+        }
+        @keyframes slideInUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .btn {
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .spinner {
+            width: 64px;
+            height: 64px;
+            border: 6px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .intersection-marker {
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+        }
+        
+        .leaflet-tooltip {
+            background: rgba(30, 41, 59, 0.95) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: #1e293b !important;
+            color: white !important;
+            border-radius: 12px !important;
+            padding: 0 !important;
+        }
+        .leaflet-popup-content {
+            margin: 16px !important;
+        }
+        .leaflet-popup-tip {
+            background: #1e293b !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // Cores para diferentes modos de visualização
+        const BR_COLORS = {
+            '010': '#ef4444', '020': '#f59e0b', '030': '#10b981', '040': '#3b82f6',
+            '050': '#8b5cf6', '060': '#ec4899', '070': '#14b8a6', '080': '#f97316',
+            '101': '#6366f1', '110': '#84cc16', '116': '#06b6d4', '120': '#a855f7',
+            '135': '#eab308', '153': '#22c55e', '158': '#0ea5e9', '163': '#f43f5e',
+            '174': '#64748b', '210': '#facc15', '222': '#4ade80', '226': '#2dd4bf',
+            '230': '#818cf8', '242': '#fb923c', '251': '#c084fc', '262': '#34d399',
+            '272': '#38bdf8', '282': '#fbbf24', '293': '#a78bfa', '304': '#4ade80',
+            '316': '#60a5fa', '324': '#f472b6', '364': '#fcd34d', '381': '#86efac',
+            '401': '#7dd3fc', '415': '#fca5a5', '420': '#d8b4fe', '429': '#fed7aa'
+        };
+
+        const PAVIMENTACAO_COLORS = {
+            'DUP': '#10b981', // Verde - Duplicada
+            'PAV': '#3b82f6', // Azul - Pavimentada
+            'PLA': '#f59e0b', // Laranja - Planejada
+            'LEN': '#6b7280', // Cinza - Leito Natural
+            'IMP': '#ef4444', // Vermelho - Implantada
+            'EOI': '#8b5cf6', // Roxo - Em Obras de Implantação
+            'EOP': '#ec4899', // Rosa - Em Obras de Pavimentação
+            'EOD': '#14b8a6', // Teal - Em Obras de Duplicação
+            'TRV': '#f97316'  // Laranja escuro - Travessia
+        };
+
+        const PAVIMENTACAO_LABELS = {
+            'PLA': 'Planejada',
+            'LEN': 'Leito Natural',
+            'IMP': 'Implantada',
+            'PAV': 'Pavimentada',
+            'DUP': 'Duplicada',
+            'EOI': 'Em Obras de Implantação',
+            'EOP': 'Em Obras de Pavimentação',
+            'EOD': 'Em Obras de Duplicação',
+            'TRV': 'Travessia'
+        };
+
+        const JURISDICAO_COLORS = {
+            'Federal': '#3b82f6',
+            'Estadual': '#10b981',
+            'Distrital': '#f59e0b',
+            'Municipal': '#8b5cf6'
+        };
+
+        const UF_COLORS = {
+            'AC': '#FF6B6B', 'AL': '#4ECDC4', 'AP': '#45B7D1', 'AM': '#FFA07A',
+            'BA': '#98D8C8', 'CE': '#F7DC6F', 'DF': '#BB8FCE', 'ES': '#85C1E2',
+            'GO': '#F8B739', 'MA': '#52B3D9', 'MT': '#E59866', 'MS': '#AED6F1',
+            'MG': '#A9CCE3', 'PA': '#F9E79F', 'PB': '#D7BDE2', 'PR': '#A3E4D7',
+            'PE': '#FAD7A0', 'PI': '#D5F4E6', 'RJ': '#FADBD8', 'RN': '#E8DAEF',
+            'RS': '#D6EAF8', 'RO': '#FCF3CF', 'RR': '#EBDEF0', 'SC': '#D1F2EB',
+            'SP': '#FAE5D3', 'SE': '#F6DDCC', 'TO': '#E8F8F5'
+        };
+
+        // Componente Toast
+        const Toast = ({ message, show }) => {
+            if (!show) return null;
+            return (
+                <div className="toast">
+                    <i className="fas fa-check-circle text-green-500 text-xl"></i>
+                    <span className="font-semibold">{message}</span>
+                </div>
+            );
+        };
+
+        // Componente de Loading
+        const Loading = ({ show, message }) => {
+            if (!show) return null;
+            return (
+                <div className="loading-overlay">
+                    <div className="text-center">
+                        <div className="spinner mb-4"></div>
+                        <p className="text-white text-lg font-semibold">{message}</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // Componente Principal
+        const App = () => {
+            const [rodovias, setRodovias] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [loadingMessage, setLoadingMessage] = useState('Carregando rodovias...');
+            const [toast, setToast] = useState({ show: false, message: '' });
+            
+            // Filtros
+            const [filtros, setFiltros] = useState({
+                br: '',
+                uf: 'GO',
+                pavimentacao: [],
+                jurisdicao: [],
+                mostrarInterseções: false
+            });
+            
+            // Modo de coloração
+            const [modoColor, setModoColor] = useState('br'); // 'br', 'pavimentacao', 'jurisdicao', 'uf'
+            
+            const mapRef = useRef(null);
+            const rodoviasLayerRef = useRef(null);
+            const intersecoesLayerRef = useRef(null);
+
+            // Extrair valores únicos para os filtros
+            const valoresUnicos = useMemo(() => {
+                if (!rodovias) return { brs: [], ufs: [], pavimentacoes: [], jurisdicoes: [] };
+                
+                const features = rodovias.features || [];
+                return {
+                    brs: [...new Set(features.map(f => f.properties.vl_br).filter(Boolean))].sort(),
+                    ufs: [...new Set(features.map(f => f.properties.sg_uf).filter(Boolean))].sort(),
+                    pavimentacoes: [...new Set(features.map(f => f.properties.sg_legenda).filter(Boolean))].sort(),
+                    jurisdicoes: [...new Set(features.map(f => f.properties.ds_jurisdi).filter(Boolean))].sort()
+                };
+            }, [rodovias]);
+
+            // Carregar rodovias automaticamente ou via upload
+            useEffect(() => {
+                const carregarRodovias = async () => {
+                    try {
+                        // Tentar carregar do servidor primeiro
+                        const response = await fetch('rodovias_federais_brasil.json');
+                        if (response.ok) {
+                            const data = await response.json();
+                            setRodovias(data);
+                            setLoadingMessage('Processando dados...');
+                            setTimeout(() => {
+                                setLoading(false);
+                                mostrarToast('Rodovias carregadas com sucesso!');
+                            }, 500);
+                        } else {
+                            // Se não conseguir carregar, mostrar interface de upload
+                            setLoading(false);
+                        }
+                    } catch (error) {
+                        console.log('Arquivo não encontrado, aguardando upload...');
+                        setLoading(false);
+                    }
+                };
+                carregarRodovias();
+            }, []);
+
+            // Função para fazer upload do arquivo
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            setRodovias(data);
+                            mostrarToast('Arquivo carregado com sucesso!');
+                        } catch (error) {
+                            alert('Erro ao processar arquivo JSON: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            // Inicializar mapa
+            useEffect(() => {
+                if (!mapRef.current) {
+                    const map = L.map('map', {
+                        center: [-15.7801, -47.9292], // Centro do Brasil
+                        zoom: 5,
+                        zoomControl: true
+                    });
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+
+                    rodoviasLayerRef.current = L.geoJSON(null).addTo(map);
+                    intersecoesLayerRef.current = L.layerGroup().addTo(map);
+
+                    mapRef.current = map;
+                }
+            }, []);
+
+            // Filtrar rodovias
+            const rodoviasFiltradas = useMemo(() => {
+                if (!rodovias) return null;
+                
+                let features = rodovias.features || [];
+                
+                // Filtro por BR
+                if (filtros.br) {
+                    features = features.filter(f => f.properties.vl_br === filtros.br);
+                }
+                
+                // Filtro por UF
+                if (filtros.uf) {
+                    features = features.filter(f => f.properties.sg_uf === filtros.uf);
+                }
+                
+                // Filtro por Pavimentação
+                if (filtros.pavimentacao.length > 0) {
+                    features = features.filter(f => 
+                        filtros.pavimentacao.includes(f.properties.sg_legenda)
+                    );
+                }
+                
+                // Filtro por Jurisdição
+                if (filtros.jurisdicao.length > 0) {
+                    features = features.filter(f => 
+                        filtros.jurisdicao.includes(f.properties.ds_jurisdi)
+                    );
+                }
+                
+                return {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+            }, [rodovias, filtros]);
+
+            // Identificar interseções
+            const intersecoes = useMemo(() => {
+                if (!rodoviasFiltradas) return [];
+                
+                const pontos = [];
+                rodoviasFiltradas.features.forEach(feature => {
+                    const props = feature.properties;
+                    const coords = feature.geometry.coordinates;
+                    
+                    // Verificar se é interseção pelo nome do local
+                    const isIntersecaoInicio = props.ds_local_i && 
+                        (props.ds_local_i.includes('ENTR') || props.ds_local_i.includes('ACESSO'));
+                    const isIntersecaoFim = props.ds_local_f && 
+                        (props.ds_local_f.includes('ENTR') || props.ds_local_f.includes('ACESSO'));
+                    
+                    if (isIntersecaoInicio && coords.length > 0) {
+                        pontos.push({
+                            latlng: [coords[0][1], coords[0][0]],
+                            info: props.ds_local_i,
+                            br: props.vl_br,
+                            km: props.vl_km_inic
+                        });
+                    }
+                    
+                    if (isIntersecaoFim && coords.length > 0) {
+                        const lastIdx = coords.length - 1;
+                        pontos.push({
+                            latlng: [coords[lastIdx][1], coords[lastIdx][0]],
+                            info: props.ds_local_f,
+                            br: props.vl_br,
+                            km: props.vl_km_fina
+                        });
+                    }
+                });
+                
+                return pontos;
+            }, [rodoviasFiltradas]);
+
+            // Atualizar rodovias no mapa
+            useEffect(() => {
+                if (!rodoviasFiltradas || !rodoviasLayerRef.current) return;
+                
+                rodoviasLayerRef.current.clearLayers();
+                
+                const getColor = (properties) => {
+                    switch (modoColor) {
+                        case 'br':
+                            return BR_COLORS[properties.vl_br] || '#6b7280';
+                        case 'pavimentacao':
+                            return PAVIMENTACAO_COLORS[properties.sg_legenda] || '#6b7280';
+                        case 'jurisdicao':
+                            return JURISDICAO_COLORS[properties.ds_jurisdi] || '#6b7280';
+                        case 'uf':
+                            return UF_COLORS[properties.sg_uf] || '#6b7280';
+                        default:
+                            return '#3b82f6';
+                    }
+                };
+                
+                rodoviasLayerRef.current.addData(rodoviasFiltradas);
+                
+                rodoviasLayerRef.current.eachLayer(layer => {
+                    const props = layer.feature.properties;
+                    
+                    layer.setStyle({
+                        color: getColor(props),
+                        weight: 3,
+                        opacity: 0.8
+                    });
+                    
+                    // Tooltip
+                    const extensaoKm = props.vl_extensa ? ` (${props.vl_extensa} km)` : '';
+                    const tooltipContent = `BR-${props.vl_br} • ${props.sg_uf}${extensaoKm}`;
+                    layer.bindTooltip(tooltipContent, {
+                        permanent: false,
+                        direction: 'top'
+                    });
+                    
+                    // Popup
+                    const popupContent = `
+                        <div style="min-width: 250px;">
+                            <div style="font-size: 18px; font-weight: bold; color: #60a5fa; margin-bottom: 12px;">
+                                BR-${props.vl_br}
+                            </div>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; font-size: 13px;">
+                                <strong>Estado:</strong> <span>${props.sg_uf}</span>
+                                <strong>Início:</strong> <span>${props.ds_local_i || '-'}</span>
+                                <strong>Fim:</strong> <span>${props.ds_local_f || '-'}</span>
+                                <strong>KM:</strong> <span>${props.vl_km_inic} - ${props.vl_km_fina}</span>
+                                <strong>Extensão:</strong> <span>${props.vl_extensa} km</span>
+                                <strong>Superfície:</strong> <span>${props.ds_legenda}</span>
+                                <strong>Jurisdição:</strong> <span>${props.ds_jurisdi}</span>
+                            </div>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                });
+                
+                // Ajustar zoom
+                if (rodoviasFiltradas.features.length > 0) {
+                    const bounds = rodoviasLayerRef.current.getBounds();
+                    if (bounds.isValid()) {
+                        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                }
+            }, [rodoviasFiltradas, modoColor]);
+
+            // Atualizar interseções no mapa
+            useEffect(() => {
+                if (!intersecoesLayerRef.current) return;
+                
+                intersecoesLayerRef.current.clearLayers();
+                
+                if (filtros.mostrarInterseções && intersecoes.length > 0) {
+                    intersecoes.forEach(intersecao => {
+                        const icon = L.divIcon({
+                            html: '<div class="intersection-marker"></div>',
+                            className: '',
+                            iconSize: [12, 12],
+                            iconAnchor: [6, 6]
+                        });
+                        
+                        const marker = L.marker(intersecao.latlng, { icon });
+                        
+                        marker.bindPopup(`
+                            <div style="min-width: 200px;">
+                                <div style="font-size: 16px; font-weight: bold; color: #ef4444; margin-bottom: 8px;">
+                                    <i class="fas fa-exchange-alt"></i> Interseção
+                                </div>
+                                <div style="font-size: 13px; margin-bottom: 4px;">
+                                    <strong>BR-${intersecao.br}</strong>
+                                </div>
+                                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">
+                                    ${intersecao.info}
+                                </div>
+                                <div style="font-size: 11px; color: #64748b;">
+                                    KM ${intersecao.km}
+                                </div>
+                            </div>
+                        `);
+                        
+                        intersecoesLayerRef.current.addLayer(marker);
+                    });
+                }
+            }, [intersecoes, filtros.mostrarInterseções]);
+
+            const mostrarToast = (message) => {
+                setToast({ show: true, message });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
+
+            const limparFiltros = () => {
+                setFiltros({
+                    br: '',
+                    uf: '',
+                    pavimentacao: [],
+                    jurisdicao: [],
+                    mostrarInterseções: true
+                });
+                mostrarToast('Filtros limpos!');
+            };
+
+            const toggleFiltroArray = (tipo, valor) => {
+                setFiltros(prev => ({
+                    ...prev,
+                    [tipo]: prev[tipo].includes(valor)
+                        ? prev[tipo].filter(v => v !== valor)
+                        : [...prev[tipo], valor]
+                }));
+            };
+
+            // Estatísticas
+            const stats = useMemo(() => {
+                if (!rodoviasFiltradas) return { trechos: 0, extensao: 0, intersecoes: 0 };
+                
+                const extensaoTotal = rodoviasFiltradas.features.reduce(
+                    (sum, f) => sum + (f.properties.vl_extensa || 0), 0
+                );
+                
+                return {
+                    trechos: rodoviasFiltradas.features.length,
+                    extensao: extensaoTotal.toFixed(1),
+                    intersecoes: intersecoes.length
+                };
+            }, [rodoviasFiltradas, intersecoes]);
+
+            // Legendas baseadas no modo de coloração
+            const legendas = useMemo(() => {
+                if (!rodoviasFiltradas) return [];
+                
+                const items = new Set();
+                
+                rodoviasFiltradas.features.forEach(f => {
+                    const props = f.properties;
+                    switch (modoColor) {
+                        case 'br':
+                            if (props.vl_br) items.add(props.vl_br);
+                            break;
+                        case 'pavimentacao':
+                            if (props.sg_legenda) items.add(props.sg_legenda);
+                            break;
+                        case 'jurisdicao':
+                            if (props.ds_jurisdi) items.add(props.ds_jurisdi);
+                            break;
+                        case 'uf':
+                            if (props.sg_uf) items.add(props.sg_uf);
+                            break;
+                    }
+                });
+                
+                return Array.from(items).slice(0, 15); // Limitar a 15 itens
+            }, [rodoviasFiltradas, modoColor]);
+
+            const getColorForLegend = (item) => {
+                switch (modoColor) {
+                    case 'br':
+                        return BR_COLORS[item] || '#6b7280';
+                    case 'pavimentacao':
+                        return PAVIMENTACAO_COLORS[item] || '#6b7280';
+                    case 'jurisdicao':
+                        return JURISDICAO_COLORS[item] || '#6b7280';
+                    case 'uf':
+                        return UF_COLORS[item] || '#6b7280';
+                    default:
+                        return '#6b7280';
+                }
+            };
+
+            const getLabelForLegend = (item) => {
+                switch (modoColor) {
+                    case 'br':
+                        return `BR-${item}`;
+                    case 'pavimentacao':
+                        return PAVIMENTACAO_LABELS[item] || item;
+                    default:
+                        return item;
+                }
+            };
+
+            return (
+                <div className="flex h-screen">
+                    {/* Mapa */}
+                    <div className="flex-1">
+                        <div id="map"></div>
+                        
+                        {/* Interface de Upload quando não há dados */}
+                        {!rodovias && !loading && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: 'rgba(30, 41, 59, 0.95)',
+                                padding: '48px',
+                                borderRadius: '24px',
+                                textAlign: 'center',
+                                zIndex: 1000,
+                                border: '2px dashed rgba(59, 130, 246, 0.5)',
+                                maxWidth: '500px'
+                            }}>
+                                <i className="fas fa-upload text-6xl text-blue-400 mb-6"></i>
+                                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '12px' }}>
+                                    Carregar Rodovias
+                                </h2>
+                                <p style={{ color: '#94a3b8', marginBottom: '24px', fontSize: '14px' }}>
+                                    Faça upload do arquivo <strong>rodovias_federais_brasil.json</strong>
+                                </p>
+                                <label style={{
+                                    display: 'inline-block',
+                                    padding: '16px 32px',
+                                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                    color: 'white',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    fontSize: '16px',
+                                    transition: 'transform 0.3s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                                >
+                                    <i className="fas fa-file-upload mr-2"></i>
+                                    Selecionar Arquivo
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={handleFileUpload}
+                                        style={{ display: 'none' }}
+                                    />
+                                </label>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="sidebar w-96 p-6">
+                        <div className="mb-6">
+                            <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                                <i className="fas fa-road text-blue-400"></i>
+                                Rodovias Federais
+                            </h1>
+                            <p className="text-sm text-gray-400">Sistema de Análise e Filtros</p>
+                        </div>
+
+                        {/* Estatísticas */}
+                        <div className="grid grid-cols-3 gap-3 mb-6">
+                            <div className="stat-card">
+                                <div className="stat-value">{stats.trechos}</div>
+                                <div className="stat-label">Trechos</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-value">{stats.extensao}</div>
+                                <div className="stat-label">KM Total</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-value">{stats.intersecoes}</div>
+                                <div className="stat-label">Interseções</div>
+                            </div>
+                        </div>
+
+                        {/* Modo de Coloração */}
+                        <div className="filter-card">
+                            <div className="filter-title">
+                                <i className="fas fa-palette"></i>
+                                Modo de Coloração
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    className={`color-mode-btn ${modoColor === 'br' ? 'active' : ''}`}
+                                    onClick={() => setModoColor('br')}
+                                >
+                                    <i className="fas fa-road"></i>
+                                    BR
+                                </button>
+                                <button
+                                    className={`color-mode-btn ${modoColor === 'pavimentacao' ? 'active' : ''}`}
+                                    onClick={() => setModoColor('pavimentacao')}
+                                >
+                                    <i className="fas fa-layer-group"></i>
+                                    Pavimentação
+                                </button>
+                                <button
+                                    className={`color-mode-btn ${modoColor === 'jurisdicao' ? 'active' : ''}`}
+                                    onClick={() => setModoColor('jurisdicao')}
+                                >
+                                    <i className="fas fa-building"></i>
+                                    Jurisdição
+                                </button>
+                                <button
+                                    className={`color-mode-btn ${modoColor === 'uf' ? 'active' : ''}`}
+                                    onClick={() => setModoColor('uf')}
+                                >
+                                    <i className="fas fa-map"></i>
+                                    Estado
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Legenda */}
+                        {legendas.length > 0 && (
+                            <div className="filter-card">
+                                <div className="filter-title">
+                                    <i className="fas fa-list"></i>
+                                    Legenda
+                                </div>
+                                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                    {legendas.map(item => (
+                                        <div key={item} className="legend-item">
+                                            <div 
+                                                className="legend-color"
+                                                style={{ background: getColorForLegend(item) }}
+                                            ></div>
+                                            <span className="text-sm font-medium">
+                                                {getLabelForLegend(item)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Filtros */}
+                        <div className="filter-card">
+                            <div className="filter-title">
+                                <i className="fas fa-filter"></i>
+                                Filtrar por BR
+                            </div>
+                            <select
+                                className="select-field"
+                                value={filtros.br}
+                                onChange={(e) => setFiltros(prev => ({ ...prev, br: e.target.value }))}
+                            >
+                                <option value="">Todas as BRs</option>
+                                {valoresUnicos.brs.map(br => (
+                                    <option key={br} value={br}>BR-{br}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="filter-card">
+                            <div className="filter-title">
+                                <i className="fas fa-map-marker-alt"></i>
+                                Filtrar por Estado
+                            </div>
+                            <select
+                                className="select-field"
+                                value={filtros.uf}
+                                onChange={(e) => setFiltros(prev => ({ ...prev, uf: e.target.value }))}
+                            >
+                                <option value="">Todos os Estados</option>
+                                {valoresUnicos.ufs.map(uf => (
+                                    <option key={uf} value={uf}>{uf}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="filter-card">
+                            <div className="filter-title">
+                                <i className="fas fa-road"></i>
+                                Pavimentação
+                            </div>
+                            {valoresUnicos.pavimentacoes.map(pav => (
+                                <label key={pav} className="checkbox-container">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox-input"
+                                        checked={filtros.pavimentacao.includes(pav)}
+                                        onChange={() => toggleFiltroArray('pavimentacao', pav)}
+                                    />
+                                    <span className="text-sm">
+                                        {PAVIMENTACAO_LABELS[pav] || pav}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="filter-card">
+                            <div className="filter-title">
+                                <i className="fas fa-building"></i>
+                                Jurisdição
+                            </div>
+                            {valoresUnicos.jurisdicoes.map(jur => (
+                                <label key={jur} className="checkbox-container">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox-input"
+                                        checked={filtros.jurisdicao.includes(jur)}
+                                        onChange={() => toggleFiltroArray('jurisdicao', jur)}
+                                    />
+                                    <span className="text-sm">{jur}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="filter-card">
+                            <label className="checkbox-container">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox-input"
+                                    checked={filtros.mostrarInterseções}
+                                    onChange={(e) => setFiltros(prev => ({ 
+                                        ...prev, 
+                                        mostrarInterseções: e.target.checked 
+                                    }))}
+                                />
+                                <span className="text-sm font-semibold">
+                                    <i className="fas fa-exchange-alt mr-2"></i>
+                                    Mostrar Interseções
+                                </span>
+                            </label>
+                        </div>
+
+                        <button
+                            onClick={limparFiltros}
+                            className="btn btn-secondary w-full"
+                        >
+                            <i className="fas fa-eraser"></i>
+                            Limpar Filtros
+                        </button>
+                    </div>
+
+                    <Loading show={loading} message={loadingMessage} />
+                    <Toast message={toast.message} show={toast.show} />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Camadas de Rodovias - Sistema Refatorado</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        /* Layout Principal */
+        #map { height: 100vh; width: 100%; }
+        .sidebar {
+            height: 100vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            box-shadow: -4px 0 30px rgba(0,0,0,0.4);
+            color: white;
+            width: 320px;
+            padding: 16px;
+        }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #0f172a; }
+        .sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 5px; }
+        
+        /* Camadas */
+        .layer-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+        .layer-item:hover { background: rgba(255, 255, 255, 0.08); }
+        .layer-item.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        
+        .layer-color { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .layer-info { flex: 1; min-width: 0; }
+        .layer-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .layer-count { font-size: 10px; color: #94a3b8; }
+        .layer-actions { display: flex; align-items: center; gap: 6px; }
+        
+        /* Botões */
+        .btn-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        .btn-icon:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
+        
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+        .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #475569;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider { background-color: #3b82f6; }
+        input:checked + .toggle-slider:before { transform: translateX(18px); }
+        
+        /* Cards de Estatísticas */
+        .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+        .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 600; margin-top: 4px; }
+        
+        /* Seções */
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin: 16px 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-content {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s;
+            color: white;
+        }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* Formulários */
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 6px; display: block; }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .form-input:focus { outline: none; border-color: #3b82f6; background: rgba(255, 255, 255, 0.1); }
+        .form-input option { background: #1e293b; }
+        
+        /* Color Picker */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .color-option {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .color-option:hover { transform: scale(1.1); }
+        .color-option.selected { border-color: white; transform: scale(1.15); }
+        
+        /* Filtros */
+        .filter-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+        }
+        .filter-item:hover { background: rgba(255, 255, 255, 0.05); }
+        .checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6; }
+        
+        /* Slider */
+        .slider { width: 100%; margin: 8px 0; accent-color: #3b82f6; }
+        
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .fab:hover { transform: scale(1.1) rotate(90deg); }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            color: #1e293b;
+            padding: 12px 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            z-index: 10001;
+            animation: slideInUp 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        @keyframes slideInUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* Loading */
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Tooltips Customizados */
+        .leaflet-tooltip.custom-tooltip {
+            background: rgba(30, 41, 59, 0.98) !important;
+            color: white !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+            font-size: 12px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+            max-width: 300px !important;
+        }
+        .tooltip-row { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin: 4px 0; }
+        .tooltip-key { font-weight: 600; color: #60a5fa; }
+        .tooltip-value { color: #e2e8f0; word-break: break-word; }
+        
+        /* Popups */
+        .leaflet-popup-content-wrapper {
+            background: #1e293b !important;
+            color: white !important;
+            border-radius: 12px !important;
+            padding: 0 !important;
+        }
+        .leaflet-popup-content { margin: 16px !important; }
+        .leaflet-popup-tip { background: #1e293b !important; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        // ==================== CONSTANTES ====================
+        
+        const COLORS = {
+            PRESET: [
+                '#ef4444', '#f59e0b', '#10b981', '#3b82f6',
+                '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
+                '#6366f1', '#84cc16', '#06b6d4', '#a855f7',
+                '#eab308', '#22c55e', '#0ea5e9', '#f43f5e'
+            ]
+        };
+
+        const AUTO_LAYERS = [
+            { 
+                file: 'rodovias_federais_brasil.json',
+                name: 'BR - Federais',
+                color: '#ef4444',
+                filterState: 'GO'
+            },
+            { 
+                file: 'prf.json',
+                name: 'PRF - Postos',
+                color: '#3b82f6',
+                filterState: 'GO'
+            },
+            { 
+                file: 'rodovias_goias.json',
+                name: 'GO - Estaduais',
+                color: '#10b981',
+                filterState: 'GO'
+            }
+        ];
+
+        const MAP_CONFIG = {
+            center: [-16.6869, -49.2648],
+            zoom: 7,
+            maxZoom: 19
+        };
+
+        const STATE_FIELDS = ['Unidade_Federacao', 'sg_uf', 'UF'];
+
+        // ==================== UTILITÁRIOS ====================
+        
+        const Utils = {
+            // Gera ID único
+            generateId: () => Date.now() + Math.random(),
+            
+            // Filtra GeoJSON por propriedades
+            filterGeoJSON: (geojson, filters) => {
+                if (!geojson || !filters || Object.keys(filters).length === 0) {
+                    return geojson;
+                }
+                
+                let features = geojson.features || [];
+                
+                Object.entries(filters).forEach(([field, values]) => {
+                    if (values && values.length > 0) {
+                        features = features.filter(f => {
+                            const propValue = f.properties?.[field];
+                            return values.includes(propValue);
+                        });
+                    }
+                });
+                
+                return {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+            },
+            
+            // Extrai valores únicos de propriedades
+            extractUniqueValues: (geojson) => {
+                const features = geojson?.features || [];
+                if (features.length === 0) return {};
+                
+                const properties = features.map(f => f.properties || {});
+                const result = {};
+                
+                const firstProps = properties[0];
+                Object.keys(firstProps).forEach(key => {
+                    const values = [...new Set(properties.map(p => p[key]).filter(Boolean))];
+                    if (values.length > 0 && values.length < 100) {
+                        result[key] = values.sort();
+                    }
+                });
+                
+                return result;
+            },
+            
+            // Cria HTML para tooltip
+            createTooltipHTML: (properties, layerName) => {
+                if (!properties || Object.keys(properties).length === 0) {
+                    return `<div style="font-weight: bold;">${layerName}</div>`;
+                }
+                
+                let html = `<div style="font-weight: bold; color: #60a5fa; margin-bottom: 8px; font-size: 13px;">${layerName}</div>`;
+                html += `<div style="max-height: 300px; overflow-y: auto;">`;
+                
+                Object.entries(properties).forEach(([key, value]) => {
+                    if (value && key !== 'geom' && key !== 'geometry') {
+                        html += `<div class="tooltip-row">`;
+                        html += `<span class="tooltip-key">${key.replace(/_/g, ' ')}:</span>`;
+                        html += `<span class="tooltip-value">${value}</span>`;
+                        html += `</div>`;
+                    }
+                });
+                
+                html += `</div>`;
+                return html;
+            },
+            
+            // Carrega arquivo JSON
+            loadJSON: async (filename) => {
+                try {
+                    const response = await fetch(filename);
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (error) {
+                    console.warn(`Não foi possível carregar ${filename}`);
+                }
+                return null;
+            }
+        };
+
+        // ==================== COMPONENTES UI ====================
+        
+        const Toast = ({ message, show }) => {
+            if (!show) return null;
+            return (
+                <div className="toast">
+                    <i className="fas fa-check-circle text-green-500 text-lg"></i>
+                    <span>{message}</span>
+                </div>
+            );
+        };
+
+        const Loading = ({ show, message = 'Carregando...' }) => {
+            if (!show) return null;
+            return (
+                <div className="loading">
+                    <div style={{ textAlign: 'center' }}>
+                        <div className="spinner" style={{ margin: '0 auto 12px' }}></div>
+                        <p style={{ color: 'white', fontWeight: '600' }}>{message}</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const ColorPicker = ({ selectedColor, onColorChange }) => (
+            <div className="color-grid">
+                {COLORS.PRESET.map(color => (
+                    <div
+                        key={color}
+                        className={`color-option ${selectedColor === color ? 'selected' : ''}`}
+                        style={{ background: color }}
+                        onClick={() => onColorChange(color)}
+                    />
+                ))}
+            </div>
+        );
+
+        const FilterList = ({ field, values, selectedValues, onToggle }) => (
+            <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
+                    {field.replace(/_/g, ' ')}
+                </div>
+                <div className="filter-list">
+                    {values.slice(0, 10).map(value => (
+                        <label key={value} className="filter-item">
+                            <input
+                                type="checkbox"
+                                className="checkbox"
+                                checked={selectedValues.includes(value)}
+                                onChange={() => onToggle(field, value)}
+                            />
+                            <span>{String(value)}</span>
+                        </label>
+                    ))}
+                    {values.length > 10 && (
+                        <div style={{ fontSize: '10px', color: '#64748b', padding: '4px 8px' }}>
+                            + {values.length - 10} opções...
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+
+        // ==================== MODAIS ====================
+        
+        const AddLayerModal = ({ show, onClose, onAdd }) => {
+            const [name, setName] = useState('');
+            const [color, setColor] = useState('#3b82f6');
+            const [file, setFile] = useState(null);
+            const [geojson, setGeojson] = useState(null);
+
+            const handleFileChange = useCallback((e) => {
+                const selectedFile = e.target.files[0];
+                if (!selectedFile) return;
+                
+                setFile(selectedFile);
+                const reader = new FileReader();
+                
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        setGeojson(data);
+                        if (!name) {
+                            setName(selectedFile.name.replace(/\.(json|geojson)$/, ''));
+                        }
+                    } catch (error) {
+                        alert('Erro ao ler arquivo: ' + error.message);
+                    }
+                };
+                
+                reader.readAsText(selectedFile);
+            }, [name]);
+
+            const handleSubmit = useCallback(() => {
+                if (!name || !geojson) {
+                    alert('Preencha todos os campos');
+                    return;
+                }
+                
+                onAdd({ name, color, geojson });
+                
+                // Reset
+                setName('');
+                setColor('#3b82f6');
+                setFile(null);
+                setGeojson(null);
+            }, [name, color, geojson, onAdd]);
+
+            if (!show) return null;
+
+            return (
+                <div className="modal" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                                <i className="fas fa-plus-circle" style={{ marginRight: '8px' }}></i>
+                                Nova Camada
+                            </h2>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Nome</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Ex: Minha Camada"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Cor</label>
+                            <ColorPicker selectedColor={color} onColorChange={setColor} />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Arquivo GeoJSON</label>
+                            <label className="btn btn-secondary" style={{ width: '100%', cursor: 'pointer' }}>
+                                <i className="fas fa-upload"></i>
+                                {file ? file.name : 'Selecionar Arquivo'}
+                                <input
+                                    type="file"
+                                    accept=".json,.geojson"
+                                    onChange={handleFileChange}
+                                    style={{ display: 'none' }}
+                                />
+                            </label>
+                            {geojson && (
+                                <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px' }}>
+                                    ✓ {geojson.features?.length || 1} feature(s)
+                                </p>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+                            <button onClick={handleSubmit} className="btn btn-success" style={{ flex: 1 }}>
+                                <i className="fas fa-plus"></i>
+                                Adicionar
+                            </button>
+                            <button onClick={onClose} className="btn btn-secondary">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LayerPropertiesModal = ({ show, layer, onClose, onUpdate }) => {
+            const [localLayer, setLocalLayer] = useState(null);
+
+            useEffect(() => {
+                if (layer) {
+                    setLocalLayer({ ...layer });
+                }
+            }, [layer]);
+
+            const uniqueValues = useMemo(() => {
+                if (!localLayer?.originalGeoJSON) return {};
+                return Utils.extractUniqueValues(localLayer.originalGeoJSON);
+            }, [localLayer?.originalGeoJSON]);
+
+            const toggleFilter = useCallback((field, value) => {
+                setLocalLayer(prev => {
+                    const filters = prev.filters || {};
+                    const currentArray = filters[field] || [];
+                    const newArray = currentArray.includes(value)
+                        ? currentArray.filter(v => v !== value)
+                        : [...currentArray, value];
+                    
+                    return {
+                        ...prev,
+                        filters: { ...filters, [field]: newArray }
+                    };
+                });
+            }, []);
+
+            const handleUpdate = useCallback(() => {
+                onUpdate(localLayer);
+                onClose();
+            }, [localLayer, onUpdate, onClose]);
+
+            if (!show || !localLayer) return null;
+
+            return (
+                <div className="modal" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                                <i className="fas fa-cog" style={{ marginRight: '8px' }}></i>
+                                {localLayer.name}
+                            </h2>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Nome da Camada</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={localLayer.name}
+                                onChange={e => setLocalLayer({ ...localLayer, name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Cor</label>
+                            <ColorPicker 
+                                selectedColor={localLayer.color} 
+                                onColorChange={color => setLocalLayer({ ...localLayer, color })} 
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">
+                                Opacidade: {Math.round(localLayer.opacity * 100)}%
+                            </label>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                value={localLayer.opacity}
+                                onChange={e => setLocalLayer({ ...localLayer, opacity: parseFloat(e.target.value) })}
+                                className="slider"
+                            />
+                        </div>
+
+                        {Object.keys(uniqueValues).length > 0 && (
+                            <div className="form-group">
+                                <label className="form-label">
+                                    <i className="fas fa-filter" style={{ marginRight: '4px' }}></i>
+                                    Filtros
+                                </label>
+                                {Object.entries(uniqueValues).map(([field, values]) => (
+                                    <FilterList
+                                        key={field}
+                                        field={field}
+                                        values={values}
+                                        selectedValues={localLayer.filters?.[field] || []}
+                                        onToggle={toggleFilter}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+                            <button onClick={handleUpdate} className="btn btn-primary" style={{ flex: 1 }}>
+                                <i className="fas fa-save"></i>
+                                Aplicar
+                            </button>
+                            <button onClick={onClose} className="btn btn-secondary">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== COMPONENTE DE CAMADA ====================
+        
+        const LayerItem = ({ layer, onToggle, onDelete, onProperties }) => (
+            <div className={`layer-item ${layer.visible ? 'active' : ''}`}>
+                <div className="layer-color" style={{ background: layer.color }} />
+                <div className="layer-info">
+                    <div className="layer-name" title={layer.name}>
+                        {layer.name}
+                    </div>
+                    <div className="layer-count">
+                        {layer.visibleCount || layer.featureCount} features
+                    </div>
+                </div>
+                <div className="layer-actions">
+                    <button
+                        className="btn-icon"
+                        onClick={() => onProperties(layer)}
+                        title="Propriedades"
+                    >
+                        <i className="fas fa-cog"></i>
+                    </button>
+                    <label className="toggle">
+                        <input
+                            type="checkbox"
+                            checked={layer.visible}
+                            onChange={() => onToggle(layer.id)}
+                        />
+                        <span className="toggle-slider"></span>
+                    </label>
+                    <button
+                        className="btn-icon"
+                        onClick={() => onDelete(layer.id)}
+                        title="Remover"
+                    >
+                        <i className="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        );
+
+        // ==================== GERENCIADOR DE MAPA ====================
+        
+        const MapManager = {
+            // Cria e configura o mapa
+            createMap: (elementId) => {
+                const map = L.map(elementId, {
+                    center: MAP_CONFIG.center,
+                    zoom: MAP_CONFIG.zoom,
+                    zoomControl: true
+                });
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap',
+                    maxZoom: MAP_CONFIG.maxZoom
+                }).addTo(map);
+
+                return map;
+            },
+            
+            // Cria layer GeoJSON com estilos
+            createGeoJSONLayer: (geojson, layer, layerName) => {
+                return L.geoJSON(geojson, {
+                    style: () => ({
+                        color: layer.color,
+                        weight: 3,
+                        opacity: layer.opacity,
+                        fillOpacity: layer.opacity * 0.5
+                    }),
+                    pointToLayer: (feature, latlng) => {
+                        return L.circleMarker(latlng, {
+                            radius: 6,
+                            fillColor: layer.color,
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: layer.opacity
+                        });
+                    },
+                    onEachFeature: (feature, leafletLayer) => {
+                        const props = feature.properties || {};
+                        const tooltipContent = Utils.createTooltipHTML(props, layerName);
+                        
+                        leafletLayer.bindTooltip(tooltipContent, {
+                            permanent: false,
+                            direction: 'top',
+                            className: 'custom-tooltip'
+                        });
+
+                        leafletLayer.bindPopup(tooltipContent);
+                    }
+                });
+            },
+            
+            // Ajusta zoom para camada
+            fitBounds: (map, leafletLayer) => {
+                const bounds = leafletLayer.getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+        };
+
+        // ==================== APLICAÇÃO PRINCIPAL ====================
+        
+        const App = () => {
+            // Estado
+            const [layers, setLayers] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [loadingMessage, setLoadingMessage] = useState('Carregando...');
+            const [toast, setToast] = useState({ show: false, message: '' });
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [showPropsModal, setShowPropsModal] = useState(false);
+            const [selectedLayer, setSelectedLayer] = useState(null);
+            
+            // Refs
+            const mapRef = useRef(null);
+            const leafletLayersRef = useRef({});
+
+            // Inicialização
+            useEffect(() => {
+                if (!mapRef.current) {
+                    mapRef.current = MapManager.createMap('map');
+                }
+                loadAutoLayers();
+            }, []);
+
+            // Carregar camadas automáticas
+            const loadAutoLayers = async () => {
+                const loadedLayers = [];
+                
+                for (const config of AUTO_LAYERS) {
+                    const geojson = await Utils.loadJSON(config.file);
+                    if (geojson) {
+                        const newLayer = {
+                            id: Utils.generateId(),
+                            name: config.name,
+                            color: config.color,
+                            originalGeoJSON: geojson,
+                            featureCount: geojson.features?.length || 1,
+                            visible: true,
+                            opacity: 0.8,
+                            filters: {}
+                        };
+                        
+                        // Aplicar filtro de estado
+                        if (config.filterState) {
+                            STATE_FIELDS.forEach(field => {
+                                newLayer.filters[field] = [config.filterState];
+                            });
+                        }
+                        
+                        loadedLayers.push(newLayer);
+                    }
+                }
+                
+                setLayers(loadedLayers);
+                setLoading(false);
+                
+                if (loadedLayers.length > 0) {
+                    showToast(`${loadedLayers.length} camada(s) carregada(s)`);
+                }
+            };
+
+            // Atualizar mapa quando camadas mudam
+            useEffect(() => {
+                if (!mapRef.current) return;
+
+                // Limpar camadas antigas
+                Object.values(leafletLayersRef.current).forEach(leafletLayer => {
+                    if (mapRef.current.hasLayer(leafletLayer)) {
+                        mapRef.current.removeLayer(leafletLayer);
+                    }
+                });
+                leafletLayersRef.current = {};
+
+                let firstVisible = true;
+
+                // Adicionar camadas visíveis
+                layers.forEach(layer => {
+                    if (!layer.visible) return;
+
+                    const filteredGeoJSON = Utils.filterGeoJSON(layer.originalGeoJSON, layer.filters);
+                    layer.visibleCount = filteredGeoJSON.features?.length || 0;
+
+                    const leafletLayer = MapManager.createGeoJSONLayer(filteredGeoJSON, layer, layer.name);
+                    leafletLayer.addTo(mapRef.current);
+                    leafletLayersRef.current[layer.id] = leafletLayer;
+
+                    // Ajustar zoom na primeira camada
+                    if (firstVisible && filteredGeoJSON.features.length > 0) {
+                        MapManager.fitBounds(mapRef.current, leafletLayer);
+                        firstVisible = false;
+                    }
+                });
+
+                // Forçar re-render para atualizar contagens
+                setLayers([...layers]);
+            }, [layers]);
+
+            // Handlers
+            const showToast = useCallback((message) => {
+                setToast({ show: true, message });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            }, []);
+
+            const addLayer = useCallback(({ name, color, geojson }) => {
+                const newLayer = {
+                    id: Utils.generateId(),
+                    name,
+                    color,
+                    originalGeoJSON: geojson,
+                    featureCount: geojson.features?.length || 1,
+                    visible: true,
+                    opacity: 0.8,
+                    filters: {}
+                };
+                
+                setLayers(prev => [...prev, newLayer]);
+                setShowAddModal(false);
+                showToast(`"${name}" adicionada`);
+            }, [showToast]);
+
+            const toggleLayer = useCallback((id) => {
+                setLayers(prev => prev.map(l =>
+                    l.id === id ? { ...l, visible: !l.visible } : l
+                ));
+            }, []);
+
+            const deleteLayer = useCallback((id) => {
+                if (confirm('Remover esta camada?')) {
+                    setLayers(prev => prev.filter(l => l.id !== id));
+                    showToast('Camada removida');
+                }
+            }, [showToast]);
+
+            const openProperties = useCallback((layer) => {
+                setSelectedLayer(layer);
+                setShowPropsModal(true);
+            }, []);
+
+            const updateLayer = useCallback((updatedLayer) => {
+                setLayers(prev => prev.map(l =>
+                    l.id === updatedLayer.id ? updatedLayer : l
+                ));
+                showToast('Propriedades atualizadas');
+            }, [showToast]);
+
+            // Estatísticas
+            const stats = useMemo(() => ({
+                total: layers.length,
+                features: layers.reduce((sum, l) => sum + (l.visible ? (l.visibleCount || l.featureCount) : 0), 0)
+            }), [layers]);
+
+            // Render
+            return (
+                <div style={{ display: 'flex', height: '100vh' }}>
+                    <div style={{ flex: 1 }}>
+                        <div id="map"></div>
+                    </div>
+
+                    <div className="sidebar">
+                        <div style={{ marginBottom: '16px' }}>
+                            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '4px' }}>
+                                Camadas
+                            </h1>
+                            <p style={{ fontSize: '12px', color: '#94a3b8' }}>
+                                Sistema Multi-camadas
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+                            <div className="stat-card">
+                                <div className="stat-value">{stats.total}</div>
+                                <div className="stat-label">Camadas</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-value">{stats.features}</div>
+                                <div className="stat-label">Features</div>
+                            </div>
+                        </div>
+
+                        <div className="section-title">
+                            <i className="fas fa-layer-group"></i>
+                            Ativas ({layers.filter(l => l.visible).length})
+                        </div>
+
+                        <div>
+                            {layers.length === 0 ? (
+                                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '24px 0' }}>
+                                    Nenhuma camada
+                                </p>
+                            ) : (
+                                layers.map(layer => (
+                                    <LayerItem
+                                        key={layer.id}
+                                        layer={layer}
+                                        onToggle={toggleLayer}
+                                        onDelete={deleteLayer}
+                                        onProperties={openProperties}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="fab"
+                        title="Adicionar Camada"
+                    >
+                        <i className="fas fa-plus"></i>
+                    </button>
+
+                    <AddLayerModal
+                        show={showAddModal}
+                        onClose={() => setShowAddModal(false)}
+                        onAdd={addLayer}
+                    />
+
+                    <LayerPropertiesModal
+                        show={showPropsModal}
+                        layer={selectedLayer}
+                        onClose={() => {
+                            setShowPropsModal(false);
+                            setSelectedLayer(null);
+                        }}
+                        onUpdate={updateLayer}
+                    />
+
+                    <Loading show={loading} message={loadingMessage} />
+                    <Toast message={toast.message} show={toast.show} />
+                </div>
+            );
+        };
+
+        // ==================== RENDER ====================
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

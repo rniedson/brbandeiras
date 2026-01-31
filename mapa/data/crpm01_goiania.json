@@ -1,0 +1,495 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "crpm01_go.1",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 1,
+        "Unidade": "01º COMANDO REGIONAL DA POLÍCIA MILITAR - 01º CRPM",
+        "Tipo": "CRPM Comando Regional",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "GO-020, KM 3.5, PARQUE LOZANDES, GOIÂNIA-GO, CEP: 74.899-899",
+        "Telefone": "(62)3201-2441",
+        "Celular": "",
+        "Email": "sop.cpc@gmail.com",
+        "Comandante": "Coronel PM Pedro Henrique BATISTA Alves de Paiva",
+        "Subcomandante": "Tenente-Coronel PM Daniel Moreira GALVÃO",
+        "SEI": "06359",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.2",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 2,
+        "Unidade": "06º BATALHÃO DE POLÍCIA MILITAR - 06º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Alameda Dr. Sebastião Fleury, S/Nº, Qd. 255, Setor Marista, Goiânia-GO - CEP:74180-060",
+        "Telefone": "(62)3201-1777",
+        "Celular": "(62)99631-4027",
+        "Email": "1bpm.cpc@gmail.com",
+        "Comandante": "Major QOPM LUCIANO RODRIGUES DE FARIA",
+        "Subcomandante": "Major PM SAMUEL SILVA ROCHA NEGRÃO",
+        "SEI": "06342",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.3",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 3,
+        "Unidade": "07º BATALHÃO DE POLÍCIA MILITAR - 07º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Av. Milão, Qds. 52 e 53, Jardim Europa, Goiânia-GO - CEP: 74325-030",
+        "Telefone": "(62)3201-1628",
+        "Celular": "(62)99651-0136",
+        "Email": "7bpm.cpc@gmail.com",
+        "Comandante": "Major QOPM Leandro BORGES de Jesus",
+        "Subcomandante": "Major QOPM Athos TÚLIO Rocha Pinheiro",
+        "SEI": "06343",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.4",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 4,
+        "Unidade": "09º BATALHÃO DE POLÍCIA MILITAR - 09º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida Frei Nazareno Confalone, s/n, Qd 22, Setor Goiânia 2, Goiânia-GO - CEP:74663-280",
+        "Telefone": "(62)9611-1346",
+        "Celular": "(62)99631-4047",
+        "Email": "9bpm.cpc@gmail.com",
+        "Comandante": "Major QOPM Rodrigo Fernandes de ALMEIDA",
+        "Subcomandante": "Capitão QOPM Bruno Tomaz DUARTE",
+        "SEI": "06344",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.5",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 5,
+        "Unidade": "13º BATALHÃO DE POLÍCIA MILITAR - 13º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua VMB-1, esq. com as ruas VMS e VMR, Qd. 81, Jardim Liberdade, Goiânia-GO - CEP: 74475-535",
+        "Telefone": "(62)3593-2399",
+        "Celular": "(62)98438-1419",
+        "Email": "13bpm.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM Evando POLIDÓRIO Lustosa",
+        "Subcomandante": "Major QOPM WENDER das Chagas",
+        "SEI": "06346",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.6",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 6,
+        "Unidade": "30º BATALHÃO DE POLÍCIA MILITAR - 30° BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida Anápolis, esquina com a Rua JDA-08, Praça da Juventude, Jardim das Aroeiras, Goiânia-GO, CEP:74781-005",
+        "Telefone": "(62)3201-2375",
+        "Celular": "(62)99611-3222",
+        "Email": "30bpm.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM Carlos Fernando Moura MARTINS",
+        "Subcomandante": "Capitão QOPM Livio Jaime de PINA Júnior",
+        "SEI": "09968",
+        "Horario": "Segunda a sexta-feira, das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.7",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 7,
+        "Unidade": "31º BATALHÃO DE POLÍCIA MILITAR - 31º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua AT 07 c/ rua AT 05, Unidade 301, S/Nº, Parque Atheneu, Goiânia-GO - CEP: 74893-782",
+        "Telefone": "(62)3273-6778",
+        "Celular": "",
+        "Email": "31bpm.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel PM SANDRO Nogueira de Rezende",
+        "Subcomandante": "Major QOPM BRUNO Rodrigues da Costa",
+        "SEI": "21872",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.8",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 8,
+        "Unidade": "38º BATALHÃO DE POLÍCIA MILITAR - 38º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua 4, esquina com a Av. Tocantins, nº 777, Setor Central, Goiânia-GO - CEP: 74043-200",
+        "Telefone": "(62)3201-1848",
+        "Celular": "(62)99624-8982",
+        "Email": "38bpm.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM PAULO Henrique Ribeiro",
+        "Subcomandante": "Major QOPM IGOR Renovato dos Santos",
+        "SEI": "14598",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.9",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 9,
+        "Unidade": "42º BATALHÃO DE POLÍCIA MILITAR - 42º BPM",
+        "Tipo": "CRPM Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua das Magnólias, esquina com a Rua do Esmalte, Parque Oeste Industrial, Goiânia-GO - CEP: 74375-560",
+        "Telefone": "(62)3252-3347",
+        "Celular": "(62)99631-4275",
+        "Email": "42bpm.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel PM Vitor JORGE Fernandes",
+        "Subcomandante": "Major PM Raphael Henrique MACEDO Firmino",
+        "SEI": "17561",
+        "Horario": "1) ADMINISTRATIVO: segunda a sexta-feira, das 08h00 às 12h00 e das 14h00 às 18h00; e 2)OPERACIONAL: 24 horas",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.10",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 10,
+        "Unidade": "BATALHÃO DE POLÍCIA MILITAR DE TERMINAL - BPMTERMINAL",
+        "Tipo": "CRPM Batalhões Especializados",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua 05, Qd 21, Lt 12, Vila Abajá, Goiânia-GO - CEP: 74550-480",
+        "Telefone": "(62)9962-2067",
+        "Celular": "",
+        "Email": "bpmterminal.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel PM Johnathan TARLEY Alga dos Reis Rodrigues",
+        "Subcomandante": "Major PM Rafael KAMINICHE Alves de Moraes",
+        "SEI": "16950",
+        "Horario": "1) ADMINISTRATIVO: segunda a sexta-feira, das 08h00 às 12h00 e das 14h00 às 18h00; e 2)OPERACIONAL: 24 horas",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.11",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 11,
+        "Unidade": "BATALHÃO DA POLÍCIA MILITAR DE RONDAS TÁTICAS METROPOLITANAS - BPMROTAM",
+        "Tipo": "CRPM Batalhões Especializados",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida Ayrton Senna, Autódromo de Goiânia, Residencial Alphaville Flamboyant, Goiânia-GO - CEP: 74884-528",
+        "Telefone": "(62)3201-2423",
+        "Celular": "(62)99628-9704",
+        "Email": "bpmrotam.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM JOSÉ ALBERTO VIANA CORTEZ JÚNIOR",
+        "Subcomandante": "Capitão QOPM VINÍCIUS NUNES DA SILVA",
+        "SEI": "06354",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.12",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 12,
+        "Unidade": "BATALHÃO DE TRÂNSITO - BPMTRAN",
+        "Tipo": "CRPM Batalhões Especializados",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Av. da Concórdia, Qd. 78, Lt. 1/45, Setor Santa Genoveva, Goiânia-GO - CEP: 74670-430",
+        "Telefone": "(62)3201-1506",
+        "Celular": "(62)99628-3479",
+        "Email": "bpmtran.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM Thiago Loretto SALUM",
+        "Subcomandante": "Major QOPM Gustavo Henrique Pereira de MELO",
+        "SEI": "06355",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.13",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 13,
+        "Unidade": "BATALHÃO ESCOLAR - BPMESC",
+        "Tipo": "CRPM Batalhões Especializados",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "5ª Avenida, Quadra 71, Nº S/N, Lote Área 03, Setor Vila Nova, Goiânia-GO - CEP: 74.643-030",
+        "Telefone": "(62)9628-9527",
+        "Celular": "(62)99969-7125",
+        "Email": "3secaoescolar@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM WOLNEY Ferreira da Silva",
+        "Subcomandante": "Major QOPM Yuri JORDAN Gonçalves de Carvalho",
+        "SEI": "06349",
+        "Horario": "1) ADMINISTRATIVO: Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00; e 2) OPERACIONAL: das 06h00 às 23h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.14",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 14,
+        "Unidade": "BATALHÃO MARIA DA PENHA - BPM MP",
+        "Tipo": "CRPM Batalhões Especializados",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Av. Perimetral Q 6, 1736 - St. Coimbra, Goiânia - GO, 74530-020",
+        "Telefone": "(62)9930-9778",
+        "Celular": "(62)9930-9778",
+        "Email": "patrulhamariadapenha2015@gmail.com",
+        "Comandante": "Major PM DYRLENE Seixas Santana",
+        "Subcomandante": "Capitão PM MÁRCIA Elizabeth Soares Mendes Testa",
+        "SEI": "17296",
+        "Horario": "De Segunda à Sextas, das 08:00 às 12:00 e das 14:00 às 18:00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.15",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 15,
+        "Unidade": "1º GRUPAMENTO DE INTERVENÇÃO RÁPIDA OSTENSIVA - GIRO",
+        "Tipo": "CRPM Unidades Especiais",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Av. Leopoldo de Bulhões, esquina com Rua 1007, Área 1, Setor Pedro Ludovido, Goiânia-GO - CEP: 74.672-410",
+        "Telefone": "(62)3201-3502",
+        "Celular": "",
+        "Email": "giro.cpc@gmail.com",
+        "Comandante": "Tenente-Coronel PM JOHNATHAN ANDRADE CORRÊA",
+        "Subcomandante": "Capitão PM MÁRIO FLORO RAMOS JÚNIOR",
+        "SEI": "11843",
+        "Horario": "Segunda a sexta-feira, das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "crpm01_go.16",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 16,
+        "Unidade": "CENTRO DE OPERAÇÕES DA POLÍCIA MILITAR - COPOM",
+        "Tipo": "CRPM Unidades Especiais",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida Anhanguera, Nº 7364, Setor Aeroviário, Goiânia-GO",
+        "Telefone": "(62)3201-4874",
+        "Celular": "",
+        "Email": "copom.cpc@gmail.com",
+        "Comandante": "Tenente Coronel QOPM Paulo de Oliveira ARRAES",
+        "Subcomandante": "Major QOPM João Afonso Berquó Neto",
+        "SEI": "06360",
+        "Horario": "Segunda a sexta-feira: das 08:00 às 12:00 e das 14:00 às 18:00 horas",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    }
+  ],
+  "totalFeatures": 16,
+  "numberMatched": 16,
+  "numberReturned": 16,
+  "timeStamp": "2025-10-30T14:03:51.497Z",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4674"
+    }
+  }
+}

@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Marcações em Rodovias - Sistema Policial</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        
+        .sidebar { 
+            height: 100vh; 
+            overflow-y: auto; 
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            box-shadow: -4px 0 30px rgba(0,0,0,0.3); 
+            color: white;
+        }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #0f172a; }
+        .sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        .category-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .category-card:hover {
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.1) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .category-card.active {
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        
+        .marker-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .marker-list.expanded {
+            max-height: 500px;
+        }
+        
+        .marker-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+        .marker-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(4px);
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-content {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s;
+            color: white;
+        }
+        @keyframes slideUp { 
+            from { transform: translateY(100px) scale(0.9); opacity: 0; } 
+            to { transform: translateY(0) scale(1); opacity: 1; } 
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255,255,255,0.1);
+        }
+        .input-field::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 10000;
+            animation: slideIn 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 400px;
+        }
+        @keyframes slideIn { 
+            from { transform: translateX(500px) scale(0.8); opacity: 0; } 
+            to { transform: translateX(0) scale(1); opacity: 1; } 
+        }
+        
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .fab:hover {
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 12px 32px rgba(239, 68, 68, 0.7);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .highway-tooltip {
+            background: white !important;
+            border: none !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            padding: 12px !important;
+            border-radius: 8px !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: #1e293b !important;
+            color: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+        }
+        .leaflet-popup-tip {
+            background: #1e293b !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Categorias de marcadores para uso policial
+        const CATEGORIAS = [
+            { 
+                id: 'camera', 
+                nome: 'Câmeras', 
+                icon: 'fa-video',
+                color: '#3b82f6',
+                description: 'Câmeras de monitoramento'
+            },
+            { 
+                id: 'fuga', 
+                nome: 'Rotas de Fuga', 
+                icon: 'fa-route',
+                color: '#ef4444',
+                description: 'Possíveis rotas de fuga'
+            },
+            { 
+                id: 'estrategico', 
+                nome: 'Pontos Estratégicos', 
+                icon: 'fa-map-marker-alt',
+                color: '#f59e0b',
+                description: 'Locais estratégicos'
+            },
+            { 
+                id: 'bloqueio', 
+                nome: 'Pontos de Bloqueio', 
+                icon: 'fa-hand-paper',
+                color: '#8b5cf6',
+                description: 'Locais para bloqueios'
+            },
+            { 
+                id: 'perigo', 
+                nome: 'Áreas de Risco', 
+                icon: 'fa-exclamation-triangle',
+                color: '#dc2626',
+                description: 'Áreas de alto risco'
+            },
+            { 
+                id: 'posto', 
+                nome: 'Postos/Bases', 
+                icon: 'fa-home',
+                color: '#10b981',
+                description: 'Postos policiais e bases'
+            }
+        ];
+
+        // Componente Toast
+        const Toast = ({ toast }) => {
+            if (!toast) return null;
+            
+            const iconMap = {
+                success: '✓',
+                error: '✗',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+            
+            const colorMap = {
+                success: '#10b981',
+                error: '#ef4444',
+                warning: '#f59e0b',
+                info: '#3b82f6'
+            };
+            
+            return (
+                <div className="toast" style={{ borderLeft: `4px solid ${colorMap[toast.tipo]}` }}>
+                    <div style={{ 
+                        fontSize: '24px', 
+                        color: colorMap[toast.tipo],
+                        fontWeight: 'bold' 
+                    }}>
+                        {iconMap[toast.tipo]}
+                    </div>
+                    <div style={{ color: '#1f2937' }}>{toast.mensagem}</div>
+                </div>
+            );
+        };
+
+        // Modal de adicionar/editar marcador
+        const MarkerModal = ({ aberto, onFechar, onSalvar, marcador, categoria }) => {
+            const [titulo, setTitulo] = useState('');
+            const [descricao, setDescricao] = useState('');
+            const [observacoes, setObservacoes] = useState('');
+
+            useEffect(() => {
+                if (marcador) {
+                    setTitulo(marcador.titulo || '');
+                    setDescricao(marcador.descricao || '');
+                    setObservacoes(marcador.observacoes || '');
+                } else {
+                    setTitulo('');
+                    setDescricao('');
+                    setObservacoes('');
+                }
+            }, [marcador]);
+
+            if (!aberto) return null;
+
+            const handleSalvar = () => {
+                if (!titulo.trim()) {
+                    alert('Por favor, insira um título para o marcador.');
+                    return;
+                }
+                onSalvar({ titulo, descricao, observacoes });
+            };
+
+            const categoriaInfo = CATEGORIAS.find(c => c.id === categoria);
+
+            return (
+                <div className="modal" onClick={onFechar}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-3">
+                                <i className={`fas ${categoriaInfo?.icon}`} style={{ color: categoriaInfo?.color }}></i>
+                                {marcador ? 'Editar Marcador' : 'Novo Marcador'}
+                            </h2>
+                            <button onClick={onFechar} className="text-2xl hover:text-red-400 transition-colors">
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Categoria
+                                </label>
+                                <div className="input-field flex items-center gap-3" style={{ 
+                                    borderColor: categoriaInfo?.color,
+                                    cursor: 'default'
+                                }}>
+                                    <i className={`fas ${categoriaInfo?.icon}`} style={{ color: categoriaInfo?.color }}></i>
+                                    <span>{categoriaInfo?.nome}</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Título *
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Ex: Câmera KM 15"
+                                    value={titulo}
+                                    onChange={e => setTitulo(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Descrição
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Descrição breve do local"
+                                    value={descricao}
+                                    onChange={e => setDescricao(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Observações
+                                </label>
+                                <textarea
+                                    className="textarea"
+                                    placeholder="Informações adicionais, observações táticas, etc."
+                                    value={observacoes}
+                                    onChange={e => setObservacoes(e.target.value)}
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button onClick={handleSalvar} className="btn btn-primary flex-1">
+                                <i className="fas fa-save"></i>
+                                Salvar
+                            </button>
+                            <button onClick={onFechar} className="btn btn-secondary">
+                                <i className="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Modal de importação de GeoJSON
+        const ImportModal = ({ aberto, onFechar, onImportar }) => {
+            const [texto, setTexto] = useState('');
+            const [metodo, setMetodo] = useState('upload'); // 'upload', 'colar', 'url'
+            const [url, setUrl] = useState('');
+            const [carregando, setCarregando] = useState(false);
+            const fileInputRef = useRef(null);
+
+            if (!aberto) return null;
+
+            const handleUploadArquivo = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const geojson = JSON.parse(event.target.result);
+                        if (geojson.type !== 'FeatureCollection' && geojson.type !== 'Feature') {
+                            throw new Error('Formato inválido. Esperado GeoJSON.');
+                        }
+                        onImportar(geojson);
+                    } catch (error) {
+                        alert('Erro ao processar arquivo: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleImportarTexto = () => {
+                try {
+                    const geojson = JSON.parse(texto);
+                    if (geojson.type !== 'FeatureCollection' && geojson.type !== 'Feature') {
+                        throw new Error('Formato inválido. Esperado GeoJSON.');
+                    }
+                    onImportar(geojson);
+                    setTexto('');
+                } catch (error) {
+                    alert('Erro ao processar GeoJSON: ' + error.message);
+                }
+            };
+
+            const handleCarregarURL = async () => {
+                if (!url.trim()) {
+                    alert('Por favor, insira uma URL válida.');
+                    return;
+                }
+
+                setCarregando(true);
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Erro ao carregar arquivo');
+                    const geojson = await response.json();
+                    if (geojson.type !== 'FeatureCollection' && geojson.type !== 'Feature') {
+                        throw new Error('Formato inválido. Esperado GeoJSON.');
+                    }
+                    onImportar(geojson);
+                    setUrl('');
+                } catch (error) {
+                    alert('Erro ao carregar da URL: ' + error.message);
+                } finally {
+                    setCarregando(false);
+                }
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.type === 'application/json') {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const geojson = JSON.parse(event.target.result);
+                            if (geojson.type !== 'FeatureCollection' && geojson.type !== 'Feature') {
+                                throw new Error('Formato inválido. Esperado GeoJSON.');
+                            }
+                            onImportar(geojson);
+                        } catch (error) {
+                            alert('Erro ao processar arquivo: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            return (
+                <div className="modal" onClick={onFechar}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold">
+                                <i className="fas fa-road mr-2 text-blue-400"></i>
+                                Importar Rodovias Federais
+                            </h2>
+                            <button onClick={onFechar} className="text-2xl hover:text-red-400 transition-colors">
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        {/* Abas de métodos */}
+                        <div className="flex gap-2 mb-6">
+                            <button
+                                onClick={() => setMetodo('upload')}
+                                className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
+                                    metodo === 'upload' 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                            >
+                                <i className="fas fa-file-upload mr-2"></i>
+                                Upload
+                            </button>
+                            <button
+                                onClick={() => setMetodo('colar')}
+                                className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
+                                    metodo === 'colar' 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                            >
+                                <i className="fas fa-paste mr-2"></i>
+                                Colar
+                            </button>
+                            <button
+                                onClick={() => setMetodo('url')}
+                                className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
+                                    metodo === 'url' 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                            >
+                                <i className="fas fa-link mr-2"></i>
+                                URL
+                            </button>
+                        </div>
+
+                        {/* Conteúdo baseado no método selecionado */}
+                        {metodo === 'upload' && (
+                            <div>
+                                <div
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{
+                                        border: '3px dashed rgba(255,255,255,0.3)',
+                                        borderRadius: '16px',
+                                        padding: '60px 20px',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        background: 'rgba(59, 130, 246, 0.05)',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = '#3b82f6';
+                                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+                                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)';
+                                    }}
+                                >
+                                    <i className="fas fa-cloud-upload-alt text-6xl text-blue-400 mb-4"></i>
+                                    <div className="text-lg font-semibold mb-2">
+                                        Arraste o arquivo aqui
+                                    </div>
+                                    <div className="text-sm text-gray-400 mb-3">
+                                        ou clique para selecionar
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        rodovias_federais_brasil.json
+                                    </div>
+                                </div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".json,application/json"
+                                    onChange={handleUploadArquivo}
+                                    style={{ display: 'none' }}
+                                />
+                            </div>
+                        )}
+
+                        {metodo === 'colar' && (
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Cole o conteúdo do arquivo GeoJSON
+                                </label>
+                                <textarea
+                                    className="textarea"
+                                    style={{ minHeight: '300px', fontFamily: 'monospace', fontSize: '12px' }}
+                                    placeholder='{"type":"FeatureCollection","features":[...]}'
+                                    value={texto}
+                                    onChange={e => setTexto(e.target.value)}
+                                ></textarea>
+                                <button onClick={handleImportarTexto} className="btn btn-primary w-full mt-4">
+                                    <i className="fas fa-check mr-2"></i>
+                                    Importar JSON
+                                </button>
+                            </div>
+                        )}
+
+                        {metodo === 'url' && (
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    URL do arquivo GeoJSON
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input-field mb-4"
+                                    placeholder="https://exemplo.com/rodovias_federais_brasil.json"
+                                    value={url}
+                                    onChange={e => setUrl(e.target.value)}
+                                />
+                                <button 
+                                    onClick={handleCarregarURL} 
+                                    className="btn btn-primary w-full"
+                                    disabled={carregando}
+                                >
+                                    {carregando ? (
+                                        <>
+                                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                                            Carregando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fas fa-download mr-2"></i>
+                                            Carregar da URL
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="mt-6 p-4 bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg">
+                            <div className="flex items-start gap-3">
+                                <i className="fas fa-info-circle text-yellow-400 text-xl"></i>
+                                <div className="text-sm text-gray-300">
+                                    <strong className="text-yellow-400">Importante:</strong> O arquivo deve estar no formato GeoJSON com features do tipo LineString representando os trechos das rodovias.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Componente principal
+        const App = () => {
+            const [categoriaAtiva, setCategoriaAtiva] = useState('camera');
+            const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
+            const [marcadores, setMarcadores] = useState([]);
+            const [modalMarcador, setModalMarcador] = useState({ aberto: false, marcador: null });
+            const [modalImport, setModalImport] = useState(false);
+            const [toast, setToast] = useState(null);
+            const [rodovias, setRodovias] = useState(null);
+            const [adicionandoMarcador, setAdicionandoMarcador] = useState(false);
+            
+            const mapRef = useRef(null);
+            const rodoviasLayerRef = useRef(null);
+            const marcadoresLayerRef = useRef(null);
+
+            // Inicializar mapa
+            useEffect(() => {
+                if (!mapRef.current) {
+                    const map = L.map('map', {
+                        center: [-15.7942, -47.8822], // Brasília
+                        zoom: 10,
+                        zoomControl: true
+                    });
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+
+                    rodoviasLayerRef.current = L.geoJSON(null, {
+                        style: {
+                            color: '#3b82f6',
+                            weight: 4,
+                            opacity: 0.8
+                        },
+                        onEachFeature: (feature, layer) => {
+                            // Tooltip com informações da rodovia
+                            const props = feature.properties;
+                            const tooltipContent = `
+                                <div style="font-weight: bold; color: #1e293b; margin-bottom: 4px;">
+                                    BR-${props.vl_br || '000'}
+                                </div>
+                                <div style="font-size: 12px; color: #475569;">
+                                    ${props.ds_local_i || 'Início'} → ${props.ds_local_f || 'Fim'}
+                                </div>
+                                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                                    KM ${props.vl_km_inic || 0} - ${props.vl_km_fina || 0}
+                                </div>
+                            `;
+                            layer.bindTooltip(tooltipContent, {
+                                permanent: false,
+                                className: 'highway-tooltip'
+                            });
+
+                            // Click para adicionar marcador
+                            layer.on('click', (e) => {
+                                if (adicionandoMarcador) {
+                                    const latlng = e.latlng;
+                                    setModalMarcador({
+                                        aberto: true,
+                                        marcador: null,
+                                        latlng: latlng,
+                                        rodovia: props
+                                    });
+                                    setAdicionandoMarcador(false);
+                                }
+                            });
+                        }
+                    }).addTo(map);
+
+                    marcadoresLayerRef.current = L.layerGroup().addTo(map);
+
+                    mapRef.current = map;
+
+                    mostrarToast('Sistema iniciado!', 'success');
+                }
+            }, [adicionandoMarcador]);
+
+            // Atualizar rodovias no mapa
+            useEffect(() => {
+                if (rodovias && rodoviasLayerRef.current) {
+                    rodoviasLayerRef.current.clearLayers();
+                    rodoviasLayerRef.current.addData(rodovias);
+                    
+                    // Ajustar zoom para mostrar todas as rodovias
+                    const bounds = rodoviasLayerRef.current.getBounds();
+                    if (bounds.isValid()) {
+                        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                }
+            }, [rodovias]);
+
+            // Atualizar marcadores no mapa
+            useEffect(() => {
+                if (marcadoresLayerRef.current) {
+                    marcadoresLayerRef.current.clearLayers();
+                    
+                    marcadores.forEach(marcador => {
+                        const categoria = CATEGORIAS.find(c => c.id === marcador.categoria);
+                        
+                        const icon = L.divIcon({
+                            html: `
+                                <div style="
+                                    background: ${categoria.color};
+                                    width: 36px;
+                                    height: 36px;
+                                    border-radius: 50% 50% 50% 0;
+                                    transform: rotate(-45deg);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                                    border: 3px solid white;
+                                ">
+                                    <i class="fas ${categoria.icon}" style="
+                                        transform: rotate(45deg);
+                                        color: white;
+                                        font-size: 16px;
+                                    "></i>
+                                </div>
+                            `,
+                            className: '',
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 36]
+                        });
+
+                        const marker = L.marker([marcador.lat, marcador.lng], { 
+                            icon: icon,
+                            draggable: true
+                        });
+
+                        // Popup com informações
+                        const popupContent = `
+                            <div style="min-width: 200px;">
+                                <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: ${categoria.color};">
+                                    ${marcador.titulo}
+                                </div>
+                                ${marcador.descricao ? `<div style="margin-bottom: 8px; color: #cbd5e1;">${marcador.descricao}</div>` : ''}
+                                ${marcador.observacoes ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 12px; border-left: 3px solid ${categoria.color}; padding-left: 8px;">${marcador.observacoes}</div>` : ''}
+                                <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
+                                    ${marcador.rodovia?.vl_br ? `BR-${marcador.rodovia.vl_br}` : 'Rodovia'}
+                                    ${marcador.rodovia?.vl_km_inic ? ` • KM ${marcador.rodovia.vl_km_inic}` : ''}
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick="window.editarMarcador('${marcador.id}')" style="
+                                        padding: 6px 12px;
+                                        background: #3b82f6;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 6px;
+                                        cursor: pointer;
+                                        font-size: 12px;
+                                    ">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                    <button onclick="window.excluirMarcador('${marcador.id}')" style="
+                                        padding: 6px 12px;
+                                        background: #ef4444;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 6px;
+                                        cursor: pointer;
+                                        font-size: 12px;
+                                    ">
+                                        <i class="fas fa-trash"></i> Excluir
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+
+                        marker.bindPopup(popupContent);
+
+                        // Atualizar posição ao arrastar
+                        marker.on('dragend', (e) => {
+                            const newLatLng = e.target.getLatLng();
+                            setMarcadores(prev => prev.map(m => 
+                                m.id === marcador.id 
+                                    ? { ...m, lat: newLatLng.lat, lng: newLatLng.lng }
+                                    : m
+                            ));
+                            mostrarToast('Marcador movido!', 'success');
+                        });
+
+                        marcadoresLayerRef.current.addLayer(marker);
+                    });
+                }
+            }, [marcadores]);
+
+            // Funções globais para editar/excluir (chamadas do popup)
+            useEffect(() => {
+                window.editarMarcador = (id) => {
+                    const marcador = marcadores.find(m => m.id === id);
+                    if (marcador) {
+                        setModalMarcador({
+                            aberto: true,
+                            marcador: marcador,
+                            latlng: { lat: marcador.lat, lng: marcador.lng },
+                            rodovia: marcador.rodovia
+                        });
+                    }
+                };
+
+                window.excluirMarcador = (id) => {
+                    if (confirm('Deseja realmente excluir este marcador?')) {
+                        setMarcadores(prev => prev.filter(m => m.id !== id));
+                        mostrarToast('Marcador excluído!', 'success');
+                    }
+                };
+
+                return () => {
+                    delete window.editarMarcador;
+                    delete window.excluirMarcador;
+                };
+            }, [marcadores]);
+
+            const mostrarToast = (mensagem, tipo = 'info') => {
+                setToast({ mensagem, tipo });
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            const toggleCategoria = (id) => {
+                setCategoriasExpandidas(prev => ({
+                    ...prev,
+                    [id]: !prev[id]
+                }));
+            };
+
+            const importarRodovias = (geojson) => {
+                setRodovias(geojson);
+                setModalImport(false);
+                mostrarToast('Rodovias importadas com sucesso!', 'success');
+            };
+
+            const salvarMarcador = (dados) => {
+                const { latlng, marcador, rodovia } = modalMarcador;
+                
+                if (marcador) {
+                    // Editar existente
+                    setMarcadores(prev => prev.map(m => 
+                        m.id === marcador.id 
+                            ? { ...m, ...dados }
+                            : m
+                    ));
+                    mostrarToast('Marcador atualizado!', 'success');
+                } else {
+                    // Criar novo
+                    const novoMarcador = {
+                        id: Date.now().toString(),
+                        categoria: categoriaAtiva,
+                        lat: latlng.lat,
+                        lng: latlng.lng,
+                        rodovia: rodovia,
+                        dataCriacao: new Date().toISOString(),
+                        ...dados
+                    };
+                    setMarcadores(prev => [...prev, novoMarcador]);
+                    mostrarToast('Marcador adicionado!', 'success');
+                }
+                
+                setModalMarcador({ aberto: false, marcador: null });
+            };
+
+            const exportarDados = () => {
+                const dados = {
+                    versao: '1.0',
+                    sistema: 'Editor de Rodovias - Sistema Policial',
+                    data_exportacao: new Date().toISOString(),
+                    total_marcadores: marcadores.length,
+                    rodovias: rodovias,
+                    marcadores: marcadores
+                };
+                
+                const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `marcacoes-rodovias-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                mostrarToast('Dados exportados!', 'success');
+            };
+
+            const getMarcadoresPorCategoria = (categoriaId) => {
+                return marcadores.filter(m => m.categoria === categoriaId);
+            };
+
+            return (
+                <div className="flex h-screen">
+                    {/* Mapa */}
+                    <div className="flex-1 relative">
+                        <div id="map"></div>
+                        
+                        {adicionandoMarcador && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '20px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                background: '#ef4444',
+                                color: 'white',
+                                padding: '16px 32px',
+                                borderRadius: '12px',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                zIndex: 1000,
+                                fontWeight: 'bold',
+                                animation: 'pulse 2s infinite'
+                            }}>
+                                <i className="fas fa-hand-pointer mr-2"></i>
+                                Clique na rodovia para adicionar o marcador
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="sidebar w-96 p-6">
+                        <div className="mb-6">
+                            <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                                <i className="fas fa-shield-alt text-red-500"></i>
+                                Sistema Policial
+                            </h1>
+                            <p className="text-sm text-gray-400">Editor de Marcações em Rodovias</p>
+                        </div>
+
+                        {/* Estatísticas */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            <div className="stat-card">
+                                <div className="text-3xl font-bold text-blue-400">{marcadores.length}</div>
+                                <div className="text-xs text-gray-400">Marcadores</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="text-3xl font-bold text-green-400">
+                                    {rodovias ? (rodovias.features?.length || 1) : 0}
+                                </div>
+                                <div className="text-xs text-gray-400">Trechos</div>
+                            </div>
+                        </div>
+
+                        {/* Status das Rodovias */}
+                        {rodovias && (
+                            <div className="mb-6 p-4 bg-green-900 bg-opacity-30 border border-green-600 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <i className="fas fa-check-circle text-green-400 text-xl"></i>
+                                    <div>
+                                        <div className="font-semibold text-sm text-green-400">Rodovias Carregadas</div>
+                                        <div className="text-xs text-gray-400">
+                                            {rodovias.features?.length || 0} trechos de rodovias federais disponíveis
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Botão Importar Rodovias */}
+                        {!rodovias && (
+                            <div className="mb-6">
+                                <div className="p-6 bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl border-2 border-blue-600 mb-4">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <i className="fas fa-exclamation-circle text-yellow-400 text-2xl"></i>
+                                        <h3 className="font-bold text-lg">Começar</h3>
+                                    </div>
+                                    <p className="text-sm text-gray-300 mb-4">
+                                        Para iniciar, importe o arquivo das rodovias federais do Brasil:
+                                    </p>
+                                    <div className="bg-black bg-opacity-30 rounded-lg p-3 mb-4">
+                                        <code className="text-xs text-green-400 font-mono">
+                                            📁 rodovias_federais_brasil.json
+                                        </code>
+                                    </div>
+                                    <button 
+                                        onClick={() => setModalImport(true)}
+                                        className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                    >
+                                        <i className="fas fa-upload mr-2"></i>
+                                        Importar Arquivo de Rodovias
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Categorias */}
+                        <div className="space-y-3 mb-20">
+                            {CATEGORIAS.map(categoria => {
+                                const marcadoresDaCategoria = getMarcadoresPorCategoria(categoria.id);
+                                const expandido = categoriasExpandidas[categoria.id];
+                                
+                                return (
+                                    <div key={categoria.id}>
+                                        <div 
+                                            className={`category-card ${categoriaAtiva === categoria.id ? 'active' : ''}`}
+                                            onClick={() => toggleCategoria(categoria.id)}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <div style={{
+                                                        width: '48px',
+                                                        height: '48px',
+                                                        background: categoria.color,
+                                                        borderRadius: '12px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '20px'
+                                                    }}>
+                                                        <i className={`fas ${categoria.icon}`}></i>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-lg">{categoria.nome}</div>
+                                                        <div className="text-xs text-gray-400">{categoria.description}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="badge" style={{ background: categoria.color }}>
+                                                        {marcadoresDaCategoria.length}
+                                                    </span>
+                                                    <i className={`fas fa-chevron-${expandido ? 'up' : 'down'}`}></i>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCategoriaAtiva(categoria.id);
+                                                    setAdicionandoMarcador(true);
+                                                    mostrarToast(`Clique na rodovia para adicionar ${categoria.nome}`, 'info');
+                                                }}
+                                                className="w-full mt-3 px-4 py-2 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-all text-sm font-semibold"
+                                            >
+                                                <i className="fas fa-plus mr-2"></i>
+                                                Adicionar {categoria.nome}
+                                            </button>
+                                        </div>
+
+                                        {/* Lista de marcadores da categoria */}
+                                        <div className={`marker-list ${expandido ? 'expanded' : ''}`}>
+                                            <div style={{ padding: '0 8px' }}>
+                                                {marcadoresDaCategoria.map(marcador => (
+                                                    <div 
+                                                        key={marcador.id}
+                                                        className="marker-item"
+                                                        style={{ borderColor: categoria.color }}
+                                                        onClick={() => {
+                                                            // Centralizar no marcador
+                                                            if (mapRef.current) {
+                                                                mapRef.current.setView([marcador.lat, marcador.lng], 15);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="font-semibold text-sm">{marcador.titulo}</div>
+                                                        {marcador.descricao && (
+                                                            <div className="text-xs text-gray-400 mt-1">{marcador.descricao}</div>
+                                                        )}
+                                                        <div className="text-xs text-gray-500 mt-2">
+                                                            {marcador.rodovia?.vl_br && `BR-${marcador.rodovia.vl_br}`}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {marcadoresDaCategoria.length === 0 && (
+                                                    <div className="text-center text-gray-500 text-sm py-4">
+                                                        Nenhum marcador nesta categoria
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Botão Exportar */}
+                        {marcadores.length > 0 && (
+                            <div className="fixed bottom-24 right-6 w-84">
+                                <button 
+                                    onClick={exportarDados}
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
+                                >
+                                    <i className="fas fa-download mr-2"></i>
+                                    Exportar Dados
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modais */}
+                    <MarkerModal
+                        aberto={modalMarcador.aberto}
+                        onFechar={() => setModalMarcador({ aberto: false, marcador: null })}
+                        onSalvar={salvarMarcador}
+                        marcador={modalMarcador.marcador}
+                        categoria={categoriaAtiva}
+                    />
+
+                    <ImportModal
+                        aberto={modalImport}
+                        onFechar={() => setModalImport(false)}
+                        onImportar={importarRodovias}
+                    />
+
+                    <Toast toast={toast} />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

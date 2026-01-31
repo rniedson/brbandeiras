@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Divisões Territoriais - Goiás</title>
+    
+    <!-- Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        /* ============================================
+           ESTILOS GERAIS
+           ============================================ */
+        * { box-sizing: border-box; }
+        
+        /* ============================================
+           MAPA
+           ============================================ */
+        #map { 
+            height: 100vh; 
+            width: 100%; 
+        }
+        
+        /* ============================================
+           SIDEBAR
+           ============================================ */
+        .sidebar { 
+            height: 100vh; 
+            overflow-y: auto; 
+            background: #f8fafc; 
+            box-shadow: -2px 0 20px rgba(0,0,0,0.1); 
+        }
+        
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* ============================================
+           CAMADAS (LAYERS)
+           ============================================ */
+        .layer-container { 
+            background: white; 
+            border-radius: 12px; 
+            margin-bottom: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        
+        .layer-container:hover { 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12); 
+            transform: translateY(-2px); 
+        }
+        
+        .layer-container.active { 
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3); 
+            border: 2px solid #3b82f6; 
+        }
+        
+        .layer-container.dragging { 
+            opacity: 0.4; 
+            transform: scale(0.95) rotate(2deg); 
+            cursor: grabbing; 
+            border: 2px dashed #3b82f6; 
+        }
+        
+        .layer-container.drag-over { 
+            border-top: 4px solid #3b82f6; 
+            background: linear-gradient(to bottom, #eff6ff 0%, white 20%);
+            transform: translateY(-2px);
+            margin-top: 8px;
+        }
+        
+        .layer-container.layer-hidden {
+            opacity: 0.5;
+        }
+        
+        .layer-container.layer-hidden:hover {
+            opacity: 0.7;
+        }
+        
+        .layer-header { 
+            padding: 16px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            transition: background 0.2s; 
+            user-select: none;
+            position: relative;
+        }
+        
+        .layer-header:hover { background: #f8fafc; }
+        .layer-header.active { background: #eff6ff; }
+        .layer-header:active { cursor: grabbing; }
+        
+        .layer-header-actions {
+            position: absolute;
+            right: 50px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+        
+        .layer-header:hover .layer-header-actions {
+            opacity: 1;
+        }
+        
+        .layer-action-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .layer-action-btn:hover {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+            transform: scale(1.15);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .layer-action-btn:has(.fa-trash):hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+        
+        .layer-color-indicator { 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 10px; 
+            flex-shrink: 0; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); 
+            border: 3px solid white; 
+            transition: transform 0.2s; 
+        }
+        
+        .layer-header:hover .layer-color-indicator { 
+            transform: scale(1.1); 
+        }
+        
+        .layer-body { 
+            max-height: 0; 
+            overflow: hidden; 
+            transition: max-height 0.3s ease-out; 
+            background: #f8fafc; 
+        }
+        
+        .layer-body.expanded { 
+            max-height: 3000px; 
+            border-top: 2px solid #e5e7eb; 
+        }
+        
+        .layer-content { padding: 16px; }
+        
+        .drag-handle { 
+            cursor: grab; 
+            transition: all 0.2s; 
+        }
+        
+        .drag-handle:hover { 
+            color: #3b82f6 !important; 
+            transform: scale(1.2); 
+        }
+        
+        .drag-handle:active { cursor: grabbing; }
+        
+        /* ============================================
+           SELETOR DE COR
+           ============================================ */
+        .color-selected-display { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px; 
+            background: #f9fafb; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+        }
+        
+        .color-selected-display:hover { background: #f3f4f6; }
+        
+        .color-selected-box { 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); 
+            border: 3px solid white; 
+        }
+        
+        .color-palette { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 10px; 
+            margin-top: 12px; 
+            max-height: 0; 
+            overflow: hidden; 
+            transition: max-height 0.3s ease-out; 
+        }
+        
+        .color-palette.expanded { max-height: 200px; }
+        
+        .color-option { 
+            width: 48px; 
+            height: 48px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            border: 3px solid transparent; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
+            position: relative; 
+        }
+        
+        .color-option:hover { 
+            transform: scale(1.15) rotate(5deg); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+        }
+        
+        .color-option.selected { 
+            border-color: #1e293b; 
+            transform: scale(1.2); 
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3); 
+        }
+        
+        .color-option.selected::after { 
+            content: '✓'; 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            color: white; 
+            font-weight: bold; 
+            font-size: 20px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3); 
+        }
+        
+        /* ============================================
+           BOTÕES
+           ============================================ */
+        .import-button { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            padding: 8px 12px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            border: none; 
+        }
+        
+        .import-button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); 
+        }
+        
+        .fab { 
+            position: fixed; 
+            bottom: 30px; 
+            right: 30px; 
+            width: 64px; 
+            height: 64px; 
+            border-radius: 50%; 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+            color: white; 
+            border: none; 
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4); 
+            cursor: pointer; 
+            transition: all 0.3s; 
+            z-index: 1000; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 24px; 
+        }
+        
+        .fab:hover { 
+            transform: scale(1.1) rotate(90deg); 
+            box-shadow: 0 12px 32px rgba(59, 130, 246, 0.6); 
+        }
+        
+        /* ============================================
+           MODAL
+           ============================================ */
+        .modal { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0, 0, 0, 0.5); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 9999; 
+            animation: fadeIn 0.2s; 
+        }
+        
+        @keyframes fadeIn { 
+            from { opacity: 0; } 
+            to { opacity: 1; } 
+        }
+        
+        .modal-content { 
+            background: white; 
+            border-radius: 16px; 
+            padding: 24px; 
+            max-width: 600px; 
+            width: 90%; 
+            max-height: 80vh; 
+            overflow-y: auto; 
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); 
+            animation: slideUp 0.3s; 
+        }
+        
+        @keyframes slideUp { 
+            from { transform: translateY(50px); opacity: 0; } 
+            to { transform: translateY(0); opacity: 1; } 
+        }
+        
+        .textarea { 
+            width: 100%; 
+            min-height: 300px; 
+            padding: 12px; 
+            border-radius: 8px; 
+            border: 2px solid #e5e7eb; 
+            font-family: monospace; 
+            font-size: 13px; 
+            resize: vertical; 
+            background: #f9fafb; 
+            color: #1f2937; 
+        }
+        
+        .textarea::placeholder { color: #9ca3af; }
+        .textarea:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+            background: white; 
+        }
+        
+        /* ============================================
+           TABS
+           ============================================ */
+        .tab-buttons { 
+            display: flex; 
+            gap: 8px; 
+            margin-bottom: 16px; 
+            border-bottom: 2px solid #e5e7eb; 
+        }
+        
+        .tab-button { 
+            padding: 12px 20px; 
+            background: transparent; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 600; 
+            color: #6b7280; 
+            transition: all 0.2s; 
+            border-bottom: 3px solid transparent; 
+            margin-bottom: -2px; 
+        }
+        
+        .tab-button:hover { color: #3b82f6; }
+        .tab-button.active { 
+            color: #3b82f6; 
+            border-bottom-color: #3b82f6; 
+        }
+        
+        /* ============================================
+           BADGES E INFO BOXES
+           ============================================ */
+        .badge { 
+            display: inline-block; 
+            padding: 4px 8px; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            font-weight: 600; 
+            margin: 2px; 
+        }
+        
+        .badge-success { background: #10b981; color: white; }
+        .badge-error { background: #ef4444; color: white; }
+        .badge-warning { background: #f59e0b; color: white; }
+        
+        .info-box { 
+            background: #eff6ff; 
+            border-left: 4px solid #3b82f6; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 16px; 
+        }
+        
+        .info-box-title { 
+            font-weight: 600; 
+            color: #1e40af; 
+            margin-bottom: 4px; 
+        }
+        
+        .info-box-text { 
+            font-size: 13px; 
+            color: #3b82f6; 
+        }
+        
+        /* ============================================
+           LABELS NO MAPA
+           ============================================ */
+        .layer-label { 
+            position: absolute; 
+            background: white; 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); 
+            font-weight: bold; 
+            cursor: move; 
+            user-select: none; 
+            z-index: 1000; 
+            border-left: 4px solid; 
+            transition: box-shadow 0.2s; 
+        }
+        
+        .layer-label:hover { 
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3); 
+        }
+        
+        .layer-label.dragging { 
+            opacity: 0.8; 
+            cursor: grabbing; 
+        }
+        
+        .layer-label-controls { 
+            display: flex; 
+            gap: 8px; 
+            margin-top: 8px; 
+            padding-top: 8px; 
+            border-top: 1px solid #e5e7eb; 
+        }
+        
+        .layer-label-btn { 
+            padding: 4px 8px; 
+            background: #f3f4f6; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 12px; 
+            transition: background 0.2s; 
+        }
+        
+        .layer-label-btn:hover { background: #e5e7eb; }
+        
+        /* ============================================
+           TOGGLE SWITCH
+           ============================================ */
+        .toggle-switch { 
+            position: relative; 
+            display: inline-block; 
+            width: 44px; 
+            height: 24px; 
+        }
+        
+        .toggle-switch input { 
+            opacity: 0; 
+            width: 0; 
+            height: 0; 
+        }
+        
+        .toggle-slider { 
+            position: absolute; 
+            cursor: pointer; 
+            inset: 0; 
+            background-color: #cbd5e1; 
+            transition: .3s; 
+            border-radius: 24px; 
+        }
+        
+        .toggle-slider:before { 
+            position: absolute; 
+            content: ""; 
+            height: 18px; 
+            width: 18px; 
+            left: 3px; 
+            bottom: 3px; 
+            background-color: white; 
+            transition: .3s; 
+            border-radius: 50%; 
+        }
+        
+        input:checked + .toggle-slider { 
+            background-color: #3b82f6; 
+        }
+        
+        input:checked + .toggle-slider:before { 
+            transform: translateX(20px); 
+        }
+        
+        /* ============================================
+           TOAST NOTIFICATIONS
+           ============================================ */
+        .toast { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            background: white; 
+            padding: 16px 24px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            z-index: 10000; 
+            animation: slideIn 0.4s; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            max-width: 400px; 
+        }
+        
+        @keyframes slideIn { 
+            from { transform: translateX(500px) scale(0.8); opacity: 0; } 
+            to { transform: translateX(0) scale(1); opacity: 1; } 
+        }
+    </style>
+</head>
+
+<body class="m-0 p-0 overflow-hidden">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        /* ============================================
+           UTILITÁRIOS E FUNÇÕES AUXILIARES
+           ============================================ */
+        
+        /**
+         * Normaliza texto removendo acentos, pontuação e convertendo para minúsculas
+         */
+        const normalizarTexto = (texto) => {
+            return texto
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s]/g, '')
+                .trim();
+        };
+
+        /**
+         * Extrai nomes de municípios de uma lista de texto
+         * Remove numeração no formato "1 - Nome" ou "1. Nome"
+         */
+        const extrairNomesDaLista = (texto) => {
+            return texto
+                .split('\n')
+                .map(linha => linha.replace(/^\d+\s*[-.]?\s*/g, '').trim())
+                .filter(nome => nome.length > 0);
+        };
+
+        /* ============================================
+           HOOKS CUSTOMIZADOS
+           ============================================ */
+        
+        /**
+         * Hook para busca inteligente de municípios
+         * Faz busca exata e parcial com normalização de texto
+         */
+        const useBuscaMunicipio = (municipiosDisponiveis) => {
+            const encontrar = (nomeBusca) => {
+                const normalizado = normalizarTexto(nomeBusca);
+                
+                // Busca exata
+                for (const municipio of municipiosDisponiveis) {
+                    if (normalizarTexto(municipio) === normalizado) {
+                        return { encontrado: true, nome: municipio, original: nomeBusca };
+                    }
+                }
+                
+                // Busca parcial
+                for (const municipio of municipiosDisponiveis) {
+                    const normalizadoMunicipio = normalizarTexto(municipio);
+                    if (normalizadoMunicipio.includes(normalizado) || normalizado.includes(normalizadoMunicipio)) {
+                        return { encontrado: true, nome: municipio, original: nomeBusca, parcial: true };
+                    }
+                }
+                
+                return { encontrado: false, original: nomeBusca };
+            };
+
+            const processarLista = (texto) => {
+                const nomes = extrairNomesDaLista(texto);
+                const resultados = { sucesso: [], erro: [], parciais: [] };
+                
+                nomes.forEach(nome => {
+                    const resultado = encontrar(nome);
+                    if (resultado.encontrado) {
+                        if (resultado.parcial) {
+                            resultados.parciais.push(resultado);
+                        } else {
+                            resultados.sucesso.push(resultado);
+                        }
+                    } else {
+                        resultados.erro.push(resultado);
+                    }
+                });
+                
+                return resultados;
+            };
+
+            return { encontrar, processarLista };
+        };
+
+        /* ============================================
+           COMPONENTES UI
+           ============================================ */
+        
+        /**
+         * Componente Toast para notificações
+         */
+        const Toast = ({ toast }) => {
+            if (!toast) return null;
+            
+            return (
+                <div className="toast">
+                    <div className={`text-2xl ${
+                        toast.tipo === 'success' ? 'text-green-500' : 
+                        toast.tipo === 'error' ? 'text-red-500' : 
+                        'text-orange-500'
+                    }`}>
+                        <i className={`fas fa-${
+                            toast.tipo === 'success' ? 'check-circle' : 
+                            toast.tipo === 'error' ? 'exclamation-circle' : 
+                            'exclamation-triangle'
+                        }`}></i>
+                    </div>
+                    <div>
+                        <div className="font-semibold text-gray-800">{toast.mensagem}</div>
+                        {toast.detalhes && (
+                            <div className="text-sm text-gray-600 mt-1">{toast.detalhes}</div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * Modal de importação com três abas:
+         * 1. Lista de texto (busca inteligente)
+         * 2. JSON Array (validação exata)
+         * 3. Hierarquia completa (múltiplas camadas)
+         */
+        const ImportModal = ({ 
+            aberto, 
+            onFechar, 
+            onImportar, 
+            texto, 
+            onAlterarTexto, 
+            resultado, 
+            onImportarHierarquia, 
+            onImportarLista 
+        }) => {
+            const [abaAtiva, setAbaAtiva] = useState('lista');
+
+            if (!aberto) return null;
+
+            const placeholders = {
+                lista: `Exemplo de importação de lista:
+1 - Aparecida de Goiânia
+2 - Trindade
+3 - Senador Canedo
+4 - Goianira
+5 - Inhumas
+
+Ou sem numeração:
+Aparecida de Goiânia
+Trindade
+Senador Canedo`,
+                municipios: `Exemplo de importação de municípios (array):
+["Goiânia", "Anápolis", "Aparecida de Goiânia"]
+
+Ou objeto com descrição:
+{
+  "municipios": ["Goiânia", "Anápolis"],
+  "descricao": "Região Metropolitana"
+}`,
+                hierarquia: `Exemplo de importação hierárquica:
+{
+  "Centro Goiano": {
+    "Anápolis": ["Anápolis", "Jaraguá", "Inhumas"],
+    "Goiânia": ["Goiânia", "Aparecida de Goiânia", "Trindade"]
+  },
+  "Sul Goiano": {
+    "Catalão": ["Catalão", "Ipameri", "Ouvidor"]
+  }
+}`
+            };
+
+            return (
+                <div className="modal" onClick={onFechar}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-800">Importar Dados</h2>
+                                <p className="text-sm text-gray-600 mt-1">Escolha o formato de importação</p>
+                            </div>
+                            <button 
+                                onClick={onFechar} 
+                                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="tab-buttons">
+                            <button 
+                                className={`tab-button ${abaAtiva === 'lista' ? 'active' : ''}`}
+                                onClick={() => setAbaAtiva('lista')}
+                            >
+                                <i className="fas fa-list-ul mr-2"></i>Lista de Texto
+                            </button>
+                            <button 
+                                className={`tab-button ${abaAtiva === 'municipios' ? 'active' : ''}`}
+                                onClick={() => setAbaAtiva('municipios')}
+                            >
+                                <i className="fas fa-brackets-curly mr-2"></i>JSON Array
+                            </button>
+                            <button 
+                                className={`tab-button ${abaAtiva === 'hierarquia' ? 'active' : ''}`}
+                                onClick={() => setAbaAtiva('hierarquia')}
+                            >
+                                <i className="fas fa-sitemap mr-2"></i>Hierarquia
+                            </button>
+                        </div>
+
+                        {/* Aba: Lista de Texto */}
+                        {abaAtiva === 'lista' && (
+                            <>
+                                <div className="info-box">
+                                    <div className="info-box-title">
+                                        <i className="fas fa-info-circle mr-2"></i>
+                                        Importar lista de texto com busca inteligente
+                                    </div>
+                                    <div className="info-box-text">
+                                        Cole uma lista de municípios (um por linha, com ou sem numeração). 
+                                        O sistema fará busca inteligente!
+                                    </div>
+                                </div>
+                                <textarea
+                                    className="textarea"
+                                    value={texto}
+                                    onChange={(e) => onAlterarTexto(e.target.value)}
+                                    placeholder={placeholders.lista}
+                                />
+                                {resultado && resultado.tipo === 'lista' && (
+                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {resultado.sucesso && resultado.sucesso.length > 0 && (
+                                                <span className="badge badge-success">
+                                                    ✓ {resultado.sucesso.length} encontrados
+                                                </span>
+                                            )}
+                                            {resultado.parciais && resultado.parciais.length > 0 && (
+                                                <span className="badge badge-warning">
+                                                    ⚠ {resultado.parciais.length} parciais
+                                                </span>
+                                            )}
+                                            {resultado.erro && resultado.erro.length > 0 && (
+                                                <span className="badge badge-error">
+                                                    ✗ {resultado.erro.length} não encontrados
+                                                </span>
+                                            )}
+                                        </div>
+                                        {resultado.erro && resultado.erro.length > 0 && (
+                                            <div className="text-xs text-red-600 mt-2">
+                                                <strong>Não encontrados:</strong>
+                                                {resultado.erro.map((r, i) => (
+                                                    <div key={i}>• {r.original}</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex gap-3 mt-4">
+                                    <button 
+                                        onClick={onFechar} 
+                                        className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={() => onImportarLista(texto)} 
+                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
+                                    >
+                                        <i className="fas fa-magic mr-2"></i>Importar Lista
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Aba: JSON Array */}
+                        {abaAtiva === 'municipios' && (
+                            <>
+                                <div className="info-box">
+                                    <div className="info-box-title">
+                                        <i className="fas fa-info-circle mr-2"></i>
+                                        Importar municípios para a camada atual
+                                    </div>
+                                    <div className="info-box-text">
+                                        Cole um array de nomes de municípios ou um objeto com a chave "municipios"
+                                    </div>
+                                </div>
+                                <textarea
+                                    className="textarea"
+                                    value={texto}
+                                    onChange={(e) => onAlterarTexto(e.target.value)}
+                                    placeholder={placeholders.municipios}
+                                />
+                                {resultado && resultado.tipo === 'json' && (
+                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {resultado.sucesso && (
+                                                <span className="badge badge-success">
+                                                    {resultado.adicionados} adicionados
+                                                </span>
+                                            )}
+                                            {resultado.ja_existentes > 0 && (
+                                                <span className="badge badge-warning">
+                                                    {resultado.ja_existentes} já existentes
+                                                </span>
+                                            )}
+                                            {resultado.invalidos > 0 && (
+                                                <span className="badge badge-error">
+                                                    {resultado.invalidos} inválidos
+                                                </span>
+                                            )}
+                                        </div>
+                                        {resultado.invalidos > 0 && resultado.municipios_invalidos && (
+                                            <div className="text-xs text-gray-600 mt-2">
+                                                <strong>Inválidos:</strong> {resultado.municipios_invalidos.join(', ')}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex gap-3 mt-4">
+                                    <button 
+                                        onClick={onFechar} 
+                                        className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={() => onImportar(texto)} 
+                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
+                                    >
+                                        <i className="fas fa-upload mr-2"></i>Importar
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Aba: Hierarquia */}
+                        {abaAtiva === 'hierarquia' && (
+                            <>
+                                <div className="info-box">
+                                    <div className="info-box-title">
+                                        <i className="fas fa-info-circle mr-2"></i>
+                                        Importar estrutura completa ou arquivo exportado
+                                    </div>
+                                    <div className="info-box-text">
+                                        • Cole o arquivo JSON exportado pelo editor (com todas as configurações)<br/>
+                                        • Ou cole uma hierarquia: Região → Microrregião → [Municípios]
+                                    </div>
+                                </div>
+                                <textarea
+                                    className="textarea"
+                                    value={texto}
+                                    onChange={(e) => onAlterarTexto(e.target.value)}
+                                    placeholder={placeholders.hierarquia}
+                                />
+                                {resultado && resultado.tipo === 'hierarquia' && (
+                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {resultado.sucesso && (
+                                                <span className="badge badge-success">
+                                                    {resultado.camadas_criadas} camadas criadas
+                                                </span>
+                                            )}
+                                            {resultado.total_municipios && (
+                                                <span className="badge badge-success">
+                                                    {resultado.total_municipios} municípios
+                                                </span>
+                                            )}
+                                            {resultado.erros && resultado.erros.length > 0 && (
+                                                <span className="badge badge-error">
+                                                    {resultado.erros.length} erros
+                                                </span>
+                                            )}
+                                        </div>
+                                        {resultado.detalhes && (
+                                            <div className="text-xs text-gray-600 mt-2">
+                                                {resultado.detalhes}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex gap-3 mt-4">
+                                    <button 
+                                        onClick={onFechar} 
+                                        className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={() => onImportarHierarquia(texto)} 
+                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
+                                    >
+                                        <i className="fas fa-sitemap mr-2"></i>Importar Hierarquia
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * Label arrastável no mapa para identificar camadas
+         */
+        const LayerLabel = ({ camada, onAtualizar }) => {
+            const [posicao, setPosicao] = useState(camada.posicaoLabel || { x: 100, y: 100 });
+            const [arrastando, setArrastando] = useState(false);
+            const [offset, setOffset] = useState({ x: 0, y: 0 });
+            const labelRef = useRef(null);
+
+            useEffect(() => {
+                if (!camada.posicaoLabel) {
+                    onAtualizar({ ...camada, posicaoLabel: posicao });
+                }
+            }, []);
+
+            const iniciarArrasto = (e) => {
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'I') return;
+                setArrastando(true);
+                const rect = labelRef.current.getBoundingClientRect();
+                setOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+            };
+
+            useEffect(() => {
+                if (!arrastando) return;
+                
+                const moverLabel = (e) => {
+                    const novaPosicao = { 
+                        x: e.clientX - offset.x, 
+                        y: e.clientY - offset.y 
+                    };
+                    setPosicao(novaPosicao);
+                };
+                
+                const pararArrasto = () => {
+                    setArrastando(false);
+                    onAtualizar({ ...camada, posicaoLabel: posicao });
+                };
+                
+                document.addEventListener('mousemove', moverLabel);
+                document.addEventListener('mouseup', pararArrasto);
+                
+                return () => {
+                    document.removeEventListener('mousemove', moverLabel);
+                    document.removeEventListener('mouseup', pararArrasto);
+                };
+            }, [arrastando, offset, posicao, camada, onAtualizar]);
+
+            const toggleVisibilidade = () => {
+                onAtualizar({ ...camada, labelVisivel: !camada.labelVisivel });
+            };
+
+            if (!camada.labelVisivel) return null;
+
+            return (
+                <div 
+                    ref={labelRef} 
+                    className={`layer-label ${arrastando ? 'dragging' : ''}`}
+                    style={{ 
+                        left: posicao.x, 
+                        top: posicao.y, 
+                        borderLeftColor: camada.cor 
+                    }}
+                    onMouseDown={iniciarArrasto}
+                >
+                    <div className="font-bold text-gray-800">{camada.nome}</div>
+                    <div className="text-xs text-gray-600">{camada.municipios.length} municípios</div>
+                    <div className="layer-label-controls">
+                        <button onClick={toggleVisibilidade} className="layer-label-btn">
+                            <i className="fas fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * Item de camada na sidebar com drag-and-drop para reordenação
+         */
+        const LayerItem = ({ 
+            camada, 
+            ativo, 
+            expandido, 
+            onToggleExpansao, 
+            onSelecionar, 
+            onAtualizar, 
+            onAbrirImport, 
+            paletaExpandida, 
+            onTogglePaleta, 
+            onReordenar,
+            onDuplicar,
+            onExcluir
+        }) => {
+            const [arrastando, setArrastando] = useState(false);
+            const [dragOver, setDragOver] = useState(false);
+            
+            const cores = [
+                '#ef4444', '#f59e0b', '#10b981', '#3b82f6', 
+                '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', 
+                '#f97316', '#6366f1', '#14b8a6', '#a855f7'
+            ];
+            
+            // Event handlers para drag and drop
+            const handleDragStart = (e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', camada.id.toString());
+                setArrastando(true);
+            };
+
+            const handleDragEnd = () => {
+                setArrastando(false);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDragOver(true);
+            };
+
+            const handleDragLeave = () => {
+                setDragOver(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOver(false);
+                
+                const draggedId = e.dataTransfer.getData('text/plain');
+                
+                if (Number(draggedId) !== Number(camada.id)) {
+                    onReordenar(draggedId, camada.id);
+                }
+            };
+            
+            const alterarNome = () => {
+                const novoNome = prompt('Nome da camada:', camada.nome);
+                if (novoNome && novoNome.trim()) {
+                    onAtualizar({ ...camada, nome: novoNome.trim() });
+                }
+            };
+
+            const removerMunicipio = (municipio) => {
+                onAtualizar({ 
+                    ...camada, 
+                    municipios: camada.municipios.filter(m => m !== municipio) 
+                });
+            };
+
+            const toggleLabel = () => {
+                onAtualizar({ ...camada, labelVisivel: !camada.labelVisivel });
+            };
+
+            return (
+                <div 
+                    className={`layer-container ${ativo ? 'active' : ''} ${arrastando ? 'dragging' : ''} ${dragOver ? 'drag-over' : ''} ${camada.visivel === false ? 'layer-hidden' : ''}`}
+                    draggable
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                >
+                    {/* Header */}
+                    <div 
+                        className={`layer-header ${ativo ? 'active' : ''}`}
+                    >
+                        <div 
+                            className="text-gray-400 drag-handle" 
+                            title="Arrastar para reordenar"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <i className="fas fa-grip-vertical"></i>
+                        </div>
+                        <div 
+                            className="layer-color-indicator" 
+                            style={{ background: camada.cor }}
+                            onClick={() => onToggleExpansao(camada.id)}
+                        ></div>
+                        <div className="flex-1" onClick={() => onToggleExpansao(camada.id)}>
+                            <div className="font-bold text-gray-800 text-base">{camada.nome}</div>
+                            <div className="text-xs text-gray-600 mt-1">
+                                {camada.municipios.length} municípios
+                            </div>
+                        </div>
+                        
+                        {/* Ações discretas */}
+                        <div className="layer-header-actions">
+                            <button
+                                className="layer-action-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAtualizar({ ...camada, visivel: camada.visivel === false ? true : false });
+                                }}
+                                title={camada.visivel === false ? "Mostrar camada" : "Ocultar camada"}
+                            >
+                                <i className={`fas ${camada.visivel === false ? 'fa-eye-slash' : 'fa-eye'} text-xs`}></i>
+                            </button>
+                            <button
+                                className="layer-action-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDuplicar(camada);
+                                }}
+                                title="Duplicar camada"
+                            >
+                                <i className="fas fa-copy text-xs"></i>
+                            </button>
+                            <button
+                                className="layer-action-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Tem certeza que deseja excluir a camada "${camada.nome}"?`)) {
+                                        onExcluir(camada.id);
+                                    }
+                                }}
+                                title="Excluir camada"
+                            >
+                                <i className="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                        
+                        <div className="text-gray-400" onClick={() => onToggleExpansao(camada.id)}>
+                            <i className={`fas fa-chevron-${expandido ? 'up' : 'down'}`}></i>
+                        </div>
+                    </div>
+                    
+                    {/* Body */}
+                    <div className={`layer-body ${expandido ? 'expanded' : ''}`}>
+                        <div className="layer-content space-y-4">
+                            {/* Botão de ativar */}
+                            <button 
+                                onClick={() => onSelecionar(camada.id)} 
+                                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition"
+                            >
+                                <i className="fas fa-hand-pointer mr-2"></i>Ativar para Edição
+                            </button>
+                            
+                            {/* Nome da camada */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Nome da Camada
+                                </label>
+                                <div 
+                                    onClick={alterarNome} 
+                                    className="w-full px-4 py-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition flex items-center justify-between"
+                                >
+                                    <span className="font-medium text-gray-800">{camada.nome}</span>
+                                    <i className="fas fa-edit text-gray-400"></i>
+                                </div>
+                            </div>
+                            
+                            {/* Seletor de cor */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Cor da Camada
+                                </label>
+                                <div onClick={onTogglePaleta} className="color-selected-display">
+                                    <div 
+                                        className="color-selected-box" 
+                                        style={{ background: camada.cor }}
+                                    ></div>
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-gray-800">Cor Selecionada</div>
+                                        <div className="text-xs text-gray-500">{camada.cor}</div>
+                                    </div>
+                                    <i className={`fas fa-chevron-${paletaExpandida ? 'up' : 'down'} text-gray-400`}></i>
+                                </div>
+                                <div className={`color-palette ${paletaExpandida ? 'expanded' : ''}`}>
+                                    {cores.map(cor => (
+                                        <div 
+                                            key={cor} 
+                                            className={`color-option ${camada.cor === cor ? 'selected' : ''}`}
+                                            style={{ background: cor }}
+                                            onClick={() => onAtualizar({ ...camada, cor })}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Lista de municípios */}
+                            <div>
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-sm font-semibold text-gray-700">
+                                        Municípios ({camada.municipios.length})
+                                    </label>
+                                    <button onClick={onAbrirImport} className="import-button">
+                                        <i className="fas fa-file-import"></i>Importar JSON
+                                    </button>
+                                </div>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                    {camada.municipios.map((mun, idx) => (
+                                        <div 
+                                            key={idx} 
+                                            className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition group"
+                                        >
+                                            <span className="text-sm text-gray-700 font-medium">{mun}</span>
+                                            <button 
+                                                onClick={() => removerMunicipio(mun)} 
+                                                className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                                            >
+                                                <i className="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Toggle de rótulo */}
+                            <div className="pt-4 border-t border-gray-200">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-semibold text-gray-700">
+                                        Mostrar Rótulo no Mapa
+                                    </span>
+                                    <label className="toggle-switch">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={camada.labelVisivel} 
+                                            onChange={toggleLabel} 
+                                        />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        /* ============================================
+           COMPONENTE PRINCIPAL
+           ============================================ */
+        
+        const App = () => {
+            // Estados principais
+            const [camadas, setCamadas] = useState([]);
+            const [camadaAtiva, setCamadaAtiva] = useState(null);
+            const [camadaExpandida, setCamadaExpandida] = useState(null);
+            const [paletasExpandidas, setPaletasExpandidas] = useState({});
+            const [geojson, setGeojson] = useState(null);
+            const [mapaLeaflet, setMapaLeaflet] = useState(null);
+            const [carregando, setCarregando] = useState(true);
+            
+            // Estados do modal
+            const [modalImportAberto, setModalImportAberto] = useState(false);
+            const [textoImport, setTextoImport] = useState('');
+            const [resultadoImport, setResultadoImport] = useState(null);
+            
+            // Toast
+            const [toast, setToast] = useState(null);
+            
+            // Refs
+            const layersRef = useRef({});
+
+            // Hook para busca inteligente de municípios
+            const municipiosDisponiveis = geojson ? geojson.features.map(f => f.properties.name) : [];
+            const { processarLista } = useBuscaMunicipio(municipiosDisponiveis);
+
+            /**
+             * Mostra uma notificação toast
+             */
+            const mostrarToast = (mensagem, tipo = 'success', detalhes = null) => {
+                setToast({ mensagem, tipo, detalhes });
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            /**
+             * Carrega o GeoJSON do GitHub
+             */
+            useEffect(() => {
+                fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-52-mun.json')
+                    .then(res => res.json())
+                    .then(data => {
+                        setGeojson(data);
+                        setCarregando(false);
+                    })
+                    .catch(err => {
+                        console.error('Erro ao carregar GeoJSON:', err);
+                        setCarregando(false);
+                        mostrarToast('Erro ao carregar dados do mapa', 'error');
+                    });
+            }, []);
+
+            /**
+             * Inicializa o mapa Leaflet
+             */
+            useEffect(() => {
+                if (!geojson) return;
+
+                const mapa = L.map('map').setView([-15.8, -49.5], 7);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(mapa);
+
+                setMapaLeaflet(mapa);
+
+                return () => {
+                    mapa.remove();
+                };
+            }, [geojson]);
+
+            /**
+             * Atualiza o mapa quando as camadas mudam
+             */
+            useEffect(() => {
+                if (!mapaLeaflet || !geojson) return;
+
+                // Remove camadas antigas
+                Object.values(layersRef.current).forEach(layer => {
+                    if (layer) mapaLeaflet.removeLayer(layer);
+                });
+
+                /**
+                 * Define o estilo de um município baseado em sua camada
+                 */
+                const aplicarEstilo = (feature, camada, ehCamadaAtiva) => {
+                    if (!camada) {
+                        return { 
+                            fillColor: '#d1d5db', 
+                            fillOpacity: 0.3, 
+                            color: '#9ca3af', 
+                            weight: 1 
+                        };
+                    }
+                    
+                    // Destaque para camada ativa
+                    if (ehCamadaAtiva) {
+                        return { 
+                            fillColor: camada.cor, 
+                            fillOpacity: 0.7, 
+                            color: '#000000',
+                            weight: 3,
+                            dashArray: '8, 4',
+                            opacity: 0.9
+                        };
+                    }
+                    
+                    return { 
+                        fillColor: camada.cor, 
+                        fillOpacity: 0.7, 
+                        color: '#ffffff', 
+                        weight: 2 
+                    };
+                };
+
+                // Cria nova camada GeoJSON
+                const layer = L.geoJSON(geojson, {
+                    style: (feature) => {
+                        const nome = feature.properties.name;
+                        const camada = camadas.find(c => c.municipios.includes(nome));
+                        const ehCamadaAtiva = camada && camada.id === camadaAtiva;
+                        
+                        // Se a camada está oculta, renderiza como não atribuído
+                        if (camada && camada.visivel === false) {
+                            return aplicarEstilo(feature, null, false);
+                        }
+                        
+                        return aplicarEstilo(feature, camada, ehCamadaAtiva);
+                    },
+                    onEachFeature: (feature, layer) => {
+                        const nome = feature.properties.name;
+                        layer.bindTooltip(nome, { sticky: true });
+
+                        layer.on('click', () => {
+                            if (!camadaAtiva) {
+                                mostrarToast('Selecione uma camada primeiro!', 'warning');
+                                return;
+                            }
+                            
+                            const camadaSelecionada = camadas.find(c => c.id === camadaAtiva);
+                            if (!camadaSelecionada) return;
+
+                            const jaExiste = camadaSelecionada.municipios.includes(nome);
+                            const novosMunicipios = jaExiste
+                                ? camadaSelecionada.municipios.filter(m => m !== nome)
+                                : [...camadaSelecionada.municipios, nome];
+
+                            atualizarCamada({ 
+                                ...camadaSelecionada, 
+                                municipios: novosMunicipios 
+                            });
+                            
+                            mostrarToast(
+                                jaExiste ? `✓ "${nome}" removido` : `✓ "${nome}" adicionado`, 
+                                'success'
+                            );
+                        });
+                    }
+                }).addTo(mapaLeaflet);
+
+                layersRef.current['main'] = layer;
+            }, [camadas, mapaLeaflet, geojson, camadaAtiva]);
+
+            /**
+             * Atualiza uma camada existente
+             */
+            const atualizarCamada = (camadaAtualizada) => {
+                setCamadas(camadas.map(c => 
+                    c.id === camadaAtualizada.id ? camadaAtualizada : c
+                ));
+            };
+
+            /**
+             * Reordena camadas via drag and drop
+             */
+            const reordenarCamadas = (idArrastado, idAlvo) => {
+                const idArrastadoNum = Number(idArrastado);
+                const idAlvoNum = Number(idAlvo);
+                
+                const indexArrastado = camadas.findIndex(c => c.id === idArrastadoNum);
+                const indexAlvo = camadas.findIndex(c => c.id === idAlvoNum);
+                
+                if (indexArrastado === -1 || indexAlvo === -1) return;
+                
+                const novasCamadas = [...camadas];
+                const [camadaRemovida] = novasCamadas.splice(indexArrastado, 1);
+                novasCamadas.splice(indexAlvo, 0, camadaRemovida);
+                
+                setCamadas(novasCamadas);
+                mostrarToast('✓ Camadas reordenadas!', 'success');
+            };
+
+            /**
+             * Importa JSON array de municípios
+             */
+            const processarImportacao = (textoJSON) => {
+                if (!camadaAtiva) {
+                    mostrarToast('Selecione uma camada primeiro!', 'error');
+                    return;
+                }
+
+                try {
+                    const dados = JSON.parse(textoJSON);
+                    let municipiosImportar = [];
+
+                    if (Array.isArray(dados)) {
+                        municipiosImportar = dados;
+                    } else if (dados.municipios && Array.isArray(dados.municipios)) {
+                        municipiosImportar = dados.municipios;
+                    } else {
+                        throw new Error('Formato inválido. Use um array ou objeto com chave "municipios".');
+                    }
+
+                    const camadaSelecionada = camadas.find(c => c.id === camadaAtiva);
+                    if (!camadaSelecionada) return;
+
+                    const todosNomes = geojson.features.map(f => f.properties.name);
+                    const municipiosValidos = municipiosImportar.filter(m => todosNomes.includes(m));
+                    const municipiosInvalidos = municipiosImportar.filter(m => !todosNomes.includes(m));
+                    const municipiosJaExistentes = municipiosValidos.filter(m => 
+                        camadaSelecionada.municipios.includes(m)
+                    );
+                    const municipiosNovos = municipiosValidos.filter(m => 
+                        !camadaSelecionada.municipios.includes(m)
+                    );
+
+                    atualizarCamada({
+                        ...camadaSelecionada,
+                        municipios: [...camadaSelecionada.municipios, ...municipiosNovos]
+                    });
+
+                    setResultadoImport({
+                        tipo: 'json',
+                        sucesso: true,
+                        adicionados: municipiosNovos.length,
+                        ja_existentes: municipiosJaExistentes.length,
+                        invalidos: municipiosInvalidos.length,
+                        municipios_invalidos: municipiosInvalidos
+                    });
+
+                    mostrarToast(`✓ ${municipiosNovos.length} municípios importados!`, 'success');
+                } catch (erro) {
+                    mostrarToast('Erro ao processar JSON', 'error', erro.message);
+                    setResultadoImport(null);
+                }
+            };
+
+            /**
+             * Importa lista de texto com busca inteligente
+             */
+            const importarLista = (textoLista) => {
+                if (!camadaAtiva) {
+                    mostrarToast('Selecione uma camada primeiro!', 'error');
+                    return;
+                }
+
+                if (!textoLista.trim()) {
+                    mostrarToast('⚠ Cole a lista de municípios primeiro', 'warning');
+                    return;
+                }
+
+                const resultado = processarLista(textoLista);
+                const municipiosParaAdicionar = [
+                    ...resultado.sucesso.map(r => r.nome), 
+                    ...resultado.parciais.map(r => r.nome)
+                ];
+                
+                const camadaSelecionada = camadas.find(c => c.id === camadaAtiva);
+                if (!camadaSelecionada) return;
+
+                const municipiosUnicos = [...new Set([
+                    ...camadaSelecionada.municipios, 
+                    ...municipiosParaAdicionar
+                ])];
+                
+                atualizarCamada({
+                    ...camadaSelecionada,
+                    municipios: municipiosUnicos
+                });
+
+                setResultadoImport({
+                    tipo: 'lista',
+                    ...resultado
+                });
+
+                const total = resultado.sucesso.length + resultado.parciais.length;
+                mostrarToast(`✓ ${total} municípios adicionados!`, 'success');
+            };
+
+            /**
+             * Importa hierarquia completa (múltiplas camadas)
+             */
+            const importarHierarquia = (textoJSON) => {
+                try {
+                    const dados = JSON.parse(textoJSON);
+                    
+                    if (typeof dados !== 'object' || Array.isArray(dados)) {
+                        throw new Error('Formato inválido. Esperado objeto com regiões ou arquivo de exportação.');
+                    }
+
+                    // Detectar se é um arquivo exportado pelo próprio editor
+                    if (dados.tipo === 'editor-hierarquia' && dados.camadas && Array.isArray(dados.camadas)) {
+                        return importarArquivoExportado(dados);
+                    }
+
+                    // Caso contrário, processar como hierarquia tradicional
+                    const novasCamadas = [];
+                    const cores = [
+                        '#ef4444', '#f59e0b', '#10b981', '#3b82f6', 
+                        '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', 
+                        '#f97316', '#6366f1', '#14b8a6', '#a855f7'
+                    ];
+                    let corIndex = 0;
+
+                    const todosNomes = geojson.features.map(f => f.properties.name);
+                    let totalMunicipios = 0;
+                    const erros = [];
+
+                    // Processar cada região
+                    Object.entries(dados).forEach(([regiao, microrregioes]) => {
+                        if (typeof microrregioes !== 'object' || Array.isArray(microrregioes)) {
+                            erros.push(`Região "${regiao}" tem formato inválido`);
+                            return;
+                        }
+
+                        // Processar cada microrregião
+                        Object.entries(microrregioes).forEach(([microrregiao, municipios]) => {
+                            if (!Array.isArray(municipios)) {
+                                erros.push(`Microrregião "${microrregiao}" não tem array de municípios`);
+                                return;
+                            }
+
+                            const municipiosValidos = municipios.filter(m => todosNomes.includes(m));
+                            const municipiosInvalidos = municipios.filter(m => !todosNomes.includes(m));
+
+                            if (municipiosInvalidos.length > 0) {
+                                erros.push(
+                                    `Microrregião "${microrregiao}": ${municipiosInvalidos.length} municípios inválidos`
+                                );
+                            }
+
+                            if (municipiosValidos.length > 0) {
+                                novasCamadas.push({
+                                    id: Date.now() + corIndex, // Usar inteiro ao invés de float
+                                    nome: `${regiao} - ${microrregiao}`,
+                                    cor: cores[corIndex % cores.length],
+                                    municipios: municipiosValidos,
+                                    criacao: new Date().toISOString(),
+                                    labelVisivel: false,
+                                    visivel: true,
+                                    posicaoLabel: { 
+                                        x: 100 + (corIndex * 30), 
+                                        y: 100 + (corIndex * 50) 
+                                    }
+                                });
+                                totalMunicipios += municipiosValidos.length;
+                                corIndex++;
+                            }
+                        });
+                    });
+
+                    if (novasCamadas.length === 0) {
+                        throw new Error('Nenhuma camada válida foi criada');
+                    }
+
+                    setCamadas([...camadas, ...novasCamadas]);
+                    setCamadaAtiva(novasCamadas[0].id);
+                    setCamadaExpandida(novasCamadas[0].id);
+
+                    setResultadoImport({
+                        tipo: 'hierarquia',
+                        sucesso: true,
+                        camadas_criadas: novasCamadas.length,
+                        total_municipios: totalMunicipios,
+                        erros: erros,
+                        detalhes: `${novasCamadas.length} camadas criadas com ${totalMunicipios} municípios`
+                    });
+
+                    mostrarToast(
+                        `✓ ${novasCamadas.length} camadas importadas!`, 
+                        'success', 
+                        `${totalMunicipios} municípios no total`
+                    );
+                    
+                    setTimeout(() => {
+                        setModalImportAberto(false);
+                        setTextoImport('');
+                        setResultadoImport(null);
+                    }, 2000);
+
+                } catch (erro) {
+                    mostrarToast('Erro ao processar hierarquia', 'error', erro.message);
+                    setResultadoImport({ tipo: 'hierarquia', sucesso: false, erros: [erro.message] });
+                }
+            };
+
+            /**
+             * Importa arquivo exportado pelo próprio editor
+             */
+            const importarArquivoExportado = (dados) => {
+                try {
+                    const todosNomes = geojson.features.map(f => f.properties.name);
+                    const novasCamadas = [];
+                    let totalMunicipios = 0;
+                    const erros = [];
+
+                    dados.camadas.forEach((camadaImportada, index) => {
+                        // Validar municípios
+                        const municipiosValidos = camadaImportada.municipios.filter(m => todosNomes.includes(m));
+                        const municipiosInvalidos = camadaImportada.municipios.filter(m => !todosNomes.includes(m));
+
+                        if (municipiosInvalidos.length > 0) {
+                            erros.push(
+                                `Camada "${camadaImportada.nome}": ${municipiosInvalidos.length} municípios inválidos`
+                            );
+                        }
+
+                        if (municipiosValidos.length > 0) {
+                            novasCamadas.push({
+                                id: Date.now() + index,
+                                nome: camadaImportada.nome,
+                                cor: camadaImportada.cor || '#3b82f6',
+                                municipios: municipiosValidos,
+                                criacao: camadaImportada.data_criacao || new Date().toISOString(),
+                                labelVisivel: camadaImportada.labelVisivel !== undefined ? camadaImportada.labelVisivel : false,
+                                visivel: camadaImportada.visivel !== undefined ? camadaImportada.visivel : true,
+                                posicaoLabel: camadaImportada.posicaoLabel || { 
+                                    x: 100 + (index * 30), 
+                                    y: 100 + (index * 50) 
+                                }
+                            });
+                            totalMunicipios += municipiosValidos.length;
+                        }
+                    });
+
+                    if (novasCamadas.length === 0) {
+                        throw new Error('Nenhuma camada válida foi encontrada no arquivo');
+                    }
+
+                    // Substituir todas as camadas
+                    setCamadas(novasCamadas);
+                    setCamadaAtiva(novasCamadas[0].id);
+                    setCamadaExpandida(novasCamadas[0].id);
+
+                    setResultadoImport({
+                        tipo: 'hierarquia',
+                        sucesso: true,
+                        camadas_criadas: novasCamadas.length,
+                        total_municipios: totalMunicipios,
+                        erros: erros,
+                        detalhes: `Arquivo importado: ${novasCamadas.length} camadas com ${totalMunicipios} municípios`
+                    });
+
+                    mostrarToast(
+                        `✓ Arquivo importado com sucesso!`, 
+                        'success', 
+                        `${novasCamadas.length} camadas carregadas`
+                    );
+                    
+                    setTimeout(() => {
+                        setModalImportAberto(false);
+                        setTextoImport('');
+                        setResultadoImport(null);
+                    }, 2000);
+
+                } catch (erro) {
+                    mostrarToast('Erro ao importar arquivo', 'error', erro.message);
+                    setResultadoImport({ tipo: 'hierarquia', sucesso: false, erros: [erro.message] });
+                }
+            };
+
+            /**
+             * Adiciona uma nova camada vazia
+             */
+            const adicionarNovaCamada = () => {
+                const cores = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+                const novaCamada = {
+                    id: Date.now(),
+                    nome: `Camada ${camadas.length + 1}`,
+                    cor: cores[camadas.length % cores.length],
+                    municipios: [],
+                    criacao: new Date().toISOString(),
+                    labelVisivel: false,
+                    visivel: true,
+                    posicaoLabel: { x: 100, y: 100 + (camadas.length * 80) }
+                };
+                
+                setCamadas([...camadas, novaCamada]);
+                setCamadaAtiva(novaCamada.id);
+                setCamadaExpandida(novaCamada.id);
+                mostrarToast('✓ Nova camada criada!', 'success');
+            };
+
+            /**
+             * Duplica uma camada existente
+             */
+            const duplicarCamada = (camadaOriginal) => {
+                const novaCamada = {
+                    id: Date.now(),
+                    nome: `${camadaOriginal.nome} (cópia)`,
+                    cor: camadaOriginal.cor,
+                    municipios: [...camadaOriginal.municipios], // Copia o array
+                    criacao: new Date().toISOString(),
+                    labelVisivel: camadaOriginal.labelVisivel,
+                    visivel: camadaOriginal.visivel !== undefined ? camadaOriginal.visivel : true,
+                    posicaoLabel: { 
+                        x: camadaOriginal.posicaoLabel.x + 30, 
+                        y: camadaOriginal.posicaoLabel.y + 30 
+                    }
+                };
+                
+                // Adiciona a nova camada logo após a original
+                const indexOriginal = camadas.findIndex(c => c.id === camadaOriginal.id);
+                const novasCamadas = [...camadas];
+                novasCamadas.splice(indexOriginal + 1, 0, novaCamada);
+                
+                setCamadas(novasCamadas);
+                setCamadaAtiva(novaCamada.id);
+                setCamadaExpandida(novaCamada.id);
+                mostrarToast('✓ Camada duplicada!', 'success');
+            };
+
+            /**
+             * Exclui uma camada
+             */
+            const excluirCamada = (idCamada) => {
+                const novasCamadas = camadas.filter(c => c.id !== idCamada);
+                setCamadas(novasCamadas);
+                
+                // Se a camada excluída era a ativa, limpa a seleção
+                if (camadaAtiva === idCamada) {
+                    setCamadaAtiva(null);
+                    setCamadaExpandida(null);
+                }
+                
+                mostrarToast('✓ Camada excluída!', 'success');
+            };
+
+            /**
+             * Exporta todas as camadas como JSON
+             */
+            const exportarJSON = () => {
+                const dados = {
+                    versao: '3.0',
+                    tipo: 'editor-hierarquia',
+                    data_exportacao: new Date().toISOString(),
+                    total_camadas: camadas.length,
+                    camadas: camadas.map(c => ({
+                        nome: c.nome,
+                        cor: c.cor,
+                        municipios: c.municipios,
+                        total_municipios: c.municipios.length,
+                        data_criacao: c.criacao
+                    }))
+                };
+                
+                const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'divisoes-goias-' + Date.now() + '.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                mostrarToast('✓ Arquivo exportado!', 'success');
+            };
+
+            /* ============================================
+               RENDER
+               ============================================ */
+            
+            return (
+                <div className="flex h-screen">
+                    {/* Mapa */}
+                    <div className="flex-1 relative">
+                        <div id="map"></div>
+                        
+                        {/* Labels das camadas */}
+                        {camadas.map(camada => (
+                            <LayerLabel 
+                                key={camada.id} 
+                                camada={camada} 
+                                onAtualizar={atualizarCamada} 
+                            />
+                        ))}
+                        
+                        {/* Loading */}
+                        {carregando && (
+                            <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-[1000]">
+                                <div className="text-center">
+                                    <div className="inline-block w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                    <p className="text-gray-700 font-semibold">Carregando mapa...</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Sidebar */}
+                    <div className="sidebar w-96 p-6">
+                        {/* Header */}
+                        <div className="mb-6">
+                            <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                <i className="fas fa-layer-group text-blue-600"></i>
+                                Camadas
+                            </h1>
+                            <p className="text-sm text-gray-600">Sistema de divisões territoriais</p>
+                            {camadas.length > 1 && (
+                                <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                                    <i className="fas fa-info-circle"></i>
+                                    <span>Arraste as camadas para reordená-las</span>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Controle global de visibilidade */}
+                        {camadas.length > 0 && (
+                            <div className="mb-4">
+                                <button
+                                    onClick={() => {
+                                        const todasVisiveis = camadas.every(c => c.visivel !== false);
+                                        const novasCamadas = camadas.map(c => ({
+                                            ...c,
+                                            visivel: todasVisiveis ? false : true
+                                        }));
+                                        setCamadas(novasCamadas);
+                                        mostrarToast(
+                                            todasVisiveis ? '✓ Todas as camadas ocultas' : '✓ Todas as camadas visíveis',
+                                            'success'
+                                        );
+                                    }}
+                                    className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                                >
+                                    <i className={`fas ${camadas.every(c => c.visivel !== false) ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                    {camadas.every(c => c.visivel !== false) ? 'Ocultar Todas' : 'Mostrar Todas'}
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* Estatísticas */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+                                <div className="text-3xl font-bold">{camadas.length}</div>
+                                <div className="text-xs opacity-90">Camadas</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
+                                <div className="text-3xl font-bold">
+                                    {camadas.reduce((sum, c) => sum + c.municipios.length, 0)}
+                                </div>
+                                <div className="text-xs opacity-90">Municípios</div>
+                            </div>
+                        </div>
+                        
+                        {/* Tela inicial sem camadas */}
+                        {camadas.length === 0 && (
+                            <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-dashed border-blue-300">
+                                <div className="text-center">
+                                    <i className="fas fa-sitemap text-5xl text-blue-400 mb-3"></i>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-2">Comece Aqui!</h3>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Clique no botão + para criar uma camada ou importe uma hierarquia completa
+                                    </p>
+                                    <button 
+                                        onClick={() => setModalImportAberto(true)} 
+                                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition"
+                                    >
+                                        <i className="fas fa-file-import mr-2"></i>Importar Hierarquia
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Lista de camadas */}
+                        <div className="space-y-3 mb-20">
+                            {camadas.map((camada, index) => (
+                                <LayerItem
+                                    key={camada.id}
+                                    camada={camada}
+                                    indice={index}
+                                    ativo={camadaAtiva === camada.id}
+                                    expandido={camadaExpandida === camada.id}
+                                    onToggleExpansao={(id) => 
+                                        setCamadaExpandida(camadaExpandida === id ? null : id)
+                                    }
+                                    onSelecionar={(id) => {
+                                        setCamadaAtiva(id);
+                                        setCamadaExpandida(id);
+                                        const camadaSelecionada = camadas.find(c => c.id === id);
+                                        mostrarToast(`✓ "${camadaSelecionada.nome}" ativada!`, 'success');
+                                    }}
+                                    onAtualizar={atualizarCamada}
+                                    onAbrirImport={() => setModalImportAberto(true)}
+                                    paletaExpandida={paletasExpandidas[camada.id] || false}
+                                    onTogglePaleta={() => 
+                                        setPaletasExpandidas(prev => ({ 
+                                            ...prev, 
+                                            [camada.id]: !prev[camada.id] 
+                                        }))
+                                    }
+                                    onReordenar={reordenarCamadas}
+                                    onDuplicar={duplicarCamada}
+                                    onExcluir={excluirCamada}
+                                />
+                            ))}
+                        </div>
+                        
+                        {/* Botão de exportar */}
+                        {camadas.length > 0 && (
+                            <div className="fixed bottom-24 right-6 w-84">
+                                <button 
+                                    onClick={exportarJSON} 
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                >
+                                    <i className="fas fa-download mr-2"></i>Exportar JSON
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* FAB - Adicionar camada */}
+                    <button 
+                        onClick={adicionarNovaCamada} 
+                        className="fab" 
+                        title="Criar Nova Camada"
+                    >
+                        <i className="fas fa-plus"></i>
+                    </button>
+                    
+                    {/* Modal de importação */}
+                    <ImportModal 
+                        aberto={modalImportAberto} 
+                        onFechar={() => { 
+                            setModalImportAberto(false); 
+                            setTextoImport(''); 
+                            setResultadoImport(null); 
+                        }} 
+                        onImportar={processarImportacao}
+                        onImportarHierarquia={importarHierarquia}
+                        onImportarLista={importarLista}
+                        texto={textoImport} 
+                        onAlterarTexto={setTextoImport} 
+                        resultado={resultadoImport}
+                    />
+                    
+                    {/* Toast */}
+                    <Toast toast={toast} />
+                </div>
+            );
+        };
+
+        // Renderizar aplicação
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

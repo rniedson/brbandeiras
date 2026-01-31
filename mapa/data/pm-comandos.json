@@ -1,0 +1,429 @@
+{
+  "versao": "3.0",
+  "tipo": "editor-hierarquia",
+  "data_exportacao": "2025-10-31T00:46:40.469Z",
+  "total_camadas": 21,
+  "camadas": [
+    {
+      "nome": "01° CRPM - GOIÂNIA",
+      "cor": "#2670b5",
+      "municipios": [
+        "Goiânia"
+      ],
+      "total_municipios": 1,
+      "data_criacao": "2025-10-30T23:07:34.435Z"
+    },
+    {
+      "nome": "02° CRPM - Aparecida de Goiânia",
+      "cor": "#62bf82",
+      "municipios": [
+        "Aparecida de Goiânia",
+        "Caldazinha",
+        "Bonfinópolis",
+        "Hidrolândia",
+        "Bela Vista de Goiás",
+        "Senador Canedo"
+      ],
+      "total_municipios": 6,
+      "data_criacao": "2025-10-30T23:08:24.894Z"
+    },
+    {
+      "nome": "03° CRPM - Anápolis",
+      "cor": "#fff200",
+      "municipios": [
+        "Anápolis",
+        "Abadiânia",
+        "Campo Limpo de Goiás",
+        "Corumbá de Goiás",
+        "Goianápolis",
+        "Nerópolis",
+        "Ouro Verde de Goiás",
+        "Pirenópolis",
+        "Terezópolis de Goiás",
+        "Silvânia",
+        "Vianópolis",
+        "Gameleira de Goiás",
+        "Leopoldo de Bulhões"
+      ],
+      "total_municipios": 13,
+      "data_criacao": "2025-10-30T23:11:04.562Z"
+    },
+    {
+      "nome": "04° CRPM - Goiás Velho",
+      "cor": "#e8805a",
+      "municipios": [
+        "Goiás",
+        "Americano do Brasil",
+        "Guaraíta",
+        "Heitoraí",
+        "Itaberaí",
+        "Jussara",
+        "Santa Fé de Goiás",
+        "Taquaral de Goiás",
+        "Matrinchã",
+        "Britânia",
+        "Itapirapuã",
+        "Faina",
+        "Itapuranga",
+        "Morro Agudo de Goiás",
+        "Itaguari",
+        "Itaguaru",
+        "Novo Brasil",
+        "Fazenda Nova",
+        "Córrego do Ouro",
+        "Buriti de Goiás",
+        "Mossâmedes",
+        "Sanclerlândia",
+        "Anicuns",
+        "Adelândia"
+      ],
+      "total_municipios": 24,
+      "data_criacao": "2025-10-30T23:14:41.415Z"
+    },
+    {
+      "nome": "05° CRPM - Luziânia",
+      "cor": "#de6262",
+      "municipios": [
+        "Luziânia",
+        "Cidade Ocidental",
+        "Cristalina",
+        "Novo Gama",
+        "Valparaíso de Goiás"
+      ],
+      "total_municipios": 5,
+      "data_criacao": "2025-10-30T23:28:37.146Z"
+    },
+    {
+      "nome": "06° CRPM - Itumbiara",
+      "cor": "#866b4d",
+      "municipios": [
+        "Itumbiara",
+        "Água Limpa",
+        "Aloândia",
+        "Bom Jesus de Goiás",
+        "Buriti Alegre",
+        "Cachoeira Dourada",
+        "Goiatuba",
+        "Inaciolândia",
+        "Joviânia",
+        "Panamá",
+        "Vicentinópolis"
+      ],
+      "total_municipios": 11,
+      "data_criacao": "2025-10-30T23:30:32.350Z"
+    },
+    {
+      "nome": "07° CRPM - São Luís",
+      "cor": "#b89d7f",
+      "municipios": [
+        "São Luís de Montes Belos",
+        "Aurilândia",
+        "Cachoeira de Goiás",
+        "Córrego do Ouro",
+        "Moiporá",
+        "Sanclerlândia",
+        "São João da Paraúna",
+        "Paraúna",
+        "Palminópolis",
+        "Turvânia",
+        "Firminópolis"
+      ],
+      "total_municipios": 12,
+      "data_criacao": "2025-10-30T23:35:00.367Z"
+    },
+    {
+      "nome": "08° CRPM - RIO VERDE",
+      "cor": "#5c729e",
+      "municipios": [
+        "Rio Verde",
+        "Acreúna",
+        "Maurilândia",
+        "Quirinópolis",
+        "Santa Helena de Goiás",
+        "Santo Antônio da Barra",
+        "Porteirão",
+        "Turvelândia",
+        "Edéia",
+        "Edealina",
+        "Indiara",
+        "Jandaia",
+        "Cachoeira Alta",
+        "Paranaiguara",
+        "São Simão",
+        "Castelândia",
+        "Gouvelândia"
+      ],
+      "total_municipios": 19,
+      "data_criacao": "2025-10-30T23:38:22.223Z"
+    },
+    {
+      "nome": "09° CRPM - CATALÃO",
+      "cor": "#9feb62",
+      "municipios": [
+        "Catalão",
+        "Campo Alegre de Goiás",
+        "Cumari",
+        "Davinópolis",
+        "Goiandira",
+        "Nova Aurora",
+        "Ouvidor",
+        "Três Ranchos",
+        "Urutaí",
+        "Ipameri",
+        "Orizona",
+        "Pires do Rio",
+        "Santa Cruz de Goiás",
+        "Palmelo",
+        "São Miguel do Passa Quatro"
+      ],
+      "total_municipios": 15,
+      "data_criacao": "2025-10-30T23:41:57.090Z"
+    },
+    {
+      "nome": "10° CRPM - CERES",
+      "cor": "#c2db67",
+      "municipios": [
+        "Ceres",
+        "Carmo do Rio Verde",
+        "Ipiranga de Goiás",
+        "Itapaci",
+        "Nova Glória",
+        "Pilar de Goiás",
+        "Rialma",
+        "Rianápolis",
+        "Rubiataba",
+        "Santa Isabel",
+        "Taquaral de Goiás",
+        "Uruana",
+        "Hidrolina",
+        "Crixás",
+        "Nova América",
+        "Guarinos",
+        "Santa Terezinha de Goiás",
+        "Campos Verdes",
+        "Uirapuru",
+        "São Patrício"
+      ],
+      "total_municipios": 22,
+      "data_criacao": "2025-10-30T23:45:46.756Z"
+    },
+    {
+      "nome": "11° CRPM - FORMOSA",
+      "cor": "#bab1b1",
+      "municipios": [
+        "Formosa",
+        "Cabeceiras",
+        "Flores de Goiás",
+        "Vila Boa",
+        "Cavalcante",
+        "Alto Paraíso de Goiás",
+        "São João d'Aliança",
+        "Teresina de Goiás",
+        "Água Fria de Goiás",
+        "Planaltina"
+      ],
+      "total_municipios": 10,
+      "data_criacao": "2025-10-30T23:49:33.082Z"
+    },
+    {
+      "nome": "12° CRPM - PORANGATU",
+      "cor": "#d68383",
+      "municipios": [
+        "Porangatu",
+        "Estrela do Norte",
+        "Minaçu",
+        "Mutunópolis",
+        "Novo Planalto",
+        "Santa Tereza de Goiás",
+        "Trombas",
+        "Formoso",
+        "Montividiu do Norte"
+      ],
+      "total_municipios": 10,
+      "data_criacao": "2025-10-30T23:57:29.432Z"
+    },
+    {
+      "nome": "13° CRPM - POSSE",
+      "cor": "#ffd230",
+      "municipios": [
+        "Posse",
+        "Alvorada do Norte",
+        "Buritinópolis",
+        "Damianópolis",
+        "Divinópolis de Goiás",
+        "Guarani de Goiás",
+        "Iaciara",
+        "Mambaí",
+        "Sítio d'Abadia",
+        "São Domingos",
+        "Simolândia",
+        "Monte Alegre de Goiás",
+        "Campos Belos",
+        "Nova Roma"
+      ],
+      "total_municipios": 15,
+      "data_criacao": "2025-10-30T23:59:32.397Z"
+    },
+    {
+      "nome": "14° CRPM - JATAÍ",
+      "cor": "#4e8266",
+      "municipios": [
+        "Jataí",
+        "Aparecida do Rio Doce",
+        "Aporé",
+        "Itajá",
+        "Mineiros",
+        "Perolândia",
+        "Portelândia",
+        "Santa Rita do Araguaia",
+        "Serranópolis",
+        "Chapadão do Céu",
+        "Itarumã",
+        "Caçu",
+        "Lagoa Santa"
+      ],
+      "total_municipios": 13,
+      "data_criacao": "2025-10-31T00:00:35.998Z"
+    },
+    {
+      "nome": "15° CRPM - GOIANÉSIA",
+      "cor": "#64c9ae",
+      "municipios": [
+        "Goianésia",
+        "Barro Alto",
+        "Santa Rita do Novo Destino",
+        "Vila Propício",
+        "Jaraguá",
+        "São Francisco de Goiás",
+        "Petrolina de Goiás",
+        "Santa Rosa de Goiás",
+        "Jesúpolis"
+      ],
+      "total_municipios": 9,
+      "data_criacao": "2025-10-31T00:02:28.515Z"
+    },
+    {
+      "nome": "16° CRPM - TRINDADE",
+      "cor": "#fca21b",
+      "municipios": [
+        "Trindade",
+        "Abadia de Goiás",
+        "Aragoiânia",
+        "Brazabrantes",
+        "Campestre de Goiás",
+        "Caturaí",
+        "Goianira",
+        "Guapó",
+        "Inhumas",
+        "Nazário",
+        "Santa Bárbara de Goiás",
+        "Santo Antônio de Goiás",
+        "Varjão",
+        "Palmeiras de Goiás",
+        "Cezarina",
+        "Nova Veneza",
+        "Damolândia",
+        "Itauçu",
+        "Avelinópolis",
+        "Araçu"
+      ],
+      "total_municipios": 22,
+      "data_criacao": "2025-10-31T00:05:15.463Z"
+    },
+    {
+      "nome": "17° CRPM - ÁGUAS LINDAS DE GOIÁS",
+      "cor": "#a8cde0",
+      "municipios": [
+        "Padre Bernardo",
+        "Mimoso de Goiás",
+        "Santo Antônio do Descoberto",
+        "Águas Lindas de Goiás",
+        "Cocalzinho de Goiás",
+        "Alexânia"
+      ],
+      "total_municipios": 7,
+      "data_criacao": "2025-10-31T00:07:59.729Z"
+    },
+    {
+      "nome": "18° CRPM - URUAÇU",
+      "cor": "#f5c993",
+      "municipios": [
+        "Uruaçu",
+        "Campinorte",
+        "Campinaçu",
+        "Formoso",
+        "Mara Rosa",
+        "São Luíz do Norte",
+        "Niquelândia",
+        "Nova Iguaçu de Goiás",
+        "Alto Horizonte",
+        "Amaralina",
+        "Colinas do Sul"
+      ],
+      "total_municipios": 13,
+      "data_criacao": "2025-10-31T00:14:41.290Z"
+    },
+    {
+      "nome": "19° CRPM - CALDAS NOVAS",
+      "cor": "#5eafd1",
+      "municipios": [
+        "Caldas Novas",
+        "Marzagão",
+        "Piracanjuba",
+        "Rio Quente",
+        "Morrinhos",
+        "Pontalina",
+        "Mairipotaba",
+        "Cromínia",
+        "Professor Jamil",
+        "Cristianópolis",
+        "Corumbaíba"
+      ],
+      "total_municipios": 11,
+      "data_criacao": "2025-10-31T00:16:53.620Z"
+    },
+    {
+      "nome": "20° CRPM - IPORÁ",
+      "cor": "#5eafd1",
+      "municipios": [
+        "Iporá",
+        "Amorinópolis",
+        "Diorama",
+        "Fazenda Nova",
+        "Ivolândia",
+        "Jaupaci",
+        "Moiporá",
+        "Novo Brasil",
+        "Palestina de Goiás",
+        "Sanclerlândia",
+        "Piranhas",
+        "Baliza",
+        "Bom Jardim de Goiás",
+        "Aragarças",
+        "Montes Claros de Goiás",
+        "Arenópolis",
+        "Caiapônia",
+        "Doverlândia",
+        "Israelândia"
+      ],
+      "total_municipios": 19,
+      "data_criacao": "2025-10-31T00:22:05.406Z"
+    },
+    {
+      "nome": "21° CRPM - NOVA CRIXÁS",
+      "cor": "#72965c",
+      "municipios": [
+        "Araguapaz",
+        "Mozarlândia",
+        "Aruanã",
+        "Nova Crixás",
+        "Mundo Novo",
+        "Bonópolis",
+        "São Miguel do Araguaia",
+        "Campos Belos"
+      ],
+      "total_municipios": 9,
+      "data_criacao": "2025-10-31T00:32:47.074Z"
+    }
+  ]
+}

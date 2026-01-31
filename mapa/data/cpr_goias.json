@@ -1,0 +1,769 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "cpr_go.1",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 1,
+        "Unidade": "COMANDO DE POLICIAMENTO RODOVIÁRIO - CPR",
+        "Tipo": "CPR Comando",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua 9, esquina com a rua 14, Setor Aeroviário, Goiânia-GO - CEP: 74.435-210",
+        "Telefone": "(62)3201-1444",
+        "Email": "rodoviariocpr1@gmail.com",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.2",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 2,
+        "Unidade": "1º BATALHÃO DE POLÍCIA MILITAR RODOVIÁRIO - 1º BPMRV",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-070, KM 05, Vila Mutirão, Goiânia-GO - CEP: 74480-080",
+        "Telefone": "(62)3201-6321",
+        "Email": "1bpmrv1@pm.go.gov.br",
+        "Horario": "Segunda a Sexta-feira, das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.3",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 3,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Goiânia (saída para Trindade)",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-060, KM 06, Goiânia-GO",
+        "Telefone": "(62)3201-6347",
+        "Email": "go060km04@gmail.com",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.4",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 4,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Goiânia (saída para Nerópolis)",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO 080, KM 05, Zona Rural, município de Goiânia-GO",
+        "Telefone": "(62) 99969-7120",
+        "Email": "go080km05@gmail.com",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.5",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 5,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Goiânia (saída para Goianira)",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-070, KM 05, Vila Mutirão, Goiânia-GO",
+        "Telefone": "(62) 3201-6348",
+        "Email": "",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.6",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2603,
+          -15.9309,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 6,
+        "Unidade": "Barreira de Fiscalização Rodoviária de São Francisco de Goiás",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "São Francisco de Goiás",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO 080, KM 89, São Francisco de Goiás-GO",
+        "Telefone": "(62)9957-6609",
+        "Email": "go080km05@gmail.com",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.7",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.7507,
+          -16.6189,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 7,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Leopoldo de Bulhões",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Leopoldo de Bulhões",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-010, KM 58, Leopoldo de Bulhões-GO",
+        "Telefone": "(62) 9 9969-6889",
+        "Email": "adm1bpmrv@gmail.com",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.8",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.0933,
+          -16.7073,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 8,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Senador Canedo",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Senador Canedo",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-020, KM 15, Senador Canedo-GO",
+        "Telefone": "(62) 9 9969-6891",
+        "Email": "postodago020@hotmail.com",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.9",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.4547,
+          -16.9178,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 9,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Aragoiânia",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Aragoiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-040, KM 14, Aragoiânia-GO",
+        "Telefone": "(62) 9 9969-6899",
+        "Email": "go040km018@gmail.com",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.10",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.7003,
+          -16.5319,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 10,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Santa Bárbara",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Santa Bárbara de Goiás",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-060, KM 36, Santa Bárbara de Goiás-GO",
+        "Telefone": "(62) 99969-6855",
+        "Email": "go060km36@gmail.com",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.11",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -47.9503,
+          -16.2528,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 11,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Luziânia",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Luziânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-425, KM 11, Fazenda Palma, S/Nº, Zona Rural, Luziânia-GO - CEP: 72.800-000",
+        "Telefone": "(62)8340-1524",
+        "Email": "go425km11@gmail.com",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.12",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -50.1404,
+          -15.9331,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 12,
+        "Unidade": "2º BATAHLÃO DE POLICIA MILITAR RODOVIÁRIO -CPR (2º BPMRV)",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Goiás",
+        "Unidade_Federacao": "GO",
+        "Endereço": "GO 070 KM 113 CIDADE DE GOIÁS-GO",
+        "Telefone": "(64)9986-7551",
+        "Email": "2bpmrv2@pm.go.gov.br",
+        "Horario": "ADMINISTRATIVO: Segunda a sexta-feira, das 08h00 ás 12h00 e das 14h00 ás 18h00; e OPERACIONAL: 24 horas",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.13",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.1448,
+          -14.5256,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 13,
+        "Unidade": "3º BATALHÃO DE POLÍCIA MILITAR RODOVIÁRIO – 3º BPMRv",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Uruaçu",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-237, KM 241,3, Zona Rural, Uruaçu-GO",
+        "Telefone": "(62)9969-6829",
+        "Email": "sad.3bpmrv@gmail.com",
+        "Horario": "24 horas por dia, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.14",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.1448,
+          -14.5256,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 14,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Uruaçu",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Uruaçu",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-237, KM 241, Zona rural, Uruaçu - GO",
+        "Telefone": "(62) 9 9969-6828",
+        "Email": "dpmrvuruacu@gmail.com",
+        "Horario": "24 horas por dia, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.15",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.6892,
+          -13.7853,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 15,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Santa Tereza de Goiás",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Santa Tereza de Goiás",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-241, KM 347, zona rual, Santa Tereza de Goiás - GO",
+        "Telefone": "(62) 9 9969-7136",
+        "Email": "dpmrvsantatereza241@gmail.com",
+        "Horario": "24 horas por dia, 07 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.16",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.9136,
+          -14.9656,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 16,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Barro Alto",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Barro Alto",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-080, KM 203, zona rual, Barro Alto - GO",
+        "Telefone": "(62) 99969-6948",
+        "Email": "dpmrvbarroalto@gmail.com",
+        "Horario": "24 horas por dia, 07 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.17",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.9594,
+          -15.8508,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 17,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Pirenópolis",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Pirenópolis",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-338, KM 44, zona rual, Pirenópolis - GO",
+        "Telefone": "(62) 99969-7025",
+        "Email": "dpmrvpirenopolis@gmail.com",
+        "Horario": "24 horas por dia, 07 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.18",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.117,
+          -15.3194,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 18,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Goianésia",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Goianésia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO 080, KM 139, zona Rural, Goianésia - GO",
+        "Telefone": "(62)9969-6929",
+        "Email": "dpmrvgoianesia@gmail.com",
+        "Horario": "24 horas por dia, 07 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.19",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -47.5236,
+          -14.7086,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 19,
+        "Unidade": "Barreira de Fiscalização Rodoviária de São João D'Aliança",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "São João D'Aliança",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-118, KM 092, zona rual, São João D'Aliança - GO",
+        "Telefone": "(62) 9 9969-6978",
+        "Email": "saojoao.dpmrv@gmail.com",
+        "Horario": "24 horas por dia, 07 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.20",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.625,
+          -17.7421,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 20,
+        "Unidade": "4º BATALHÃO DE POLÍCIA MILITAR RODOVIÁRIO - 4º BPMRv",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Caldas Novas",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO–213, Km 178, Zona Rural, Caldas Novas-GO",
+        "Telefone": "(64)3455-3348",
+        "Email": "4bpmrv1@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.21",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -50.4511,
+          -18.4476,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 21,
+        "Unidade": "5º BATALHÃO DE POLÍCIA MILITAR RODOVIÁRIO - 5º BPMRv",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Quirinópolis",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO -206, KM-135, Zona Rural, Quirinópolis-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@gmail.com",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.22",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -50.4511,
+          -18.4476,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 22,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Quirinópolis - 1ª CIA",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Quirinópolis",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-206, KM-135, Zona Rural, Município de Quirinópolis-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.23",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 23,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Gouvelândia - 1ª CIA",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Gouvelândia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-206, KM 82, município de Gouvelândia-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.24",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -51.1714,
+          -17.4342,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 24,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Montividiu - 2ª CIA",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Montividiu",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-174, KM 276, Zona Rural, município de Montividiu-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.25",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -52.5417,
+          -18.4006,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 25,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Chapadão do Céu - 2ª CIA",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Chapadão do Céu",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-050, KM 35, municípo de Chapadão do Céu-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.26",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -50.9456,
+          -18.7636,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 26,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Cachoeira Alta - 3ª CIA",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Cachoeira Alta",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-206, KM 01, Zona Rural, município de Cachoeira Alta-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.27",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -51.9253,
+          -18.9697,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 27,
+        "Unidade": "Barreira de Fiscalização Rodoviária de Aporé - 3ª CIA",
+        "Tipo": "CPR Barreiras",
+        "Municipio": "Aporé",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia GO-184, KM 01, município de Aporé-GO",
+        "Telefone": "0800-1901020",
+        "Email": "5bpmrvquirinopolis@pm.go.gov.br",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.28",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 28,
+        "Unidade": "6º BATALHÃO DE POLÍCIA MILITAR RODOVIÁRIO - 6º BPMRv (COPOM - 198)",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua 09, esquina com Rua 14, Setor Aeroviário, Goiânia-GO - CEP: 74435-210",
+        "Telefone": "(62)9910-7401",
+        "Email": "6bpmrv.cocrv@gmail.com",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cpr_go.29",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 29,
+        "Unidade": "BATALHÃO DE POLÍCIA MILITAR FAZENDÁRIA - BPMFAZ",
+        "Tipo": "CPR Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Av. Vereador José Monteiro, nº 2.233, Setor Nova Vila, Goiânia-GO - CEP: 74.653-900",
+        "Telefone": "(62)3269-2363",
+        "Email": "bpmfaz@gmail.com",
+        "Horario": "Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    }
+  ],
+  "totalFeatures": 29,
+  "numberMatched": 29,
+  "numberReturned": 29,
+  "timeStamp": "2025-10-30T13:07:33.250Z",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4674"
+    }
+  }
+}

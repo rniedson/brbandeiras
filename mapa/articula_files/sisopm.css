@@ -1,0 +1,11 @@
+body.skin-blue .main-header .navbar, body.skin-blue-light .main-header .navbar {
+  background-color: #3c8dbc;
+}
+
+.card .card-header {
+  background: #3c8dbc;
+  color: #FFFFFF;
+  font-weight:bold;
+  font-size:16px;
+  margin-bottom:unset;
+}

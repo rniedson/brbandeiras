@@ -1,0 +1,285 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "coc_go.1",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 1,
+        "Unidade": "COMANDO DE OPERAÇÕES DE CERRADO - COC",
+        "Tipo": "COC Comando",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida César Lattes com Rua Dom Um s/nº. Qd.103, Lt.01, Núcleo Socioambiental - Parque Municipal Bernardo Élis – Bairro Setor Horizonte, Goiânia-GO - CEP 74363-430",
+        "Telefone": "(62)9910-6148",
+        "Celular": "(64)98167-0047",
+        "Email": "coc@pm.go.gov.br",
+        "Comandante": "Coronel PM LEONARDO Rezende Reis",
+        "Subcomandante": "Tenente-Coronel PM Geraldo PASCOAL Soares Neto",
+        "SEI": "11836",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.2",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.445,
+          -16.7574,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 2,
+        "Unidade": "BATALHÃO DE POLÍCIA MILITAR AMBIENTAL - BPMAMBIENTAL",
+        "Tipo": "COC Batalhões",
+        "Municipio": "Abadia de Goiás",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Parque Estadual Telma Ortegal, BR 060, KM 174, Abadia de Goiás-GO - CEP: 75345-000",
+        "Telefone": "(62)3503-1419",
+        "Celular": "(62)99611-2182",
+        "Email": "bpmambiental-sad@pm.go.gov.br",
+        "Comandante": "Tenente-Coronel PM Marcelo Duarte VELOSO",
+        "Subcomandante": "Major PM Bruno PORTELA Leite da Silva",
+        "SEI": "06362",
+        "Horario": "24h por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.3",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.445,
+          -16.7574,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 3,
+        "Unidade": "1ª COMPANHIA DESTACADA DO BPMAMBIENTAL (ABADIA DE GOIÁS)",
+        "Tipo": "COC Companhias",
+        "Municipio": "Abadia de Goiás",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Parque Estadual Telma Ortegal, BR 060, KM 174, Abadia de Goiás-GO - CEP: 75345000",
+        "Telefone": "(62)3503-1419",
+        "Celular": "(62)99611-2054",
+        "Email": "bpmambiental-sop@pm.go.gov.br",
+        "Comandante": "Capitão PM Ronaldo QUIRINO Pereira",
+        "Subcomandante": "",
+        "SEI": "20607",
+        "Horario": "24 horas por dias, 07 dias da semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.4",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -50.9269,
+          -17.7972,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 4,
+        "Unidade": "2ª COMPANHIA DESTACADA DO BPMAMBIENTAL (RIO VERDE)",
+        "Tipo": "COC Companhias",
+        "Municipio": "Rio Verde",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua C, esquina com rua Celina Jaime Barbosa, Vila Mariana, Rio Verde-GO - CEP: 75912-312",
+        "Telefone": "(64)3622-1965",
+        "Celular": "(64)99671-5572",
+        "Email": "2cipma-rioverde@pm.go.gov.br",
+        "Comandante": "Capitão PM Danillo Duarte Pinto",
+        "Subcomandante": "",
+        "SEI": "20608",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.5",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.625,
+          -17.7421,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 5,
+        "Unidade": "3ª COMPANHIA DESTACADA DO BPMAMBIENTAL (CALDAS NOVAS)",
+        "Tipo": "COC Companhias",
+        "Municipio": "Caldas Novas",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua 02, nº 147, Bairro Itaguaí III, Caldas Novas-GO - CEP: 75.682-112",
+        "Telefone": "(64)3454-6617",
+        "Celular": "(64)99647-7447",
+        "Email": "gpmacaldasnovas@gmail.com",
+        "Comandante": "2º Tenente PM DARILDO José Leite",
+        "Subcomandante": "",
+        "SEI": "20609",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.6",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -51.0808,
+          -14.9153,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 6,
+        "Unidade": "4ª COMPANHIA DESTACADA DO BPMAMBIENTAL (ARUANÃ)",
+        "Tipo": "COC Companhias",
+        "Municipio": "Aruanã",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida Altamiro Caio Pacheco, nº 37-A, Centro - Aruanã-GO",
+        "Telefone": "(62)3376-1057",
+        "Celular": "(62)99969-7109",
+        "Email": "bpmambiental-sop@pm.go.gov.br",
+        "Comandante": "Capitão PM Círio WALDÊZ de Oliveira Rosa",
+        "Subcomandante": "",
+        "SEI": "20610",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.7",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.117,
+          -15.3194,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 7,
+        "Unidade": "5ª COMPANHIA DESTACADA DO BPMAMBIENTAL (GOIANÉSIA)",
+        "Tipo": "COC Companhias",
+        "Municipio": "Goianésia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rua 02, nº 363, Setor Eurípedes Barsanulfo, Goianésia-GO",
+        "Telefone": "(62)9969-7142",
+        "Celular": "(62)99969-7142",
+        "Email": "2ciaambiental.goianesia@gmail.com",
+        "Comandante": "Capitão PM Eurípedes DIAS Filho",
+        "Subcomandante": "",
+        "SEI": "20610",
+        "Horario": "24 horas por dia, 7 dias por semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.8",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2646,
+          -16.6869,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 8,
+        "Unidade": "BATALHÃO MILITAR DE DIVISAS - BPMDIVISAS (COD)",
+        "Tipo": "COC Batalhões",
+        "Municipio": "Goiânia",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Avenida Governador José Ludovico de Almeida nº 20, Conjunto Caiçara, Goiânia-GO, CEP 74775-013",
+        "Telefone": "6283450042",
+        "Celular": "(62)99823-9577",
+        "Email": "cod1@pm.go.gov.br",
+        "Comandante": "Major PM Hugo Jorge BRAVO de Carvalho",
+        "Subcomandante": "Major PM Filogônio Junio da COSTA",
+        "SEI": "14144",
+        "Horario": "24h por dia, 07 dias na semana",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "coc_go.9",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.0247,
+          -16.5189,
+          0
+        ]
+      },
+      "geometry_name": "geom",
+      "properties": {
+        "id_posto_prf": 9,
+        "Unidade": "BATALHÃO DE POLÍCIA MILITAR RURAL - BPMRURAL (COC)",
+        "Tipo": "COC Batalhões",
+        "Municipio": "Goianápolis",
+        "Unidade_Federacao": "GO",
+        "Endereço": "Rodovia BR-153/ 060, Km 127, Parque Estadual Altamiro de Moura Pacheco, Zona Rural, Goianápolis-GO - CEP: 75170-000",
+        "Telefone": "(62) 9 9930-4075",
+        "Celular": "(62) 9 9930-4075",
+        "Email": "policiamentoruralpmgo@gmail.com",
+        "Comandante": "Tenente-Coronel QOPM FÁBIO Francisco da COSTA",
+        "Subcomandante": "Major QOPM Márcio de LIMA Pereira",
+        "SEI": "17507",
+        "Horario": "1) ADMINISTRATIVO: Segunda a sexta-feira: das 08h00 às 12h00 e das 14h00 às 18h00; 2) OPERACIONAL: 24 horas",
+        "dt_ini": "2025-01-01Z",
+        "dt_fim": "2099-12-31Z"
+      }
+    }
+  ],
+  "totalFeatures": 9,
+  "numberMatched": 9,
+  "numberReturned": 9,
+  "timeStamp": "2025-10-30T13:34:49.942Z",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4674"
+    }
+  }
+}

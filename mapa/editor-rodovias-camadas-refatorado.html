@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Rodovias - Sistema Multi-Camadas</title>
+    
+    <!-- Bibliotecas Externas -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        /* ==================== RESET E BASE ==================== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        
+        /* ==================== SIDEBAR ==================== */
+        .sidebar {
+            height: 100vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            box-shadow: -4px 0 30px rgba(0,0,0,0.4);
+            color: white;
+        }
+        .sidebar::-webkit-scrollbar { width: 10px; }
+        .sidebar::-webkit-scrollbar-track { background: #0f172a; }
+        .sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 5px; }
+        
+        /* ==================== CARDS DE CAMADA (COMPACTO) ==================== */
+        .layer-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+        .layer-card.active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .layer-color-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .layer-color-box:hover { transform: scale(1.1); }
+        
+        /* ==================== CONTROLES (COMPACTO) ==================== */
+        .icon-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        .icon-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #475569;
+            transition: .3s;
+            border-radius: 20px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider { background-color: #3b82f6; }
+        input:checked + .toggle-slider:before { transform: translateX(20px); }
+        
+        /* ==================== PAINEL DE PROPRIEDADES EXPANSÍVEL ==================== */
+        .properties-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .properties-panel.expanded {
+            max-height: 500px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .property-section { margin-bottom: 16px; }
+        .property-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        /* ==================== FILTROS E FORMULÁRIOS ==================== */
+        .filter-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .filter-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .select-field {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .select-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .select-field option { background: #1e293b; color: white; }
+        
+        .input-field {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .opacity-slider {
+            width: 100%;
+            margin: 8px 0;
+            accent-color: #3b82f6;
+        }
+        
+        /* ==================== ESTATÍSTICAS ==================== */
+        .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+            border-radius: 16px;
+            padding: 16px 12px;
+            text-align: center;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: transform 0.3s;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stat-card:hover { transform: translateY(-4px); }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        
+        /* ==================== BOTÕES ==================== */
+        .btn {
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* ==================== FAB (Floating Action Button) ==================== */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .fab:hover {
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 12px 32px rgba(16, 185, 129, 0.7);
+        }
+        
+        /* ==================== MODAL ==================== */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-content {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s;
+            color: white;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100px) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        
+        /* ==================== SELETOR DE CORES ==================== */
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 3px solid transparent;
+        }
+        .color-option:hover { transform: scale(1.1); }
+        .color-option.selected {
+            border-color: white;
+            transform: scale(1.15);
+        }
+        
+        /* ==================== FEEDBACK (Toast, Loading) ==================== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            color: #1e293b;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            animation: slideInUp 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 400px;
+        }
+        @keyframes slideInUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .spinner {
+            width: 64px;
+            height: 64px;
+            border: 6px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* ==================== LEAFLET CUSTOMIZAÇÃO ==================== */
+        .leaflet-tooltip {
+            background: rgba(30, 41, 59, 0.95) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            max-width: 350px !important;
+        }
+        
+        .custom-tooltip {
+            background: rgba(30, 41, 59, 0.98) !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+            border-radius: 10px !important;
+            padding: 10px 14px !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: #1e293b !important;
+            color: white !important;
+            border-radius: 12px !important;
+            padding: 0 !important;
+        }
+        .leaflet-popup-content { margin: 16px !important; }
+        .leaflet-popup-tip { background: #1e293b !important; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        // ==================== HOOKS DO REACT ====================
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // ==================== CONSTANTES GLOBAIS ====================
+        
+        // Paleta de cores pré-definidas para camadas
+        const PRESET_COLORS = [
+            '#ef4444', '#f59e0b', '#10b981', '#3b82f6',
+            '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
+            '#6366f1', '#84cc16', '#06b6d4', '#a855f7',
+            '#eab308', '#22c55e', '#0ea5e9', '#f43f5e'
+        ];
+
+        // Mapeamento de siglas para nomes completos de pavimentação
+        const PAVIMENTACAO_LABELS = {
+            'PLA': 'Planejada',
+            'LEN': 'Leito Natural',
+            'IMP': 'Implantada',
+            'PAV': 'Pavimentada',
+            'DUP': 'Duplicada',
+            'EOI': 'Em Obras de Implantação',
+            'EOP': 'Em Obras de Pavimentação',
+            'EOD': 'Em Obras de Duplicação',
+            'TRV': 'Travessia'
+        };
+
+        // ==================== COMPONENTES DE UI ====================
+        
+        /**
+         * Toast - Componente de notificação temporária
+         * @param {string} message - Mensagem a exibir
+         * @param {boolean} show - Controla visibilidade
+         */
+        const Toast = ({ message, show }) => {
+            if (!show) return null;
+            return (
+                <div className="toast">
+                    <i className="fas fa-check-circle text-green-500 text-xl"></i>
+                    <span className="font-semibold">{message}</span>
+                </div>
+            );
+        };
+
+        /**
+         * Loading - Overlay de carregamento
+         * @param {boolean} show - Controla visibilidade
+         * @param {string} message - Mensagem de carregamento
+         */
+        const Loading = ({ show, message }) => {
+            if (!show) return null;
+            return (
+                <div className="loading-overlay">
+                    <div className="text-center">
+                        <div className="spinner mb-4"></div>
+                        <p className="text-white text-lg font-semibold">{message}</p>
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * AddLayerModal - Modal para adicionar novas camadas
+         * Permite upload de arquivo GeoJSON e configuração inicial
+         */
+        const AddLayerModal = ({ show, onClose, onAdd }) => {
+            const [nome, setNome] = useState('');
+            const [cor, setCor] = useState('#3b82f6');
+            const [arquivo, setArquivo] = useState(null);
+            const [geojson, setGeojson] = useState(null);
+
+            // Handler para mudança de arquivo
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    setArquivo(file);
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            setGeojson(data);
+                            // Auto-preencher nome com nome do arquivo
+                            if (!nome) {
+                                setNome(file.name.replace('.json', ''));
+                            }
+                        } catch (error) {
+                            alert('Erro ao ler arquivo JSON: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            // Handler para adicionar camada
+            const handleAdd = () => {
+                if (!nome || !geojson) {
+                    alert('Preencha todos os campos e selecione um arquivo válido');
+                    return;
+                }
+                onAdd({ nome, cor, geojson });
+                // Reset do formulário
+                setNome('');
+                setCor('#3b82f6');
+                setArquivo(null);
+                setGeojson(null);
+            };
+
+            if (!show) return null;
+
+            return (
+                <div className="modal" onClick={onClose}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold">
+                                <i className="fas fa-layer-group mr-3"></i>
+                                Nova Camada
+                            </h2>
+                            <button onClick={onClose} className="text-2xl hover:text-red-400">
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Nome da Camada */}
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Nome da Camada
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Ex: Rodovias Estaduais GO"
+                                    value={nome}
+                                    onChange={e => setNome(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Seletor de Cor */}
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Cor da Camada
+                                </label>
+                                <div className="color-picker">
+                                    {PRESET_COLORS.map(color => (
+                                        <div
+                                            key={color}
+                                            className={`color-option ${cor === color ? 'selected' : ''}`}
+                                            style={{ background: color }}
+                                            onClick={() => setCor(color)}
+                                        ></div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Upload de Arquivo */}
+                            <div>
+                                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                                    Arquivo GeoJSON
+                                </label>
+                                <label className="btn btn-secondary w-full cursor-pointer">
+                                    <i className="fas fa-upload"></i>
+                                    {arquivo ? arquivo.name : 'Selecionar Arquivo'}
+                                    <input
+                                        type="file"
+                                        accept=".json,.geojson"
+                                        onChange={handleFileChange}
+                                        style={{ display: 'none' }}
+                                    />
+                                </label>
+                                {geojson && (
+                                    <p className="text-xs text-green-400 mt-2">
+                                        <i className="fas fa-check-circle mr-1"></i>
+                                        {geojson.features?.length || 1} feature(s) carregadas
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Botões de Ação */}
+                        <div className="flex gap-3 mt-6">
+                            <button onClick={handleAdd} className="btn btn-success flex-1">
+                                <i className="fas fa-plus"></i>
+                                Adicionar Camada
+                            </button>
+                            <button onClick={onClose} className="btn btn-secondary">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * LayerCard - Card compacto de camada com painel de propriedades expansível
+         * Gerencia: visibilidade, cor, opacidade, filtros dinâmicos
+         */
+        const LayerCard = ({ camada, onToggle, onDelete, onChangeColor, onChangeOpacity, onUpdateFilters }) => {
+            const [showProperties, setShowProperties] = useState(false);
+            const [showColorPicker, setShowColorPicker] = useState(false);
+            const [localFilters, setLocalFilters] = useState(camada.filters || {});
+
+            // Extrair propriedades únicas da camada para criar filtros dinâmicos
+            const uniqueProps = useMemo(() => {
+                if (!camada.geojson?.features) return {};
+                
+                const props = {};
+                camada.geojson.features.forEach(feature => {
+                    Object.keys(feature.properties || {}).forEach(key => {
+                        if (!props[key]) props[key] = new Set();
+                        props[key].add(feature.properties[key]);
+                    });
+                });
+                
+                // Converter Sets para arrays ordenados
+                Object.keys(props).forEach(key => {
+                    props[key] = Array.from(props[key]).filter(v => v != null).sort();
+                });
+                
+                return props;
+            }, [camada.geojson]);
+
+            // Aplicar filtros à camada
+            const applyFilters = () => {
+                onUpdateFilters(camada.id, localFilters);
+                setShowProperties(false);
+            };
+
+            return (
+                <div className={`layer-card ${camada.visible ? 'active' : ''}`}>
+                    {/* Header Compacto da Camada */}
+                    <div className="layer-header">
+                        {/* Cor */}
+                        <div
+                            className="layer-color-box"
+                            style={{ background: camada.cor }}
+                            onClick={() => setShowColorPicker(!showColorPicker)}
+                            title="Mudar cor"
+                        ></div>
+                        
+                        {/* Nome e Contador */}
+                        <div className="flex-1" style={{ minWidth: 0 }}>
+                            <div style={{ 
+                                fontSize: '13px', 
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {camada.nome}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+                                {camada.features} feature(s)
+                            </div>
+                        </div>
+                        
+                        {/* Controles */}
+                        <div className="layer-controls">
+                            {/* Botão Propriedades */}
+                            <button
+                                className="icon-btn"
+                                onClick={() => setShowProperties(!showProperties)}
+                                title="Propriedades e filtros"
+                                style={showProperties ? { background: '#3b82f6' } : {}}
+                            >
+                                <i className="fas fa-sliders-h"></i>
+                            </button>
+                            
+                            {/* Toggle Visibilidade */}
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={camada.visible}
+                                    onChange={() => onToggle(camada.id)}
+                                />
+                                <span className="toggle-slider"></span>
+                            </label>
+                            
+                            {/* Botão Remover */}
+                            <button
+                                className="icon-btn"
+                                onClick={() => onDelete(camada.id)}
+                                title="Remover camada"
+                            >
+                                <i className="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Painel de Propriedades Expansível */}
+                    <div className={`properties-panel ${showProperties ? 'expanded' : ''}`}>
+                        {/* Slider de Opacidade */}
+                        <div className="property-section">
+                            <div className="property-label">
+                                Opacidade: {Math.round(camada.opacity * 100)}%
+                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                value={camada.opacity}
+                                onChange={(e) => onChangeOpacity(camada.id, parseFloat(e.target.value))}
+                                className="opacity-slider"
+                            />
+                        </div>
+
+                        {/* Seletor de Cor (quando ativo) */}
+                        {showColorPicker && (
+                            <div className="property-section">
+                                <div className="property-label">Cor da Camada</div>
+                                <div className="color-picker" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
+                                    {PRESET_COLORS.map(color => (
+                                        <div
+                                            key={color}
+                                            className={`color-option ${camada.cor === color ? 'selected' : ''}`}
+                                            style={{ 
+                                                background: color,
+                                                width: '32px',
+                                                height: '32px'
+                                            }}
+                                            onClick={() => {
+                                                onChangeColor(camada.id, color);
+                                                setShowColorPicker(false);
+                                            }}
+                                        ></div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Filtros Dinâmicos baseados nas propriedades do GeoJSON */}
+                        {Object.keys(uniqueProps).length > 0 && (
+                            <div className="property-section">
+                                <div className="property-label">
+                                    <i className="fas fa-filter mr-1"></i>
+                                    Filtros da Camada
+                                </div>
+                                {/* Mostrar até 5 propriedades como filtros */}
+                                {Object.keys(uniqueProps).slice(0, 5).map(propKey => {
+                                    const values = uniqueProps[propKey];
+                                    // Skip se houver muitos valores únicos
+                                    if (values.length > 50) return null;
+                                    
+                                    return (
+                                        <div key={propKey} style={{ marginBottom: '8px' }}>
+                                            <label style={{ 
+                                                fontSize: '10px', 
+                                                color: '#cbd5e1',
+                                                display: 'block',
+                                                marginBottom: '4px'
+                                            }}>
+                                                {propKey}
+                                            </label>
+                                            <select
+                                                className="select-field"
+                                                style={{ 
+                                                    padding: '6px 10px',
+                                                    fontSize: '12px'
+                                                }}
+                                                value={localFilters[propKey] || ''}
+                                                onChange={(e) => {
+                                                    setLocalFilters(prev => ({
+                                                        ...prev,
+                                                        [propKey]: e.target.value
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="">Todos</option>
+                                                {/* Limitar a 30 opções */}
+                                                {values.slice(0, 30).map(val => (
+                                                    <option key={val} value={val}>
+                                                        {val.toString().substring(0, 30)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    );
+                                })}
+                                
+                                {/* Botões de Ação dos Filtros */}
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                    <button
+                                        onClick={applyFilters}
+                                        className="btn btn-primary"
+                                        style={{ 
+                                            flex: 1,
+                                            padding: '8px 12px',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        <i className="fas fa-check mr-1"></i>
+                                        Aplicar
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setLocalFilters({});
+                                            onUpdateFilters(camada.id, {});
+                                        }}
+                                        className="btn btn-secondary"
+                                        style={{ 
+                                            padding: '8px 12px',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        <i className="fas fa-eraser"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== COMPONENTE PRINCIPAL ====================
+        
+        /**
+         * App - Componente raiz do sistema
+         * Gerencia: camadas, mapa, filtros, estado global
+         */
+        const App = () => {
+            // ========== ESTADO ==========
+            const [camadas, setCamadas] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [loadingMessage, setLoadingMessage] = useState('Carregando...');
+            const [toast, setToast] = useState({ show: false, message: '' });
+            const [showAddModal, setShowAddModal] = useState(false);
+            
+            // Filtros globais (mantidos para compatibilidade)
+            const [filtros, setFiltros] = useState({
+                br: '',
+                uf: 'GO',
+                pavimentacao: [],
+                jurisdicao: [],
+                mostrarInterseções: false
+            });
+            
+            // ========== REFS ==========
+            const mapRef = useRef(null);           // Instância do Leaflet
+            const layersRef = useRef({});          // Camadas do Leaflet por ID
+
+            // ========== INICIALIZAÇÃO ==========
+            
+            // Inicializar mapa Leaflet
+            useEffect(() => {
+                if (!mapRef.current) {
+                    const map = L.map('map', {
+                        center: [-16.6869, -49.2648], // Goiânia, GO
+                        zoom: 7,
+                        zoomControl: true
+                    });
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+
+                    mapRef.current = map;
+                }
+
+                // Carregar camada padrão (rodovias federais)
+                carregarCamadaPadrao();
+            }, []);
+
+            // ========== FUNÇÕES DE CAMADAS ==========
+            
+            /**
+             * Carregar rodovias federais como camada padrão
+             */
+            const carregarCamadaPadrao = async () => {
+                try {
+                    const response = await fetch('rodovias_federais_brasil.json');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const novaCamada = {
+                            id: Date.now(),
+                            nome: 'Rodovias Federais',
+                            cor: '#ef4444',
+                            geojson: data,
+                            features: data.features?.length || 0,
+                            visible: true,
+                            opacity: 0.8,
+                            tipo: 'rodovias-federais',
+                            filters: {}
+                        };
+                        setCamadas([novaCamada]);
+                        setLoading(false);
+                        mostrarToast('Rodovias federais carregadas!');
+                    } else {
+                        setLoading(false);
+                    }
+                } catch (error) {
+                    console.log('Arquivo não encontrado');
+                    setLoading(false);
+                }
+            };
+
+            /**
+             * Adicionar nova camada ao sistema
+             */
+            const adicionarCamada = ({ nome, cor, geojson }) => {
+                const novaCamada = {
+                    id: Date.now(),
+                    nome,
+                    cor,
+                    geojson,
+                    features: geojson.features?.length || 1,
+                    visible: true,
+                    opacity: 0.8,
+                    tipo: 'custom',
+                    filters: {}
+                };
+                setCamadas(prev => [...prev, novaCamada]);
+                setShowAddModal(false);
+                mostrarToast(`Camada "${nome}" adicionada!`);
+            };
+
+            /**
+             * Toggle visibilidade da camada
+             */
+            const toggleCamada = (id) => {
+                setCamadas(prev => prev.map(c =>
+                    c.id === id ? { ...c, visible: !c.visible } : c
+                ));
+            };
+
+            /**
+             * Remover camada
+             */
+            const removerCamada = (id) => {
+                if (confirm('Deseja realmente remover esta camada?')) {
+                    setCamadas(prev => prev.filter(c => c.id !== id));
+                    mostrarToast('Camada removida!');
+                }
+            };
+
+            /**
+             * Mudar cor da camada
+             */
+            const mudarCorCamada = (id, cor) => {
+                setCamadas(prev => prev.map(c =>
+                    c.id === id ? { ...c, cor } : c
+                ));
+            };
+
+            /**
+             * Mudar opacidade da camada
+             */
+            const mudarOpacidadeCamada = (id, opacity) => {
+                setCamadas(prev => prev.map(c =>
+                    c.id === id ? { ...c, opacity } : c
+                ));
+            };
+
+            /**
+             * Atualizar filtros de uma camada específica
+             */
+            const atualizarFiltrosCamada = (id, filters) => {
+                setCamadas(prev => prev.map(c =>
+                    c.id === id ? { ...c, filters } : c
+                ));
+            };
+
+            // ========== RENDERIZAÇÃO DO MAPA ==========
+            
+            /**
+             * Atualizar camadas no mapa quando estado mudar
+             */
+            useEffect(() => {
+                if (!mapRef.current) return;
+
+                // Limpar camadas antigas do mapa
+                Object.values(layersRef.current).forEach(layer => {
+                    if (mapRef.current.hasLayer(layer)) {
+                        mapRef.current.removeLayer(layer);
+                    }
+                });
+                layersRef.current = {};
+
+                // Renderizar camadas visíveis
+                camadas.forEach(camada => {
+                    if (!camada.visible) return;
+
+                    let geojsonParaRenderizar = camada.geojson;
+
+                    // Aplicar filtros da própria camada
+                    if (camada.filters && Object.keys(camada.filters).length > 0) {
+                        geojsonParaRenderizar = aplicarFiltrosCamada(camada.geojson, camada.filters);
+                    }
+
+                    // Aplicar filtros globais se for rodovias federais (compatibilidade)
+                    if (camada.tipo === 'rodovias-federais') {
+                        geojsonParaRenderizar = filtrarRodovias(geojsonParaRenderizar || camada.geojson);
+                    }
+
+                    // Criar camada Leaflet com GeoJSON
+                    const layer = L.geoJSON(geojsonParaRenderizar, {
+                        // Estilo para linhas e polígonos
+                        style: (feature) => ({
+                            color: camada.cor,
+                            weight: 3,
+                            opacity: camada.opacity
+                        }),
+                        // Renderizar pontos como círculos
+                        pointToLayer: (feature, latlng) => {
+                            return L.circleMarker(latlng, {
+                                radius: 6,
+                                fillColor: camada.cor,
+                                color: '#fff',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: camada.opacity
+                            });
+                        },
+                        // Adicionar interações (tooltip, popup)
+                        onEachFeature: (feature, layer) => {
+                            const props = feature.properties || {};
+                            
+                            // TOOLTIP: Mostrar TODAS as propriedades
+                            let tooltipHtml = `<div style="max-width: 300px;">`;
+                            tooltipHtml += `<div style="font-weight: bold; margin-bottom: 6px; color: ${camada.cor};">${camada.nome}</div>`;
+                            
+                            const propKeys = Object.keys(props);
+                            if (propKeys.length > 0) {
+                                tooltipHtml += `<div style="font-size: 11px; line-height: 1.4;">`;
+                                // Mostrar até 10 propriedades
+                                propKeys.slice(0, 10).forEach(key => {
+                                    if (props[key] != null && props[key] !== '') {
+                                        const value = props[key].toString();
+                                        const displayValue = value.length > 40 ? value.substring(0, 40) + '...' : value;
+                                        tooltipHtml += `<div style="margin: 2px 0;">`;
+                                        tooltipHtml += `<strong style="color: #94a3b8;">${key}:</strong> `;
+                                        tooltipHtml += `<span style="color: white;">${displayValue}</span>`;
+                                        tooltipHtml += `</div>`;
+                                    }
+                                });
+                                // Indicador de mais propriedades
+                                if (propKeys.length > 10) {
+                                    tooltipHtml += `<div style="margin-top: 4px; color: #64748b; font-style: italic;">`;
+                                    tooltipHtml += `+${propKeys.length - 10} propriedades...`;
+                                    tooltipHtml += `</div>`;
+                                }
+                                tooltipHtml += `</div>`;
+                            }
+                            tooltipHtml += `</div>`;
+                            
+                            layer.bindTooltip(tooltipHtml, {
+                                permanent: false,
+                                direction: 'top',
+                                className: 'custom-tooltip'
+                            });
+
+                            // POPUP: Informações detalhadas
+                            const popupContent = criarPopupContent(props, camada);
+                            layer.bindPopup(popupContent);
+                        }
+                    });
+
+                    // Adicionar ao mapa
+                    layer.addTo(mapRef.current);
+                    layersRef.current[camada.id] = layer;
+
+                    // Ajustar zoom na primeira camada
+                    if (Object.keys(layersRef.current).length === 1) {
+                        const bounds = layer.getBounds();
+                        if (bounds.isValid()) {
+                            mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+                        }
+                    }
+                });
+            }, [camadas, filtros]);
+
+            // ========== FUNÇÕES DE FILTRO ==========
+            
+            /**
+             * Aplicar filtros específicos de uma camada
+             */
+            const aplicarFiltrosCamada = (geojson, filters) => {
+                if (!geojson || !filters || Object.keys(filters).length === 0) return geojson;
+                
+                let features = geojson.features || [];
+                
+                // Filtrar por cada propriedade com valor definido
+                Object.keys(filters).forEach(key => {
+                    const value = filters[key];
+                    if (value && value !== '') {
+                        features = features.filter(f => 
+                            f.properties && f.properties[key] == value
+                        );
+                    }
+                });
+                
+                return {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+            };
+
+            /**
+             * Filtrar rodovias federais (filtros globais - compatibilidade)
+             */
+            const filtrarRodovias = (geojson) => {
+                if (!geojson) return null;
+                
+                let features = geojson.features || [];
+                
+                if (filtros.br) {
+                    features = features.filter(f => f.properties.vl_br === filtros.br);
+                }
+                
+                if (filtros.uf) {
+                    features = features.filter(f => f.properties.sg_uf === filtros.uf);
+                }
+                
+                if (filtros.pavimentacao.length > 0) {
+                    features = features.filter(f => 
+                        filtros.pavimentacao.includes(f.properties.sg_legenda)
+                    );
+                }
+                
+                if (filtros.jurisdicao.length > 0) {
+                    features = features.filter(f => 
+                        filtros.jurisdicao.includes(f.properties.ds_jurisdi)
+                    );
+                }
+                
+                return {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+            };
+
+            /**
+             * Criar conteúdo HTML do popup com propriedades
+             */
+            const criarPopupContent = (props, camada) => {
+                let html = `<div style="min-width: 250px;">`;
+                html += `<div style="font-size: 18px; font-weight: bold; color: ${camada.cor}; margin-bottom: 12px;">`;
+                html += camada.nome;
+                html += `</div>`;
+                html += `<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; font-size: 13px;">`;
+                
+                // Propriedades relevantes comuns
+                const propsRelevantes = [
+                    'vl_br', 'sg_uf', 'ds_local_i', 'ds_local_f', 
+                    'vl_km_inic', 'vl_km_fina', 'vl_extensa',
+                    'ds_legenda', 'ds_jurisdi', 'Codigo_Rodovia',
+                    'Local_Inicio', 'Local_Fim', 'Quilometragem_Inicial',
+                    'Quilometragem_Final', 'Extensao', 'nome', 'name'
+                ];
+                
+                propsRelevantes.forEach(key => {
+                    if (props[key]) {
+                        const label = key.replace(/_/g, ' ').replace(/^./, str => str.toUpperCase());
+                        html += `<strong>${label}:</strong> <span>${props[key]}</span>`;
+                    }
+                });
+                
+                html += `</div></div>`;
+                return html;
+            };
+
+            // ========== FUNÇÕES AUXILIARES ==========
+            
+            /**
+             * Mostrar toast de notificação
+             */
+            const mostrarToast = (message) => {
+                setToast({ show: true, message });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
+
+            /**
+             * Calcular estatísticas globais
+             */
+            const totalFeatures = camadas.reduce((sum, c) => sum + (c.visible ? c.features : 0), 0);
+
+            // ========== RENDER ==========
+            return (
+                <div className="flex h-screen">
+                    {/* ========== MAPA ========== */}
+                    <div className="flex-1">
+                        <div id="map"></div>
+                        
+                        {/* Mensagem quando não há camadas */}
+                        {camadas.length === 0 && !loading && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: 'rgba(30, 41, 59, 0.95)',
+                                padding: '48px',
+                                borderRadius: '24px',
+                                textAlign: 'center',
+                                zIndex: 1000,
+                                border: '2px dashed rgba(59, 130, 246, 0.5)',
+                                maxWidth: '500px'
+                            }}>
+                                <i className="fas fa-layer-group text-6xl text-blue-400 mb-6"></i>
+                                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '12px' }}>
+                                    Adicione suas primeiras camadas
+                                </h2>
+                                <p style={{ color: '#94a3b8', marginBottom: '24px', fontSize: '14px' }}>
+                                    Clique no botão <strong>+</strong> no canto inferior direito
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ========== SIDEBAR ========== */}
+                    <div className="sidebar w-96 p-6">
+                        {/* Header */}
+                        <div className="mb-6">
+                            <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                                <i className="fas fa-layer-group text-blue-400"></i>
+                                Camadas
+                            </h1>
+                            <p className="text-sm text-gray-400">Sistema de Análise Multi-camadas</p>
+                        </div>
+
+                        {/* Estatísticas */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            <div className="stat-card">
+                                <div className="stat-value">{camadas.length}</div>
+                                <div className="stat-label">Camadas</div>
+                            </div>
+                            <div className="stat-card">
+                                <div className="stat-value">{totalFeatures}</div>
+                                <div className="stat-label">Features</div>
+                            </div>
+                        </div>
+
+                        {/* Lista de Camadas */}
+                        <div className="filter-card">
+                            <div className="filter-title">
+                                <i className="fas fa-layer-group"></i>
+                                Camadas Ativas
+                            </div>
+                            {camadas.length === 0 ? (
+                                <p className="text-center text-gray-400 text-sm py-4">
+                                    Nenhuma camada adicionada
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {camadas.map(camada => (
+                                        <LayerCard
+                                            key={camada.id}
+                                            camada={camada}
+                                            onToggle={toggleCamada}
+                                            onDelete={removerCamada}
+                                            onChangeColor={mudarCorCamada}
+                                            onChangeOpacity={mudarOpacidadeCamada}
+                                            onUpdateFilters={atualizarFiltrosCamada}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ========== FAB (Adicionar Camada) ========== */}
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="fab"
+                        title="Adicionar Nova Camada"
+                    >
+                        <i className="fas fa-plus"></i>
+                    </button>
+
+                    {/* ========== MODAIS E FEEDBACK ========== */}
+                    <AddLayerModal
+                        show={showAddModal}
+                        onClose={() => setShowAddModal(false)}
+                        onAdd={adicionarCamada}
+                    />
+
+                    <Loading show={loading} message={loadingMessage} />
+                    <Toast message={toast.message} show={toast.show} />
+                </div>
+            );
+        };
+
+        // ==================== RENDERIZAR APP ====================
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
