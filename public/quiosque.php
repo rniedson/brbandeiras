@@ -358,17 +358,29 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             position: fixed;
             top: 1rem;
             right: 1rem;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.7);
             padding: 0.5rem 1rem;
             border-radius: 8px;
             font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.9);
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        /* Animação para valores que mudam */
+        .stat-value {
+            transition: transform 0.3s ease;
+        }
+
+        /* Transição suave para lista de entregas */
+        #entregasList {
+            transition: opacity 0.3s ease;
         }
     </style>
 </head>
 <body>
-    <div class="auto-refresh-indicator">
-        Atualização automática a cada 30s
+    <div class="auto-refresh-indicator" id="refreshIndicator">
+        Carregado: <?= date('H:i:s') ?>
     </div>
 
     <div class="quiosque-container">
@@ -385,20 +397,20 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
         </header>
 
         <!-- Estatísticas - Apenas 3 KPIs -->
-        <div class="stats-grid">
+        <div class="stats-grid" id="statsGrid">
             <div class="stat-card">
                 <div class="stat-label">Em Arte</div>
-                <div class="stat-value"><?= $stats['arte'] ?></div>
+                <div class="stat-value" id="statArte"><?= $stats['arte'] ?></div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-label">Em Produção</div>
-                <div class="stat-value"><?= $stats['producao'] ?></div>
+                <div class="stat-value" id="statProducao"><?= $stats['producao'] ?></div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-label">Prontos</div>
-                <div class="stat-value"><?= $stats['pronto'] ?></div>
+                <div class="stat-value" id="statPronto"><?= $stats['pronto'] ?></div>
             </div>
         </div>
 
@@ -410,30 +422,30 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
                 </svg>
                 Próximas Entregas
             </h2>
-            <div class="entregas-list">
+            <div class="entregas-list" id="entregasList">
                 <?php if (!empty($proximas_entregas)): ?>
                     <?php foreach ($proximas_entregas as $entrega): ?>
-                    <div class="entrega-item <?= $entrega['urgente'] ? 'urgente' : '' ?>">
+                    <div class="entrega-item <?= $entrega['urgente'] ? 'urgente' : '' ?>" data-numero="<?= htmlspecialchars($entrega['numero']) ?>">
                         <div class="entrega-numero">
                             Pedido #<?= htmlspecialchars($entrega['numero']) ?>
                             <?php if ($entrega['urgente']): ?>
                                 <span class="urgente-badge">URGENTE</span>
                             <?php endif; ?>
                         </div>
-                    <div class="entrega-cliente"><?= htmlspecialchars($entrega['cliente_nome'] ?: 'Cliente não informado') ?></div>
-                    <div class="entrega-data">
-                        <?php if ($entrega['prazo_entrega']): ?>
-                            Prazo: <?= date('d/m/Y', strtotime($entrega['prazo_entrega'])) ?>
-                        <?php else: ?>
-                            <span style="color: rgba(255,255,255,0.5);">Prazo não definido</span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="entrega-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">
-                        Status: <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
-                        <?php if ($entrega['created_at']): ?>
-                            | Criado em: <?= date('d/m/Y', strtotime($entrega['created_at'])) ?>
-                        <?php endif; ?>
-                    </div>
+                        <div class="entrega-cliente"><?= htmlspecialchars($entrega['cliente_nome'] ?: 'Cliente não informado') ?></div>
+                        <div class="entrega-data">
+                            <?php if ($entrega['prazo_entrega']): ?>
+                                Prazo: <?= date('d/m/Y', strtotime($entrega['prazo_entrega'])) ?>
+                            <?php else: ?>
+                                <span style="color: rgba(255,255,255,0.5);">Prazo não definido</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="entrega-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">
+                            Status: <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
+                            <?php if ($entrega['created_at']): ?>
+                                | Criado em: <?= date('d/m/Y', strtotime($entrega['created_at'])) ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -473,10 +485,139 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
         updateTime();
         setInterval(updateTime, 1000);
 
-        // Auto-refresh da página a cada 30 segundos
-        setTimeout(() => {
-            window.location.reload();
-        }, 30000);
+        // Função para atualizar dados via AJAX
+        async function atualizarDados() {
+            try {
+                // Adicionar indicador visual de atualização
+                const indicator = document.querySelector('.auto-refresh-indicator');
+                if (indicator) {
+                    indicator.style.opacity = '0.5';
+                    indicator.textContent = 'Atualizando...';
+                }
+
+                const response = await fetch('api/quiosque_data.php?t=' + Date.now());
+                
+                if (!response.ok) {
+                    throw new Error('Erro na requisição');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Atualizar estatísticas com animação
+                    atualizarEstatisticas(data.stats);
+                    
+                    // Atualizar lista de entregas
+                    atualizarEntregas(data.entregas);
+
+                    // Atualizar timestamp no indicador
+                    if (indicator) {
+                        const updateTime = new Date(data.timestamp);
+                        indicator.textContent = `Atualizado: ${updateTime.toLocaleTimeString('pt-BR')}`;
+                        indicator.style.opacity = '1';
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar dados:', error);
+                const indicator = document.querySelector('.auto-refresh-indicator');
+                if (indicator) {
+                    indicator.textContent = 'Erro na atualização';
+                    indicator.style.opacity = '1';
+                }
+            }
+        }
+
+        // Atualizar estatísticas com animação suave
+        function atualizarEstatisticas(stats) {
+            const elementos = {
+                'arte': document.getElementById('statArte'),
+                'producao': document.getElementById('statProducao'),
+                'pronto': document.getElementById('statPronto')
+            };
+
+            Object.keys(elementos).forEach(key => {
+                const elemento = elementos[key];
+                if (elemento) {
+                    const valorAtual = parseInt(elemento.textContent) || 0;
+                    const valorNovo = stats[key] || 0;
+
+                    if (valorAtual !== valorNovo) {
+                        // Animação de mudança
+                        elemento.style.transform = 'scale(1.1)';
+                        elemento.style.transition = 'transform 0.3s ease';
+                        
+                        // Atualizar valor
+                        elemento.textContent = valorNovo;
+
+                        // Voltar ao normal
+                        setTimeout(() => {
+                            elemento.style.transform = 'scale(1)';
+                        }, 300);
+                    }
+                }
+            });
+        }
+
+        // Atualizar lista de entregas
+        function atualizarEntregas(entregas) {
+            const container = document.getElementById('entregasList');
+            if (!container) return;
+
+            // Se não há entregas
+            if (!entregas || entregas.length === 0) {
+                container.innerHTML = `
+                    <div class="entrega-item" style="text-align: center; padding: 2rem;">
+                        <div style="color: rgba(255, 255, 255, 0.6); font-size: 1.125rem;">
+                            Nenhuma entrega agendada no momento
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Criar HTML das entregas
+            const html = entregas.map(entrega => {
+                const urgenteClass = entrega.urgente ? 'urgente' : '';
+                const prazoHtml = entrega.prazo_entrega 
+                    ? `Prazo: ${entrega.prazo_entrega}` 
+                    : '<span style="color: rgba(255,255,255,0.5);">Prazo não definido</span>';
+                const urgenteBadge = entrega.urgente 
+                    ? '<span class="urgente-badge">URGENTE</span>' 
+                    : '';
+                const createdHtml = entrega.created_at 
+                    ? ` | Criado em: ${entrega.created_at}` 
+                    : '';
+
+                return `
+                    <div class="entrega-item ${urgenteClass}" data-numero="${entrega.numero}">
+                        <div class="entrega-numero">
+                            Pedido #${entrega.numero}
+                            ${urgenteBadge}
+                        </div>
+                        <div class="entrega-cliente">${entrega.cliente_nome}</div>
+                        <div class="entrega-data">${prazoHtml}</div>
+                        <div class="entrega-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">
+                            Status: ${entrega.status.charAt(0).toUpperCase() + entrega.status.slice(1)}${createdHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Fade out
+            container.style.opacity = '0.5';
+            container.style.transition = 'opacity 0.3s ease';
+
+            setTimeout(() => {
+                container.innerHTML = html;
+                container.style.opacity = '1';
+            }, 300);
+        }
+
+        // Atualizar dados a cada 30 segundos
+        setInterval(atualizarDados, 30000);
+
+        // Primeira atualização após 30 segundos
+        setTimeout(atualizarDados, 30000);
     </script>
 </body>
 </html>
