@@ -27,7 +27,7 @@ try {
     ];
 }
 
-// Buscar próximas entregas
+// Buscar próximas entregas - Incluir todos os pedidos ativos
 try {
     $stmt = $pdo->query("
         SELECT 
@@ -35,13 +35,16 @@ try {
             p.prazo_entrega,
             c.nome as cliente_nome,
             p.urgente,
-            p.status
+            p.status,
+            p.created_at
         FROM pedidos p
         LEFT JOIN clientes c ON p.cliente_id = c.id
         WHERE p.status NOT IN ('entregue', 'cancelado')
-        AND p.prazo_entrega IS NOT NULL
-        ORDER BY p.prazo_entrega ASC
-        LIMIT 10
+        ORDER BY 
+            CASE WHEN p.prazo_entrega IS NOT NULL THEN 0 ELSE 1 END,
+            p.prazo_entrega ASC NULLS LAST,
+            p.created_at DESC
+        LIMIT 20
     ");
     $proximas_entregas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -417,13 +420,20 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
                                 <span class="urgente-badge">URGENTE</span>
                             <?php endif; ?>
                         </div>
-                        <div class="entrega-cliente"><?= htmlspecialchars($entrega['cliente_nome'] ?: 'Cliente não informado') ?></div>
-                        <div class="entrega-data">
-                            Prazo: <?= $entrega['prazo_entrega'] ? date('d/m/Y', strtotime($entrega['prazo_entrega'])) : 'Não informado' ?>
-                        </div>
-                        <div class="entrega-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">
-                            Status: <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
-                        </div>
+                    <div class="entrega-cliente"><?= htmlspecialchars($entrega['cliente_nome'] ?: 'Cliente não informado') ?></div>
+                    <div class="entrega-data">
+                        <?php if ($entrega['prazo_entrega']): ?>
+                            Prazo: <?= date('d/m/Y', strtotime($entrega['prazo_entrega'])) ?>
+                        <?php else: ?>
+                            <span style="color: rgba(255,255,255,0.5);">Prazo não definido</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="entrega-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">
+                        Status: <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
+                        <?php if ($entrega['created_at']): ?>
+                            | Criado em: <?= date('d/m/Y', strtotime($entrega['created_at'])) ?>
+                        <?php endif; ?>
+                    </div>
                     </div>
                     <?php endforeach; ?>
                 <?php else: ?>
