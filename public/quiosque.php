@@ -75,6 +75,233 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             color: #ffffff;
             overflow-x: hidden;
             min-height: 100vh;
+            position: relative;
+        }
+
+        /* ============================================
+           ELEMENTOS ABSTRATOS ANIMADOS
+           ============================================ */
+        
+        /* Container para elementos de fundo */
+        .abstract-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        /* Gradiente animado de fundo */
+        .gradient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .gradient-orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #f5b800 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            animation-delay: 0s;
+        }
+
+        .gradient-orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #0d5c1e 0%, transparent 70%);
+            bottom: -150px;
+            left: -150px;
+            animation-delay: -7s;
+        }
+
+        .gradient-orb-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #f5b800 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -14s;
+            opacity: 0.08;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(30px, -30px) scale(1.05);
+            }
+            50% {
+                transform: translate(-20px, 20px) scale(0.95);
+            }
+            75% {
+                transform: translate(20px, 10px) scale(1.02);
+            }
+        }
+
+        /* Linhas geométricas animadas */
+        .geometric-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, rgba(245, 184, 0, 0.1), transparent);
+            height: 1px;
+            animation: moveLine 15s linear infinite;
+        }
+
+        .line-1 { top: 20%; width: 60%; left: -60%; animation-delay: 0s; }
+        .line-2 { top: 40%; width: 80%; left: -80%; animation-delay: -3s; }
+        .line-3 { top: 60%; width: 70%; left: -70%; animation-delay: -6s; }
+        .line-4 { top: 80%; width: 50%; left: -50%; animation-delay: -9s; }
+
+        @keyframes moveLine {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(200%); }
+        }
+
+        /* Partículas flutuantes */
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(245, 184, 0, 0.3);
+            border-radius: 50%;
+            animation: particleFloat 10s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; animation-duration: 12s; }
+        .particle:nth-child(2) { left: 20%; top: 80%; animation-delay: -2s; animation-duration: 10s; }
+        .particle:nth-child(3) { left: 30%; top: 40%; animation-delay: -4s; animation-duration: 14s; }
+        .particle:nth-child(4) { left: 40%; top: 60%; animation-delay: -1s; animation-duration: 11s; }
+        .particle:nth-child(5) { left: 50%; top: 30%; animation-delay: -3s; animation-duration: 13s; }
+        .particle:nth-child(6) { left: 60%; top: 70%; animation-delay: -5s; animation-duration: 9s; }
+        .particle:nth-child(7) { left: 70%; top: 50%; animation-delay: -2s; animation-duration: 15s; }
+        .particle:nth-child(8) { left: 80%; top: 25%; animation-delay: -4s; animation-duration: 12s; }
+        .particle:nth-child(9) { left: 90%; top: 85%; animation-delay: -1s; animation-duration: 10s; }
+        .particle:nth-child(10) { left: 15%; top: 55%; animation-delay: -3s; animation-duration: 11s; }
+        .particle:nth-child(11) { left: 85%; top: 45%; animation-delay: -5s; animation-duration: 13s; }
+        .particle:nth-child(12) { left: 45%; top: 15%; animation-delay: -2s; animation-duration: 14s; }
+
+        @keyframes particleFloat {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.3;
+            }
+            25% {
+                transform: translate(20px, -30px) scale(1.5);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translate(-10px, 20px) scale(0.8);
+                opacity: 0.2;
+            }
+            75% {
+                transform: translate(15px, 10px) scale(1.2);
+                opacity: 0.5;
+            }
+        }
+
+        /* Hexágonos decorativos */
+        .hexagon {
+            position: absolute;
+            width: 60px;
+            height: 35px;
+            background: rgba(245, 184, 0, 0.03);
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            animation: hexRotate 30s linear infinite;
+        }
+
+        .hexagon-1 { top: 10%; right: 10%; animation-delay: 0s; }
+        .hexagon-2 { bottom: 20%; left: 5%; animation-delay: -10s; width: 80px; height: 46px; }
+        .hexagon-3 { top: 60%; right: 15%; animation-delay: -20s; width: 40px; height: 23px; }
+
+        @keyframes hexRotate {
+            0% { transform: rotate(0deg); opacity: 0.03; }
+            50% { opacity: 0.08; }
+            100% { transform: rotate(360deg); opacity: 0.03; }
+        }
+
+        /* Ondas sutis no fundo */
+        .wave {
+            position: absolute;
+            width: 200%;
+            height: 200px;
+            background: linear-gradient(180deg, transparent, rgba(245, 184, 0, 0.02), transparent);
+            animation: wave 20s ease-in-out infinite;
+        }
+
+        .wave-1 { bottom: 0; animation-delay: 0s; }
+        .wave-2 { bottom: 50px; animation-delay: -5s; opacity: 0.5; }
+
+        @keyframes wave {
+            0%, 100% {
+                transform: translateX(-25%) rotate(-2deg);
+            }
+            50% {
+                transform: translateX(-15%) rotate(2deg);
+            }
+        }
+
+        /* Pulso sutil nos cards */
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 16px;
+            border: 1px solid rgba(245, 184, 0, 0.1);
+            animation: cardPulse 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .stat-card {
+            position: relative;
+        }
+
+        @keyframes cardPulse {
+            0%, 100% {
+                border-color: rgba(245, 184, 0, 0.1);
+                box-shadow: 0 0 0 rgba(245, 184, 0, 0);
+            }
+            50% {
+                border-color: rgba(245, 184, 0, 0.3);
+                box-shadow: 0 0 20px rgba(245, 184, 0, 0.1);
+            }
+        }
+
+        /* Efeito de brilho no valor dos KPIs */
+        .stat-value {
+            text-shadow: 0 0 30px rgba(245, 184, 0, 0.3);
+            animation: valueGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes valueGlow {
+            0%, 100% {
+                text-shadow: 0 0 20px rgba(245, 184, 0, 0.2);
+            }
+            50% {
+                text-shadow: 0 0 40px rgba(245, 184, 0, 0.5), 0 0 60px rgba(245, 184, 0, 0.2);
+            }
         }
 
         /* Container principal */
@@ -379,11 +606,52 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
     </style>
 </head>
 <body>
+    <!-- Elementos Abstratos Animados de Fundo -->
+    <div class="abstract-bg">
+        <!-- Orbes de gradiente -->
+        <div class="gradient-orb gradient-orb-1"></div>
+        <div class="gradient-orb gradient-orb-2"></div>
+        <div class="gradient-orb gradient-orb-3"></div>
+        
+        <!-- Linhas geométricas -->
+        <div class="geometric-lines">
+            <div class="line line-1"></div>
+            <div class="line line-2"></div>
+            <div class="line line-3"></div>
+            <div class="line line-4"></div>
+        </div>
+        
+        <!-- Partículas flutuantes -->
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+        
+        <!-- Hexágonos decorativos -->
+        <div class="hexagon hexagon-1"></div>
+        <div class="hexagon hexagon-2"></div>
+        <div class="hexagon hexagon-3"></div>
+        
+        <!-- Ondas sutis -->
+        <div class="wave wave-1"></div>
+        <div class="wave wave-2"></div>
+    </div>
+
     <div class="auto-refresh-indicator" id="refreshIndicator">
         Atualização automática a cada 5s
     </div>
 
-    <div class="quiosque-container">
+    <div class="quiosque-container" style="position: relative; z-index: 1;">
         <!-- Header -->
         <header class="quiosque-header">
             <div class="quiosque-logo">
