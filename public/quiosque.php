@@ -147,28 +147,136 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             }
         }
 
-        /* Linhas geométricas animadas */
-        .geometric-lines {
+        /* Linhas aleatórias animadas percorrendo a tela */
+        .random-lines {
             position: absolute;
             width: 100%;
             height: 100%;
+            overflow: hidden;
         }
 
-        .line {
+        /* Linhas horizontais da esquerda para direita */
+        .line-h {
             position: absolute;
-            background: linear-gradient(90deg, transparent, rgba(245, 184, 0, 0.1), transparent);
             height: 1px;
-            animation: moveLine 15s linear infinite;
+            background: linear-gradient(90deg, transparent, rgba(245, 184, 0, 0.2), rgba(245, 184, 0, 0.4), rgba(245, 184, 0, 0.2), transparent);
+            animation: moveLineH linear infinite;
         }
 
-        .line-1 { top: 20%; width: 60%; left: -60%; animation-delay: 0s; }
-        .line-2 { top: 40%; width: 80%; left: -80%; animation-delay: -3s; }
-        .line-3 { top: 60%; width: 70%; left: -70%; animation-delay: -6s; }
-        .line-4 { top: 80%; width: 50%; left: -50%; animation-delay: -9s; }
+        .line-h-1 { top: 15%; width: 300px; left: -300px; animation-duration: 8s; animation-delay: 0s; }
+        .line-h-2 { top: 35%; width: 400px; left: -400px; animation-duration: 12s; animation-delay: -2s; }
+        .line-h-3 { top: 55%; width: 250px; left: -250px; animation-duration: 6s; animation-delay: -4s; }
+        .line-h-4 { top: 75%; width: 350px; left: -350px; animation-duration: 10s; animation-delay: -1s; }
+        .line-h-5 { top: 25%; width: 200px; left: -200px; animation-duration: 7s; animation-delay: -3s; }
+        .line-h-6 { top: 85%; width: 280px; left: -280px; animation-duration: 9s; animation-delay: -5s; }
 
-        @keyframes moveLine {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(200%); }
+        @keyframes moveLineH {
+            0% { transform: translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(calc(100vw + 400px)); opacity: 0; }
+        }
+
+        /* Linhas horizontais da direita para esquerda */
+        .line-h-reverse {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(13, 92, 30, 0.3), rgba(13, 92, 30, 0.5), rgba(13, 92, 30, 0.3), transparent);
+            animation: moveLineHReverse linear infinite;
+        }
+
+        .line-h-r-1 { top: 20%; width: 320px; right: -320px; animation-duration: 11s; animation-delay: -1s; }
+        .line-h-r-2 { top: 45%; width: 280px; right: -280px; animation-duration: 8s; animation-delay: -3s; }
+        .line-h-r-3 { top: 70%; width: 360px; right: -360px; animation-duration: 13s; animation-delay: -2s; }
+
+        @keyframes moveLineHReverse {
+            0% { transform: translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(calc(-100vw - 400px)); opacity: 0; }
+        }
+
+        /* Linhas verticais de cima para baixo */
+        .line-v {
+            position: absolute;
+            width: 1px;
+            background: linear-gradient(180deg, transparent, rgba(245, 184, 0, 0.15), rgba(245, 184, 0, 0.3), rgba(245, 184, 0, 0.15), transparent);
+            animation: moveLineV linear infinite;
+        }
+
+        .line-v-1 { left: 10%; height: 200px; top: -200px; animation-duration: 10s; animation-delay: 0s; }
+        .line-v-2 { left: 30%; height: 300px; top: -300px; animation-duration: 14s; animation-delay: -3s; }
+        .line-v-3 { left: 50%; height: 250px; top: -250px; animation-duration: 8s; animation-delay: -5s; }
+        .line-v-4 { left: 70%; height: 180px; top: -180px; animation-duration: 12s; animation-delay: -2s; }
+        .line-v-5 { left: 90%; height: 220px; top: -220px; animation-duration: 9s; animation-delay: -4s; }
+
+        @keyframes moveLineV {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(calc(100vh + 300px)); opacity: 0; }
+        }
+
+        /* Linhas diagonais */
+        .line-d {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(245, 184, 0, 0.25), rgba(255, 255, 255, 0.1), rgba(245, 184, 0, 0.25), transparent);
+            transform-origin: left center;
+            animation: moveLineDiag linear infinite;
+        }
+
+        .line-d-1 { top: 0; left: -300px; width: 400px; transform: rotate(25deg); animation-duration: 15s; animation-delay: 0s; }
+        .line-d-2 { top: 20%; left: -250px; width: 350px; transform: rotate(35deg); animation-duration: 12s; animation-delay: -4s; }
+        .line-d-3 { top: 40%; left: -200px; width: 300px; transform: rotate(20deg); animation-duration: 18s; animation-delay: -8s; }
+        .line-d-4 { top: 60%; left: -350px; width: 450px; transform: rotate(30deg); animation-duration: 14s; animation-delay: -2s; }
+
+        @keyframes moveLineDiag {
+            0% { transform: rotate(25deg) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: rotate(25deg) translateX(calc(150vw)); opacity: 0; }
+        }
+
+        /* Linhas diagonais reversas */
+        .line-d-reverse {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(13, 92, 30, 0.2), rgba(245, 184, 0, 0.15), rgba(13, 92, 30, 0.2), transparent);
+            transform-origin: right center;
+            animation: moveLineDiagReverse linear infinite;
+        }
+
+        .line-d-r-1 { top: 10%; right: -300px; width: 380px; transform: rotate(-30deg); animation-duration: 16s; animation-delay: -3s; }
+        .line-d-r-2 { top: 50%; right: -250px; width: 320px; transform: rotate(-20deg); animation-duration: 11s; animation-delay: -6s; }
+        .line-d-r-3 { top: 80%; right: -280px; width: 360px; transform: rotate(-35deg); animation-duration: 13s; animation-delay: -1s; }
+
+        @keyframes moveLineDiagReverse {
+            0% { transform: rotate(-30deg) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: rotate(-30deg) translateX(calc(-150vw)); opacity: 0; }
+        }
+
+        /* Linhas curtas rápidas (meteoros) */
+        .meteor {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(245, 184, 0, 0.6), rgba(255, 255, 255, 0.8));
+            border-radius: 2px;
+            animation: meteorMove linear infinite;
+        }
+
+        .meteor-1 { top: 5%; left: -100px; width: 100px; transform: rotate(45deg); animation-duration: 3s; animation-delay: 0s; }
+        .meteor-2 { top: 30%; left: -80px; width: 80px; transform: rotate(40deg); animation-duration: 4s; animation-delay: -2s; }
+        .meteor-3 { top: 60%; left: -120px; width: 120px; transform: rotate(50deg); animation-duration: 3.5s; animation-delay: -1s; }
+        .meteor-4 { top: 85%; left: -90px; width: 90px; transform: rotate(35deg); animation-duration: 4.5s; animation-delay: -3s; }
+
+        @keyframes meteorMove {
+            0% { transform: rotate(45deg) translateX(0); opacity: 0; }
+            5% { opacity: 1; }
+            95% { opacity: 1; }
+            100% { transform: rotate(45deg) translateX(calc(150vw)); opacity: 0; }
         }
 
         /* Partículas flutuantes */
@@ -613,12 +721,44 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
         <div class="gradient-orb gradient-orb-2"></div>
         <div class="gradient-orb gradient-orb-3"></div>
         
-        <!-- Linhas geométricas -->
-        <div class="geometric-lines">
-            <div class="line line-1"></div>
-            <div class="line line-2"></div>
-            <div class="line line-3"></div>
-            <div class="line line-4"></div>
+        <!-- Linhas aleatórias animadas -->
+        <div class="random-lines">
+            <!-- Linhas horizontais esquerda para direita -->
+            <div class="line-h line-h-1"></div>
+            <div class="line-h line-h-2"></div>
+            <div class="line-h line-h-3"></div>
+            <div class="line-h line-h-4"></div>
+            <div class="line-h line-h-5"></div>
+            <div class="line-h line-h-6"></div>
+            
+            <!-- Linhas horizontais direita para esquerda -->
+            <div class="line-h-reverse line-h-r-1"></div>
+            <div class="line-h-reverse line-h-r-2"></div>
+            <div class="line-h-reverse line-h-r-3"></div>
+            
+            <!-- Linhas verticais -->
+            <div class="line-v line-v-1"></div>
+            <div class="line-v line-v-2"></div>
+            <div class="line-v line-v-3"></div>
+            <div class="line-v line-v-4"></div>
+            <div class="line-v line-v-5"></div>
+            
+            <!-- Linhas diagonais -->
+            <div class="line-d line-d-1"></div>
+            <div class="line-d line-d-2"></div>
+            <div class="line-d line-d-3"></div>
+            <div class="line-d line-d-4"></div>
+            
+            <!-- Linhas diagonais reversas -->
+            <div class="line-d-reverse line-d-r-1"></div>
+            <div class="line-d-reverse line-d-r-2"></div>
+            <div class="line-d-reverse line-d-r-3"></div>
+            
+            <!-- Meteoros (linhas rápidas) -->
+            <div class="meteor meteor-1"></div>
+            <div class="meteor meteor-2"></div>
+            <div class="meteor meteor-3"></div>
+            <div class="meteor meteor-4"></div>
         </div>
         
         <!-- Partículas flutuantes -->
