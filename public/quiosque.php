@@ -65,7 +65,7 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
 
         body {
             font-family: 'Segoe UI', 'Roboto Mono', monospace;
-            background: #0a0a12;
+            background: linear-gradient(135deg, #041801 0%, #0a1a0d 50%, #041801 100%);
             color: #ffffff;
             min-height: 100vh;
             overflow: hidden;
@@ -104,7 +104,7 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
         .gradient-orb-2 {
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, #0066cc 0%, transparent 70%);
+            background: radial-gradient(circle, #0d5c1e 0%, transparent 70%);
             bottom: -100px;
             left: -100px;
             animation-delay: -10s;
@@ -152,7 +152,7 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem 1.5rem;
-            background: linear-gradient(180deg, rgba(245, 184, 0, 0.15) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(13, 92, 30, 0.3) 0%, rgba(245, 184, 0, 0.1) 50%, transparent 100%);
             border-bottom: 2px solid #f5b800;
             margin-bottom: 1rem;
         }
@@ -202,8 +202,9 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
         .pulse-dot {
             width: 8px;
             height: 8px;
-            background: #00ff00;
+            background: #22c55e;
             border-radius: 50%;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
             animation: pulse 2s infinite;
         }
 
@@ -233,9 +234,9 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
             border-left: 4px solid;
         }
 
-        .kpi-item.arte { border-color: #3b82f6; }
-        .kpi-item.producao { border-color: #f59e0b; }
-        .kpi-item.pronto { border-color: #10b981; }
+        .kpi-item.arte { border-color: #f5b800; }
+        .kpi-item.producao { border-color: #0d5c1e; }
+        .kpi-item.pronto { border-color: #22c55e; }
 
         .kpi-label {
             font-size: 0.875rem;
@@ -251,9 +252,9 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
             line-height: 1;
         }
 
-        .kpi-item.arte .kpi-value { color: #3b82f6; }
-        .kpi-item.producao .kpi-value { color: #f59e0b; }
-        .kpi-item.pronto .kpi-value { color: #10b981; }
+        .kpi-item.arte .kpi-value { color: #f5b800; }
+        .kpi-item.producao .kpi-value { color: #22c55e; }
+        .kpi-item.pronto .kpi-value { color: #4ade80; }
 
         /* Tabela estilo aeroporto */
         .flight-board {
@@ -267,7 +268,7 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
         .board-header {
             display: grid;
             grid-template-columns: 120px 1fr 150px 150px 140px;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+            background: linear-gradient(180deg, #0d2818 0%, #061a0e 100%);
             border-bottom: 2px solid #f5b800;
             padding: 1rem 1.5rem;
             font-weight: 600;
@@ -367,27 +368,27 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
         }
 
         .status-arte {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(245, 184, 0, 0.2);
+            color: #f5b800;
+            border: 1px solid rgba(245, 184, 0, 0.3);
         }
 
         .status-producao {
-            background: rgba(245, 158, 11, 0.2);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.3);
+            background: rgba(13, 92, 30, 0.3);
+            color: #22c55e;
+            border: 1px solid rgba(13, 92, 30, 0.5);
         }
 
         .status-pronto {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
         }
 
         .status-orcamento {
-            background: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            background: rgba(245, 184, 0, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 184, 0, 0.25);
         }
 
         .urgente-badge {
