@@ -34,16 +34,18 @@ try {
             p.numero,
             p.prazo_entrega,
             c.nome as cliente_nome,
-            p.urgente
+            p.urgente,
+            p.status
         FROM pedidos p
         LEFT JOIN clientes c ON p.cliente_id = c.id
         WHERE p.status NOT IN ('entregue', 'cancelado')
-        AND p.prazo_entrega >= CURRENT_DATE
+        AND p.prazo_entrega IS NOT NULL
         ORDER BY p.prazo_entrega ASC
         LIMIT 10
     ");
     $proximas_entregas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
+    error_log("Erro ao buscar próximas entregas: " . $e->getMessage());
     $proximas_entregas = [];
 }
 
@@ -398,7 +400,6 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
         </div>
 
         <!-- Próximas Entregas -->
-        <?php if (!empty($proximas_entregas)): ?>
         <div class="entregas-section">
             <h2 class="section-title">
                 <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
@@ -407,23 +408,33 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
                 Próximas Entregas
             </h2>
             <div class="entregas-list">
-                <?php foreach ($proximas_entregas as $entrega): ?>
-                <div class="entrega-item <?= $entrega['urgente'] ? 'urgente' : '' ?>">
-                    <div class="entrega-numero">
-                        Pedido #<?= htmlspecialchars($entrega['numero']) ?>
-                        <?php if ($entrega['urgente']): ?>
-                            <span class="urgente-badge">URGENTE</span>
-                        <?php endif; ?>
+                <?php if (!empty($proximas_entregas)): ?>
+                    <?php foreach ($proximas_entregas as $entrega): ?>
+                    <div class="entrega-item <?= $entrega['urgente'] ? 'urgente' : '' ?>">
+                        <div class="entrega-numero">
+                            Pedido #<?= htmlspecialchars($entrega['numero']) ?>
+                            <?php if ($entrega['urgente']): ?>
+                                <span class="urgente-badge">URGENTE</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="entrega-cliente"><?= htmlspecialchars($entrega['cliente_nome'] ?: 'Cliente não informado') ?></div>
+                        <div class="entrega-data">
+                            Prazo: <?= $entrega['prazo_entrega'] ? date('d/m/Y', strtotime($entrega['prazo_entrega'])) : 'Não informado' ?>
+                        </div>
+                        <div class="entrega-status" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">
+                            Status: <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
+                        </div>
                     </div>
-                    <div class="entrega-cliente"><?= htmlspecialchars($entrega['cliente_nome']) ?></div>
-                    <div class="entrega-data">
-                        Prazo: <?= date('d/m/Y', strtotime($entrega['prazo_entrega'])) ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="entrega-item" style="text-align: center; padding: 2rem;">
+                        <div style="color: rgba(255, 255, 255, 0.6); font-size: 1.125rem;">
+                            Nenhuma entrega agendada no momento
+                        </div>
                     </div>
-                </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
-        <?php endif; ?>
 
         <!-- Footer -->
         <footer class="quiosque-footer">
