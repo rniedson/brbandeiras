@@ -380,7 +380,7 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
 </head>
 <body>
     <div class="auto-refresh-indicator" id="refreshIndicator">
-        Carregado: <?= date('H:i:s') ?>
+        Atualização automática a cada 5s
     </div>
 
     <div class="quiosque-container">
@@ -513,7 +513,7 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
                     // Atualizar timestamp no indicador
                     if (indicator) {
                         const updateTime = new Date(data.timestamp);
-                        indicator.textContent = `Atualizado: ${updateTime.toLocaleTimeString('pt-BR')}`;
+                        indicator.textContent = `Atualizado: ${updateTime.toLocaleTimeString('pt-BR')} | Próxima: ${new Date(Date.now() + 5000).toLocaleTimeString('pt-BR')}`;
                         indicator.style.opacity = '1';
                     }
                 }
@@ -613,11 +613,11 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             }, 300);
         }
 
-        // Atualizar dados a cada 30 segundos
-        setInterval(atualizarDados, 30000);
+        // Atualizar dados a cada 5 segundos para dar impressão de tempo real
+        setInterval(atualizarDados, 5000);
 
-        // Primeira atualização após 30 segundos
-        setTimeout(atualizarDados, 30000);
+        // Primeira atualização após 5 segundos
+        setTimeout(atualizarDados, 5000);
     </script>
 </body>
 </html>
