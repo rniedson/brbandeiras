@@ -690,6 +690,25 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
       color: var(--verde-medio);
     }
 
+    /* Link do Quiosque */
+    .quiosque-link {
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+    }
+
+    .quiosque-link:hover {
+      background-color: rgba(245, 184, 0, 0.1);
+      color: var(--amarelo-principal);
+      transform: translateY(-2px);
+    }
+
+    .quiosque-link:active {
+      transform: translateY(0);
+    }
+
     /* Indicadores de imagem ativa */
     .bg-indicators {
       position: fixed;
@@ -805,6 +824,10 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
       .security-badge svg {
         width: 12px;
         height: 12px;
+      }
+
+      .quiosque-link {
+        font-size: 0.625rem;
       }
 
       .remember-section {
@@ -1100,6 +1123,17 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
         width: 20px !important;
         height: 20px !important;
       }
+
+      .quiosque-link {
+        font-size: 1rem !important;
+        padding: 0.75rem 1rem !important;
+        min-height: 48px !important;
+      }
+
+      .quiosque-link svg {
+        width: 20px !important;
+        height: 20px !important;
+      }
       
       /* Alertas maiores */
       .alert {
@@ -1339,6 +1373,12 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
             </svg>
             Dados Criptografados
           </div>
+          <a href="quiosque.php" class="security-badge quiosque-link">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+            </svg>
+            Quiosque
+          </a>
         </div>
 
         <!-- Showcase de Departamentos (apenas desktop) -->
