@@ -6,18 +6,14 @@
 
 require_once '../app/config.php';
 
-// Buscar estatísticas públicas (sem autenticação)
+// Buscar estatísticas públicas (sem autenticação) - Apenas 3 KPIs
 try {
-    // Estatísticas de pedidos por status
+    // Estatísticas de pedidos por status - Apenas Arte, Produção e Prontos
     $stmt = $pdo->query("
         SELECT 
-            COUNT(*) FILTER (WHERE status = 'orcamento') as orcamento,
             COUNT(*) FILTER (WHERE status = 'arte') as arte,
             COUNT(*) FILTER (WHERE status = 'producao') as producao,
-            COUNT(*) FILTER (WHERE status = 'pronto') as pronto,
-            COUNT(*) FILTER (WHERE status = 'entregue') as entregue,
-            COUNT(*) FILTER (WHERE urgente = true AND status NOT IN ('entregue', 'cancelado')) as urgentes,
-            COUNT(*) FILTER (WHERE DATE(prazo_entrega) = CURRENT_DATE AND status NOT IN ('entregue', 'cancelado')) as entregas_hoje
+            COUNT(*) FILTER (WHERE status = 'pronto') as pronto
         FROM pedidos
     ");
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -25,13 +21,9 @@ try {
 } catch (Exception $e) {
     error_log("Erro ao buscar estatísticas do quiosque: " . $e->getMessage());
     $stats = [
-        'orcamento' => 0,
         'arte' => 0,
         'producao' => 0,
-        'pronto' => 0,
-        'entregue' => 0,
-        'urgentes' => 0,
-        'entregas_hoje' => 0
+        'pronto' => 0
     ];
 }
 
@@ -133,12 +125,18 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             font-weight: 600;
         }
 
-        /* Grid de estatísticas */
+        /* Grid de estatísticas - 3 colunas */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 2rem;
             margin-bottom: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .stat-card {
@@ -381,13 +379,8 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             <div class="current-time" id="currentTime"></div>
         </header>
 
-        <!-- Estatísticas -->
+        <!-- Estatísticas - Apenas 3 KPIs -->
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Orçamentos</div>
-                <div class="stat-value"><?= $stats['orcamento'] ?></div>
-            </div>
-
             <div class="stat-card">
                 <div class="stat-label">Em Arte</div>
                 <div class="stat-value"><?= $stats['arte'] ?></div>
@@ -401,21 +394,6 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             <div class="stat-card">
                 <div class="stat-label">Prontos</div>
                 <div class="stat-value"><?= $stats['pronto'] ?></div>
-            </div>
-
-            <div class="stat-card urgente">
-                <div class="stat-label">Urgentes</div>
-                <div class="stat-value"><?= $stats['urgentes'] ?></div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-label">Entregas Hoje</div>
-                <div class="stat-value"><?= $stats['entregas_hoje'] ?></div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-label">Total Entregues</div>
-                <div class="stat-value"><?= $stats['entregue'] ?></div>
             </div>
         </div>
 
