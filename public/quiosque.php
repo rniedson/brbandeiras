@@ -89,47 +89,47 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             flex-direction: column;
         }
 
-        /* Header */
+        /* Header - Reduzido para 1/4 do espaço vertical */
         .quiosque-header {
             text-align: center;
-            margin-bottom: 3rem;
-            padding: 2rem 0;
-            border-bottom: 2px solid rgba(245, 184, 0, 0.3);
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(245, 184, 0, 0.3);
         }
 
         .quiosque-logo {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .logo-bar {
-            width: 6px;
-            height: 60px;
+            width: 3px;
+            height: 20px;
             background: #f5b800;
-            box-shadow: 0 0 20px rgba(245, 184, 0, 0.5);
+            box-shadow: 0 0 10px rgba(245, 184, 0, 0.5);
         }
 
         .logo-title {
-            font-size: 3rem;
+            font-size: 1.5rem;
             font-weight: 800;
             color: #ffffff;
             letter-spacing: -0.02em;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
         }
 
         .logo-subtitle {
-            font-size: 1.25rem;
+            font-size: 0.625rem;
             color: rgba(255, 255, 255, 0.8);
-            margin-top: 0.5rem;
+            margin-top: 0.125rem;
         }
 
         .current-time {
-            font-size: 1.5rem;
+            font-size: 0.875rem;
             color: #f5b800;
-            margin-top: 1rem;
+            margin-top: 0.25rem;
             font-weight: 600;
         }
 
@@ -295,15 +295,15 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
             }
 
             .logo-title {
-                font-size: 4rem;
+                font-size: 2rem;
             }
 
             .logo-subtitle {
-                font-size: 1.5rem;
+                font-size: 0.875rem;
             }
 
             .current-time {
-                font-size: 2rem;
+                font-size: 1.25rem;
             }
 
             .stat-card {
@@ -338,7 +338,7 @@ $empresa_email = defined('EMAIL_EMPRESA') ? EMAIL_EMPRESA : 'contato@brbandeiras
         /* 4K */
         @media (min-width: 2560px) {
             .logo-title {
-                font-size: 5rem;
+                font-size: 2.5rem;
             }
 
             .stat-value {
