@@ -34,14 +34,18 @@ if (!RateLimiter::check('login', null, 5, 900)) { // 5 tentativas em 15 minutos
     exit;
 }
 
-// Processar login
+// Processar login - aceitar tanto email quanto username
+$email = trim($_POST['email'] ?? '');
 $username = trim($_POST['username'] ?? '');
 $senha = $_POST['senha'] ?? '';
 
+// Determinar qual campo foi usado (prioridade: email se fornecido, senão username)
+$login_identifier = !empty($email) ? $email : $username;
+
 // Validar dados obrigatórios
-if (empty($username) || empty($senha)) {
+if (empty($login_identifier) || empty($senha)) {
     RateLimiter::recordAttempt('login'); // Registrar tentativa inválida
-    $_SESSION['erro'] = 'Nome de usuário e senha são obrigatórios';
+    $_SESSION['erro'] = 'E-mail/Nome de usuário e senha são obrigatórios';
     header('Location: index.php');
     exit;
 }
@@ -52,8 +56,9 @@ try {
         throw new Exception('Conexão com banco de dados não disponível');
     }
     
-    $stmt = $pdo->prepare("SELECT id, nome, email, senha, perfil FROM usuarios WHERE nome = ? AND ativo = true");
-    $stmt->execute([$username]);
+    // Buscar usuário por email OU nome (permite login com qualquer um dos dois)
+    $stmt = $pdo->prepare("SELECT id, nome, email, senha, perfil FROM usuarios WHERE (email = ? OR nome = ?) AND ativo = true");
+    $stmt->execute([$login_identifier, $login_identifier]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($usuario && password_verify($senha, $usuario['senha'])) {
@@ -63,6 +68,7 @@ try {
         // Login bem-sucedido
         $_SESSION['user_id'] = $usuario['id'];
         $_SESSION['user_nome'] = $usuario['nome'];
+        $_SESSION['user_email'] = $usuario['email'];
         $_SESSION['user_perfil'] = $usuario['perfil'];
         $_SESSION['last_activity'] = time(); // Registrar atividade para renovação de sessão
         

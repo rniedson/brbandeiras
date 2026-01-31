@@ -1001,6 +1001,199 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
         padding-top: 0.5rem;
       }
     }
+
+    /* ============================================
+       ESTILOS PARA TV/FIRESTICK - PÁGINA DE LOGIN
+       ============================================ */
+    
+    @media (min-width: 1920px), 
+           (min-width: 1200px) and (min-height: 800px) {
+      
+      /* Container de login maior */
+      .login-container {
+        max-width: 600px !important;
+        padding: 0 !important;
+      }
+      
+      /* Header maior */
+      .login-header {
+        padding: 3rem 2rem !important;
+      }
+      
+      .logo-title {
+        font-size: 2.5rem !important;
+      }
+      
+      .logo-subtitle {
+        font-size: 1.125rem !important;
+      }
+      
+      .logo-bar {
+        width: 6px !important;
+        height: 60px !important;
+      }
+      
+      /* Corpo do formulário maior */
+      .login-body {
+        padding: 3rem 2rem !important;
+      }
+      
+      /* Labels maiores */
+      .form-label {
+        font-size: 1.25rem !important;
+        margin-bottom: 1rem !important;
+      }
+      
+      /* Inputs maiores */
+      .form-input {
+        padding: 1.5rem 1.5rem 1.5rem 4rem !important;
+        font-size: 1.25rem !important;
+        min-height: 64px !important;
+        border-radius: 12px !important;
+      }
+      
+      /* Ícones dentro dos inputs maiores */
+      .input-icon {
+        width: 28px !important;
+        height: 28px !important;
+        left: 1.5rem !important;
+      }
+      
+      /* Botão de submit maior */
+      .submit-btn {
+        padding: 1.5rem 2rem !important;
+        font-size: 1.25rem !important;
+        min-height: 64px !important;
+        font-weight: 600 !important;
+        border-radius: 12px !important;
+      }
+      
+      /* Botão de toggle de senha maior */
+      .password-toggle {
+        right: 1.5rem !important;
+        width: 32px !important;
+        height: 32px !important;
+      }
+      
+      .password-toggle svg {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      /* Checkbox e links maiores */
+      .checkbox-label,
+      .forgot-link {
+        font-size: 1.125rem !important;
+      }
+      
+      .checkbox-input {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      /* Badges de segurança maiores */
+      .security-badge {
+        font-size: 1rem !important;
+        padding: 0.75rem 1rem !important;
+      }
+      
+      .security-badge svg {
+        width: 20px !important;
+        height: 20px !important;
+      }
+      
+      /* Alertas maiores */
+      .alert {
+        padding: 1.25rem 1.5rem !important;
+        font-size: 1.125rem !important;
+        border-radius: 12px !important;
+      }
+      
+      .alert svg {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      /* Espaçamentos maiores */
+      .form-group {
+        margin-bottom: 2rem !important;
+      }
+      
+      .remember-section {
+        margin-bottom: 2rem !important;
+      }
+      
+      /* Loading overlay maior */
+      .loader {
+        width: 80px !important;
+        height: 80px !important;
+        border-width: 5px !important;
+      }
+      
+      /* Loading inicial maior */
+      .loading-title {
+        font-size: 3rem !important;
+      }
+      
+      .loading-text {
+        font-size: 1.25rem !important;
+      }
+      
+      .loading-curiosity {
+        padding: 1.5rem !important;
+        font-size: 1.125rem !important;
+      }
+      
+      .loading-curiosity-icon {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      .loading-bar {
+        width: 5px !important;
+        height: 80px !important;
+      }
+      
+      .loading-spinner {
+        width: 60px !important;
+        height: 60px !important;
+      }
+    }
+    
+    /* Ajustes para 4K */
+    @media (min-width: 2560px) {
+      .login-container {
+        max-width: 700px !important;
+      }
+      
+      .login-header {
+        padding: 4rem 2.5rem !important;
+      }
+      
+      .logo-title {
+        font-size: 3rem !important;
+      }
+      
+      .logo-subtitle {
+        font-size: 1.25rem !important;
+      }
+      
+      .form-input {
+        padding: 1.75rem 1.75rem 1.75rem 5rem !important;
+        font-size: 1.5rem !important;
+        min-height: 72px !important;
+      }
+      
+      .submit-btn {
+        padding: 1.75rem 2.5rem !important;
+        font-size: 1.5rem !important;
+        min-height: 72px !important;
+      }
+      
+      .form-label {
+        font-size: 1.5rem !important;
+      }
+    }
   </style>
 </head>
 <body>

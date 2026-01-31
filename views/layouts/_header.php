@@ -575,6 +575,247 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
             border-color: #0ea5e9 !important;
             background-color: #0f172a !important;
         }
+        
+        /* ============================================
+           ESTILOS PARA TV/FIRESTICK - TELAS GRANDES
+           ============================================ */
+        
+        /* Detectar TV/Firestick - telas grandes com resolução HD/Full HD ou superior */
+        @media (min-width: 1920px), 
+               (min-width: 1200px) and (min-height: 800px) and (pointer: coarse) {
+            
+            /* Aumentar tamanho base da fonte para melhor legibilidade à distância */
+            html {
+                font-size: 18px !important;
+            }
+            
+            body {
+                font-size: 1.125rem !important;
+            }
+            
+            /* Container principal - aumentar largura máxima */
+            .container {
+                max-width: 1600px !important;
+            }
+            
+            /* Headers e títulos maiores */
+            h1 {
+                font-size: 2.5rem !important;
+                line-height: 1.2 !important;
+            }
+            
+            h2 {
+                font-size: 2rem !important;
+                line-height: 1.3 !important;
+            }
+            
+            h3 {
+                font-size: 1.75rem !important;
+                line-height: 1.4 !important;
+            }
+            
+            h4 {
+                font-size: 1.5rem !important;
+            }
+            
+            /* Botões maiores para navegação remota */
+            button,
+            .btn,
+            button[type="submit"],
+            button[type="button"],
+            a.button {
+                padding: 1rem 2rem !important;
+                font-size: 1.125rem !important;
+                min-height: 56px !important;
+                min-width: 120px !important;
+            }
+            
+            /* Inputs maiores */
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="number"],
+            input[type="date"],
+            input[type="time"],
+            textarea,
+            select {
+                padding: 1rem 1.25rem !important;
+                font-size: 1.125rem !important;
+                min-height: 56px !important;
+            }
+            
+            /* Labels maiores */
+            label {
+                font-size: 1.125rem !important;
+                margin-bottom: 0.75rem !important;
+            }
+            
+            /* Links maiores */
+            a {
+                font-size: 1.125rem !important;
+                padding: 0.5rem 0.75rem !important;
+            }
+            
+            /* Tabelas maiores */
+            table {
+                font-size: 1.125rem !important;
+            }
+            
+            th, td {
+                padding: 1rem 1.5rem !important;
+            }
+            
+            /* Cards e containers maiores */
+            .card,
+            .bg-white,
+            .bg-gray-50,
+            .bg-gray-100 {
+                padding: 2rem !important;
+                border-radius: 12px !important;
+            }
+            
+            /* Menu lateral maior */
+            nav {
+                font-size: 1.125rem !important;
+            }
+            
+            nav a,
+            nav button {
+                padding: 1rem 1.5rem !important;
+                min-height: 56px !important;
+            }
+            
+            /* Ícones maiores */
+            svg {
+                width: 1.5rem !important;
+                height: 1.5rem !important;
+            }
+            
+            .w-5, .h-5 {
+                width: 1.75rem !important;
+                height: 1.75rem !important;
+            }
+            
+            .w-6, .h-6 {
+                width: 2rem !important;
+                height: 2rem !important;
+            }
+            
+            /* Badges maiores */
+            .badge,
+            span[class*="badge"],
+            .bg-red-500,
+            .bg-blue-500,
+            .bg-green-500 {
+                padding: 0.5rem 1rem !important;
+                font-size: 1rem !important;
+                min-height: 32px !important;
+            }
+            
+            /* Espaçamentos maiores */
+            .p-4 {
+                padding: 2rem !important;
+            }
+            
+            .p-6 {
+                padding: 3rem !important;
+            }
+            
+            .mb-4 {
+                margin-bottom: 2rem !important;
+            }
+            
+            .mb-6 {
+                margin-bottom: 3rem !important;
+            }
+            
+            .gap-4 {
+                gap: 2rem !important;
+            }
+            
+            .gap-6 {
+                gap: 3rem !important;
+            }
+            
+            /* Modais maiores */
+            .modal,
+            [role="dialog"] {
+                max-width: 90vw !important;
+                padding: 2rem !important;
+            }
+            
+            /* Dropdowns maiores */
+            .dropdown-menu,
+            [role="menu"] {
+                font-size: 1.125rem !important;
+                padding: 0.5rem 0 !important;
+            }
+            
+            .dropdown-menu a,
+            [role="menu"] a {
+                padding: 1rem 1.5rem !important;
+            }
+            
+            /* Formulários maiores */
+            .form-group {
+                margin-bottom: 1.5rem !important;
+            }
+            
+            .form-label {
+                font-size: 1.125rem !important;
+                margin-bottom: 0.75rem !important;
+            }
+            
+            /* Grids e flex com espaçamento maior */
+            .grid {
+                gap: 1.5rem !important;
+            }
+            
+            /* Scrollbar mais visível */
+            ::-webkit-scrollbar {
+                width: 16px !important;
+                height: 16px !important;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+                min-height: 48px !important;
+            }
+        }
+        
+        /* Ajustes específicos para resoluções muito grandes (4K) */
+        @media (min-width: 2560px) {
+            html {
+                font-size: 20px !important;
+            }
+            
+            .container {
+                max-width: 2000px !important;
+            }
+            
+            button,
+            .btn {
+                padding: 1.25rem 2.5rem !important;
+                font-size: 1.25rem !important;
+                min-height: 64px !important;
+            }
+            
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            textarea,
+            select {
+                padding: 1.25rem 1.5rem !important;
+                font-size: 1.25rem !important;
+                min-height: 64px !important;
+            }
+        }
+        
+        /* Ajustes para orientação paisagem em TV */
+        @media (min-width: 1920px) and (orientation: landscape) {
+            .container {
+                max-width: 1800px !important;
+            }
+        }
     </style>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300 <?= $modoVerComo ? 'pt-12' : '' ?>">

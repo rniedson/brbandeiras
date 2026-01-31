@@ -71,7 +71,7 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
 
   <style>
     /* BR Bandeiras - Sistema de Login
-       Versão: 3.2 - Com localStorage para email e sessão estendida
+       Versão: 3.3 - Com localStorage para usuário e sessão estendida
        Características:
        - Loading inicial de 3s com curiosidade sobre bandeiras
        - Background dinâmico com rotação de imagens
@@ -80,7 +80,7 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
        - Animações suaves e profissionais
        - Design totalmente responsivo
        - Layout mobile otimizado sem seção de departamentos
-       - Email salvo no localStorage após primeiro uso
+       - Usuário salvo no localStorage após primeiro uso
        - Sessão de 14 horas
     */
     
@@ -1000,6 +1000,199 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
         padding-top: 0.5rem;
       }
     }
+
+    /* ============================================
+       ESTILOS PARA TV/FIRESTICK - PÁGINA DE LOGIN
+       ============================================ */
+    
+    @media (min-width: 1920px), 
+           (min-width: 1200px) and (min-height: 800px) {
+      
+      /* Container de login maior */
+      .login-container {
+        max-width: 600px !important;
+        padding: 0 !important;
+      }
+      
+      /* Header maior */
+      .login-header {
+        padding: 3rem 2rem !important;
+      }
+      
+      .logo-title {
+        font-size: 2.5rem !important;
+      }
+      
+      .logo-subtitle {
+        font-size: 1.125rem !important;
+      }
+      
+      .logo-bar {
+        width: 6px !important;
+        height: 60px !important;
+      }
+      
+      /* Corpo do formulário maior */
+      .login-body {
+        padding: 3rem 2rem !important;
+      }
+      
+      /* Labels maiores */
+      .form-label {
+        font-size: 1.25rem !important;
+        margin-bottom: 1rem !important;
+      }
+      
+      /* Inputs maiores */
+      .form-input {
+        padding: 1.5rem 1.5rem 1.5rem 4rem !important;
+        font-size: 1.25rem !important;
+        min-height: 64px !important;
+        border-radius: 12px !important;
+      }
+      
+      /* Ícones dentro dos inputs maiores */
+      .input-icon {
+        width: 28px !important;
+        height: 28px !important;
+        left: 1.5rem !important;
+      }
+      
+      /* Botão de submit maior */
+      .submit-btn {
+        padding: 1.5rem 2rem !important;
+        font-size: 1.25rem !important;
+        min-height: 64px !important;
+        font-weight: 600 !important;
+        border-radius: 12px !important;
+      }
+      
+      /* Botão de toggle de senha maior */
+      .password-toggle {
+        right: 1.5rem !important;
+        width: 32px !important;
+        height: 32px !important;
+      }
+      
+      .password-toggle svg {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      /* Checkbox e links maiores */
+      .checkbox-label,
+      .forgot-link {
+        font-size: 1.125rem !important;
+      }
+      
+      .checkbox-input {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      /* Badges de segurança maiores */
+      .security-badge {
+        font-size: 1rem !important;
+        padding: 0.75rem 1rem !important;
+      }
+      
+      .security-badge svg {
+        width: 20px !important;
+        height: 20px !important;
+      }
+      
+      /* Alertas maiores */
+      .alert {
+        padding: 1.25rem 1.5rem !important;
+        font-size: 1.125rem !important;
+        border-radius: 12px !important;
+      }
+      
+      .alert svg {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      /* Espaçamentos maiores */
+      .form-group {
+        margin-bottom: 2rem !important;
+      }
+      
+      .remember-section {
+        margin-bottom: 2rem !important;
+      }
+      
+      /* Loading overlay maior */
+      .loader {
+        width: 80px !important;
+        height: 80px !important;
+        border-width: 5px !important;
+      }
+      
+      /* Loading inicial maior */
+      .loading-title {
+        font-size: 3rem !important;
+      }
+      
+      .loading-text {
+        font-size: 1.25rem !important;
+      }
+      
+      .loading-curiosity {
+        padding: 1.5rem !important;
+        font-size: 1.125rem !important;
+      }
+      
+      .loading-curiosity-icon {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      
+      .loading-bar {
+        width: 5px !important;
+        height: 80px !important;
+      }
+      
+      .loading-spinner {
+        width: 60px !important;
+        height: 60px !important;
+      }
+    }
+    
+    /* Ajustes para 4K */
+    @media (min-width: 2560px) {
+      .login-container {
+        max-width: 700px !important;
+      }
+      
+      .login-header {
+        padding: 4rem 2.5rem !important;
+      }
+      
+      .logo-title {
+        font-size: 3rem !important;
+      }
+      
+      .logo-subtitle {
+        font-size: 1.25rem !important;
+      }
+      
+      .form-input {
+        padding: 1.75rem 1.75rem 1.75rem 5rem !important;
+        font-size: 1.5rem !important;
+        min-height: 72px !important;
+      }
+      
+      .submit-btn {
+        padding: 1.75rem 2.5rem !important;
+        font-size: 1.5rem !important;
+        min-height: 72px !important;
+      }
+      
+      .form-label {
+        font-size: 1.5rem !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1074,22 +1267,21 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
       <!-- Formulário -->
       <form id="loginForm" method="POST" action="auth.php">
         <?= CSRF::getField() ?>
-        <!-- Email -->
+        <!-- Usuário -->
         <div class="form-group">
-          <label for="email" class="form-label">E-mail</label>
+          <label for="email" class="form-label">Usuário</label>
           <div class="input-wrapper">
             <svg class="input-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
             </svg>
             <input 
-              type="email" 
+              type="text" 
               id="email" 
               name="email" 
               class="form-input" 
-              placeholder="seu@brbandeiras.com.br"
+              placeholder="seu.usuario"
               required
-              autocomplete="email"
+              autocomplete="username"
             >
           </div>
         </div>
@@ -1191,40 +1383,40 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
     const initialLoading = document.getElementById('initialLoading');
     const emailInput = document.getElementById('email');
 
-    // ========== FUNCIONALIDADE DE EMAIL NO LOCALSTORAGE ==========
+    // ========== FUNCIONALIDADE DE USUÁRIO NO LOCALSTORAGE ==========
     // Chave para armazenar no localStorage
-    const STORAGE_KEY = 'brBandeirasEmail';
+    const STORAGE_KEY = 'brBandeirasUsername';
     
-    // Carregar email salvo quando a página carregar
+    // Carregar usuário salvo quando a página carregar
     window.addEventListener('DOMContentLoaded', () => {
-      const savedEmail = localStorage.getItem(STORAGE_KEY);
-      if (savedEmail) {
-        emailInput.value = savedEmail;
-        // Focar direto no campo de senha se já tem email
+      const savedUsername = localStorage.getItem(STORAGE_KEY);
+      if (savedUsername) {
+        emailInput.value = savedUsername;
+        // Focar direto no campo de senha se já tem usuário
         passwordInput.focus();
       } else {
-        // Caso contrário, focar no campo de email
+        // Caso contrário, focar no campo de usuário
         emailInput.focus();
       }
     });
 
-    // Salvar email quando o usuário digitar
-    let emailSaved = false;
+    // Salvar usuário quando o usuário digitar
+    let usernameSaved = false;
     emailInput.addEventListener('blur', () => {
-      const email = emailInput.value.trim();
+      const username = emailInput.value.trim();
       
-      // Só salva se for um email válido com @brbandeiras.com.br
-      if (email && email.includes('@') && !emailSaved) {
-        localStorage.setItem(STORAGE_KEY, email);
-        emailSaved = true;
+      // Salva qualquer valor válido (sem exigir @)
+      if (username && !usernameSaved) {
+        localStorage.setItem(STORAGE_KEY, username);
+        usernameSaved = true;
       }
     });
 
     // Também salvar ao submeter o formulário (para garantir)
     form.addEventListener('submit', (e) => {
-      const email = emailInput.value.trim();
-      if (email && email.includes('@')) {
-        localStorage.setItem(STORAGE_KEY, email);
+      const username = emailInput.value.trim();
+      if (username) {
+        localStorage.setItem(STORAGE_KEY, username);
       }
     });
 
@@ -1397,15 +1589,15 @@ $curiosidade_loading = $curiosidades[array_rand($curiosidades)];
     window.addEventListener('load', adjustMobileLayout);
     window.addEventListener('resize', adjustMobileLayout);
 
-    // ========== FUNCIONALIDADE ADICIONAL: LIMPAR EMAIL ==========
-    // Permitir que o usuário limpe o email salvo segurando Ctrl+Shift+L
+    // ========== FUNCIONALIDADE ADICIONAL: LIMPAR USUÁRIO ==========
+    // Permitir que o usuário limpe o usuário salvo segurando Ctrl+Shift+L
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'L') {
-        if (confirm('Deseja limpar o e-mail salvo?')) {
+        if (confirm('Deseja limpar o usuário salvo?')) {
           localStorage.removeItem(STORAGE_KEY);
           emailInput.value = '';
           emailInput.focus();
-          emailSaved = false;
+          usernameSaved = false;
         }
       }
     });
