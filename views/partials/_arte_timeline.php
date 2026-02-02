@@ -133,7 +133,7 @@ if (!function_exists('processarObservacoesArte')) {
                         <i class="fas fa-eye"></i> Ver
                     </button>
                     <?php endif; ?>
-                    <a href="download.php?tipo=arte&id=<?= $versao['id'] ?>" 
+                    <a href="../../utils/download.php?tipo=arte&id=<?= $versao['id'] ?>" 
                        class="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition inline-flex items-center">
                         <i class="fas fa-download mr-1"></i> Baixar
                     </a>

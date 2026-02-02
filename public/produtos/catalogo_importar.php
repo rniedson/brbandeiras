@@ -56,16 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivo_csv'])) {
                     continue;
                 }
                 
-                // Extrair dados
+                // Extrair dados (apenas colunas que existem na tabela)
                 $codigo = trim($linha[$indices['codigo']] ?? '');
                 $nome = trim($linha[$indices['nome']] ?? '');
-                $categoria_id = intval($linha[$indices['categoria']] ?? 0);
+                $categoria_id = isset($indices['categoria']) ? intval($linha[$indices['categoria']] ?? 0) : null;
                 $preco = floatval(str_replace(',', '.', $linha[$indices['preco']] ?? '0'));
-                $preco_promo = floatval(str_replace(',', '.', $linha[$indices['preco_promocional']] ?? '0'));
-                $unidade = trim($linha[$indices['unidade_venda']] ?? 'UN');
-                $tempo_prod = intval(floatval(str_replace(',', '.', $linha[$indices['tempo_producao']] ?? '1')));
-                $tags_valor = $linha[$indices['tags']] ?? '';
-                $tags = is_numeric($tags_valor) ? '' : trim($tags_valor);
+                $descricao = isset($indices['descricao']) ? trim($linha[$indices['descricao']] ?? '') : null;
                 
                 // Validações
                 if (empty($codigo) || empty($nome) || $preco <= 0) {
@@ -73,12 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivo_csv'])) {
                     $linha_num++;
                     continue;
                 }
-                
-                // Garantir valores válidos
-                if ($tempo_prod < 1) $tempo_prod = 1;
-                
-                // Tratar preço promocional - NULL se for 0 ou inválido
-                $preco_promo_final = ($preco_promo > 0) ? $preco_promo : null;
                 
                 // Transação individual
                 $pdo->beginTransaction();
@@ -89,60 +79,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivo_csv'])) {
                 $existe = $stmt->fetch();
                 
                 if ($existe) {
-                    // Atualizar - tratando NULL separadamente
-                    if ($preco_promo_final === null) {
-                        $stmt = $pdo->prepare("
-                            UPDATE produtos_catalogo SET 
-                                nome = ?, 
-                                categoria_id = ?, 
-                                preco = ?, 
-                                preco_promocional = NULL,
-                                unidade_venda = ?,
-                                tempo_producao = ?, 
-                                tags = ?, 
-                                updated_at = CURRENT_TIMESTAMP
-                            WHERE codigo = ?
-                        ");
-                        $params = [$nome, $categoria_id, $preco, $unidade, $tempo_prod, $tags, $codigo];
-                    } else {
-                        $stmt = $pdo->prepare("
-                            UPDATE produtos_catalogo SET 
-                                nome = ?, 
-                                categoria_id = ?, 
-                                preco = ?, 
-                                preco_promocional = ?,
-                                unidade_venda = ?,
-                                tempo_producao = ?, 
-                                tags = ?, 
-                                updated_at = CURRENT_TIMESTAMP
-                            WHERE codigo = ?
-                        ");
-                        $params = [$nome, $categoria_id, $preco, $preco_promo_final, $unidade, $tempo_prod, $tags, $codigo];
-                    }
-                    
-                    $stmt->execute($params);
+                    // Atualizar (usando apenas colunas existentes)
+                    $stmt = $pdo->prepare("
+                        UPDATE produtos_catalogo SET 
+                            nome = ?, 
+                            categoria_id = ?, 
+                            preco = ?, 
+                            descricao = ?,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE codigo = ?
+                    ");
+                    $stmt->execute([$nome, $categoria_id, $preco, $descricao, $codigo]);
                     $atualizados++;
                     
                 } else {
-                    // Inserir novo
+                    // Inserir novo (usando apenas colunas existentes)
                     $stmt = $pdo->prepare("
                         INSERT INTO produtos_catalogo 
-                        (codigo, nome, categoria_id, preco, preco_promocional, 
-                         unidade_venda, tempo_producao, tags, ativo)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)
+                        (codigo, nome, categoria_id, preco, descricao, ativo)
+                        VALUES (?, ?, ?, ?, ?, true)
                     ");
                     
-                    $stmt->execute([
-                        $codigo, 
-                        $nome, 
-                        $categoria_id, 
-                        $preco, 
-                        $preco_promo_final, // NULL ou valor numérico
-                        $unidade, 
-                        $tempo_prod, 
-                        $tags
-                    ]);
-                    
+                    $stmt->execute([$codigo, $nome, $categoria_id, $preco, $descricao]);
                     $importados++;
                 }
                 

@@ -40,7 +40,7 @@ $stmt = $pdo->prepare("
         c.whatsapp as cliente_whatsapp,
         c.email as cliente_email,
         c.endereco,
-        c.numero,
+        c.numero as cliente_numero,
         c.complemento,
         c.bairro,
         c.cidade,
@@ -82,7 +82,7 @@ $frete = 0; // Pode adicionar campo de frete no banco futuramente
 $total = $pedido['valor_final'];
 
 // Determinar telefone principal do cliente
-$telefone_cliente = $pedido['cliente_whatsapp'] ?: $pedido['cliente_celular'] ?: $pedido['cliente_telefone'];
+$telefone_cliente = $pedido['cliente_whatsapp'] ?? $pedido['cliente_celular'] ?? $pedido['cliente_telefone'] ?? '';
 
 // Calcular validade (7 dias a partir da criação)
 $data_criacao = new DateTime($pedido['created_at']);
@@ -92,6 +92,9 @@ $validade_expirada = $data_validade < new DateTime();
 
 // Gerar ID único para este orçamento (para impressão isolada)
 $orcamento_id = 'orc_' . uniqid();
+
+// Quando incluído como componente, não renderizar estrutura HTML
+if ($modo_standalone || $modo_iframe):
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -99,7 +102,7 @@ $orcamento_id = 'orc_' . uniqid();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orçamento #<?= htmlspecialchars($pedido['numero']) ?> - BR Bandeiras</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.min.css">
     <style>
         @media print {
             body { 
@@ -156,6 +159,16 @@ $orcamento_id = 'orc_' . uniqid();
     </style>
 </head>
 <body class="<?= $modo_iframe ? 'bg-white' : 'bg-gray-50' ?>">
+<?php endif; // fim do if ($modo_standalone || $modo_iframe) ?>
+
+<?php // Estilos necessários quando incluído como componente ?>
+<?php if (!$modo_standalone && !$modo_iframe): ?>
+<style>
+    .header-gradient { background: linear-gradient(135deg, #16a34a 0%, #22c55e 50%, #fbbf24 100%); }
+    .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(34, 197, 94, 0.03); z-index: -1; font-weight: bold; pointer-events: none; }
+    .valor-destaque { background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; }
+</style>
+<?php endif; ?>
     
     <!-- Container Principal do Orçamento com ID único -->
     <div id="<?= $orcamento_id ?>" class="orcamento-container">
@@ -410,7 +423,7 @@ $orcamento_id = 'orc_' . uniqid();
                     </p>
                     <div class="flex justify-center gap-4">
                         <?php if ($telefone_cliente): ?>
-                        <a href="https://wa.me/55<?= preg_replace('/\D/', '', $telefone_cliente) ?>?text=Olá! Gostaria de aprovar o orçamento #<?= $pedido['numero'] ?>" 
+                        <a href="https://wa.me/55<?= preg_replace('/\D/', '', $telefone_cliente ?? '') ?>?text=Olá! Gostaria de aprovar o orçamento #<?= $pedido['numero'] ?>" 
                            class="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 inline-flex items-center">
                             📱 WhatsApp
                         </a>
@@ -501,7 +514,7 @@ $orcamento_id = 'orc_' . uniqid();
         }
 
         function enviarWhatsApp_<?= $pedido_id ?>() {
-            const numero = '55<?= preg_replace("/\D/", "", $telefone_cliente) ?>';
+            const numero = '55<?= preg_replace("/\D/", "", $telefone_cliente ?? '') ?>';
             const mensagem = 'Olá! Segue o link do <?= $pedido['status'] === 'orcamento' ? 'orçamento' : 'pedido' ?> #<?= $pedido['numero'] ?>:\n' +
                            '<?= $_SERVER['HTTP_HOST'] ?>/orcamento.php?id=<?= $pedido_id ?>\n\n' +
                            'Valor total: <?= formatarMoeda($total) ?>\n' +
@@ -547,5 +560,7 @@ $orcamento_id = 'orc_' . uniqid();
         }
     </script>
 
+<?php if ($modo_standalone || $modo_iframe): ?>
 </body>
 </html>
+<?php endif; ?>

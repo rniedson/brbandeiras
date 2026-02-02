@@ -1,6 +1,7 @@
 <?php
 require_once '../../app/config.php';
 require_once '../../app/auth.php';
+require_once '../../app/functions.php';
 
 requireRole(['gestor']);
 

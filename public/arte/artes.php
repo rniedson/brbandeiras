@@ -341,7 +341,7 @@ include '../../views/layouts/_header.php';
                 
                 <!-- Ações -->
                 <div class="mt-4 flex gap-2">
-                    <a href="download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
+                    <a href="../utils/download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
                        class="flex-1 px-3 py-2 bg-blue-600 text-white text-center rounded hover:bg-blue-700 text-sm">
                         Baixar
                     </a>

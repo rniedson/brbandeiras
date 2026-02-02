@@ -28,16 +28,34 @@ if (!$produto) {
     exit;
 }
 
-// Buscar imagens adicionais
-$stmt = $pdo->prepare("SELECT * FROM produtos_imagens WHERE produto_id = ? ORDER BY ordem");
-$stmt->execute([$produto_id]);
-$imagens = $stmt->fetchAll();
-
 // Buscar categorias
 $categorias = $pdo->query("SELECT * FROM categorias_produtos WHERE ativo = true ORDER BY nome")->fetchAll();
 
-// Decodificar especificações
-$especificacoes = json_decode($produto['especificacoes'], true) ?: [];
+// Valores padrão para colunas que não existem na tabela
+$produto['especificacoes'] = $produto['especificacoes'] ?? null;
+$produto['unidade_venda'] = $produto['unidade_venda'] ?? 'UN';
+$produto['preco_promocional'] = $produto['preco_promocional'] ?? null;
+$produto['tempo_producao'] = $produto['tempo_producao'] ?? 1;
+$produto['imagem_principal'] = $produto['imagem_principal'] ?? null;
+$produto['estoque_disponivel'] = $produto['estoque_disponivel'] ?? true;
+$produto['tags'] = $produto['tags'] ?? null;
+$produto['popularidade'] = $produto['popularidade'] ?? 0;
+
+// Decodificar especificações (se existir)
+$especificacoes = [];
+if (!empty($produto['especificacoes'])) {
+    $especificacoes = json_decode($produto['especificacoes'], true) ?: [];
+}
+
+// Buscar imagens adicionais (se a tabela existir)
+$imagens = [];
+try {
+    $stmt = $pdo->prepare("SELECT * FROM produtos_imagens WHERE produto_id = ? ORDER BY ordem");
+    $stmt->execute([$produto_id]);
+    $imagens = $stmt->fetchAll();
+} catch (Exception $e) {
+    // Tabela pode não existir
+}
 
 // Recuperar dados do formulário em caso de erro
 if (isset($_SESSION['form_data'])) {
@@ -114,15 +132,25 @@ include '../../views/layouts/_header.php';
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Categoria <span class="text-red-500">*</span>
                     </label>
-                    <select name="categoria_id" required 
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500">
-                        <option value="">Selecione...</option>
-                        <?php foreach ($categorias as $cat): ?>
-                        <option value="<?= $cat['id'] ?>" <?= $produto['categoria_id'] == $cat['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cat['nome']) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="flex gap-2">
+                        <select name="categoria_id" id="categoria_id" required 
+                                class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500">
+                            <option value="">Selecione...</option>
+                            <?php foreach ($categorias as $cat): ?>
+                            <option value="<?= $cat['id'] ?>" <?= $produto['categoria_id'] == $cat['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cat['nome']) ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="button" onclick="abrirModalNovaCategoria()" 
+                                class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+                                title="Criar nova categoria">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Não encontrou a categoria? Clique no <span class="text-blue-600 font-medium">+</span> para criar</p>
                 </div>
                 
                 <!-- Unidade de Venda -->
@@ -372,6 +400,22 @@ include '../../views/layouts/_header.php';
 <script>
 let especIndex = <?= count($especificacoes) ?>;
 
+// Função de loading para o formulário
+function showLoading(form) {
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+            <svg class="animate-spin inline w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Salvando...
+        `;
+    }
+    return true;
+}
+
 function adicionarEspecificacao() {
     const container = document.getElementById('especificacoes');
     const html = `
@@ -436,6 +480,171 @@ function validarFormulario(form) {
     
     return confirm('Confirmar alterações no produto?') && showLoading(form);
 }
+
+// Funções do Modal de Categoria
+function abrirModalNovaCategoria() {
+    document.getElementById('formNovaCategoria').reset();
+    document.getElementById('categoriaCriadaSucesso').classList.add('hidden');
+    document.getElementById('modalNovaCategoria').classList.remove('hidden');
+    setTimeout(() => {
+        document.getElementById('nova_categoria_nome').focus();
+    }, 100);
+}
+
+function fecharModalCategoria() {
+    document.getElementById('modalNovaCategoria').classList.add('hidden');
+}
+
+function salvarNovaCategoria(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const submitBtn = document.getElementById('btnSalvarCategoria');
+    const btnTexto = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Criando...
+    `;
+    
+    fetch('categoria_produto_criar.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error('Resposta inválida do servidor');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            document.getElementById('categoriaCriadaSucesso').classList.remove('hidden');
+            
+            const select = document.getElementById('categoria_id');
+            const option = document.createElement('option');
+            option.value = data.id;
+            option.textContent = formData.get('nome');
+            option.selected = true;
+            
+            const options = Array.from(select.options).slice(1);
+            let inserted = false;
+            
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].textContent.toLowerCase() > formData.get('nome').toLowerCase()) {
+                    select.insertBefore(option, options[i]);
+                    inserted = true;
+                    break;
+                }
+            }
+            
+            if (!inserted) {
+                select.appendChild(option);
+            }
+            
+            setTimeout(() => {
+                fecharModalCategoria();
+            }, 1000);
+            
+        } else {
+            alert('Erro: ' + (data.message || 'Erro ao criar categoria'));
+        }
+    })
+    .catch(error => {
+        alert('Erro ao criar categoria: ' + error.message);
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = btnTexto;
+    });
+}
+
+document.getElementById('modalNovaCategoria').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fecharModalCategoria();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        fecharModalCategoria();
+    }
+});
 </script>
+
+<!-- Modal de Nova Categoria -->
+<div id="modalNovaCategoria" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                <svg class="w-5 h-5 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+                Nova Categoria
+            </h3>
+            <button type="button" onclick="fecharModalCategoria()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <form id="formNovaCategoria" onsubmit="salvarNovaCategoria(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome da Categoria <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       id="nova_categoria_nome"
+                       name="nome" 
+                       required
+                       placeholder="Ex: Bandeiras Especiais"
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Descrição <span class="text-gray-400 text-xs">(opcional)</span>
+                </label>
+                <textarea id="nova_categoria_descricao"
+                          name="descricao" 
+                          rows="3"
+                          placeholder="Breve descrição da categoria..."
+                          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" 
+                        onclick="fecharModalCategoria()"
+                        class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        id="btnSalvarCategoria"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Criar Categoria
+                </button>
+            </div>
+        </form>
+        
+        <div id="categoriaCriadaSucesso" class="hidden mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Categoria criada com sucesso!</span>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include '../../views/layouts/_footer.php'; ?>

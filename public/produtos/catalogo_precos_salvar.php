@@ -23,20 +23,16 @@ try {
     foreach ($produtos_ids as $produto_id) {
         if (isset($precos[$produto_id])) {
             $preco = floatval($precos[$produto_id]);
-            $preco_promo = !empty($precos_promo[$produto_id]) ? floatval($precos_promo[$produto_id]) : null;
-            $custo = !empty($custos[$produto_id]) ? floatval($custos[$produto_id]) : null;
             
             if ($preco > 0) {
                 $stmt = $pdo->prepare("
                     UPDATE produtos_catalogo 
                     SET preco = ?, 
-                        preco_promocional = ?,
-                        custo = ?,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
                 
-                $stmt->execute([$preco, $preco_promo, $custo, $produto_id]);
+                $stmt->execute([$preco, $produto_id]);
                 $atualizados++;
             }
         }

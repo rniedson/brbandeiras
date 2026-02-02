@@ -403,7 +403,7 @@ try {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ");
         
-        $allowed_types = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'ai', 'cdr', 'psd'];
+        $allowed_types = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'ai', 'cdr', 'psd', 'mp3', 'ogg', 'opus', 'm4a', 'wav', 'aac', 'amr', 'webm'];
         $max_size = 25 * 1024 * 1024; // 25MB
         
         foreach ($_FILES['arquivos']['name'] as $key => $filename) {

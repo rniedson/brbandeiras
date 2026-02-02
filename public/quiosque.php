@@ -1,45 +1,60 @@
 <?php
 /**
  * Quiosque - Visualização pública para TV
- * Layout estilo painel de aeroporto
+ * Layout moderno com identidade BR Bandeiras
+ * Versão: 2.0 - Redesign Visual
  * Não requer autenticação
  */
 
 require_once '../app/config.php';
 
-// Buscar estatísticas públicas (sem autenticação) - Apenas 3 KPIs
-try {
-    $stmt = $pdo->query("
-        SELECT 
-            COUNT(*) FILTER (WHERE status = 'arte') as arte,
-            COUNT(*) FILTER (WHERE status = 'producao') as producao,
-            COUNT(*) FILTER (WHERE status = 'pronto') as pronto
-        FROM pedidos
-    ");
-    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
-    $stats = array_map('intval', $stats);
-} catch (Exception $e) {
-    error_log("Erro ao buscar estatísticas do quiosque: " . $e->getMessage());
-    $stats = ['arte' => 0, 'producao' => 0, 'pronto' => 0];
-}
-
 // Buscar próximas entregas - Incluir todos os pedidos ativos
 try {
     $stmt = $pdo->query("
         SELECT 
+            p.id,
             p.numero,
             p.prazo_entrega,
             c.nome as cliente_nome,
+            COALESCE(c.celular, c.whatsapp, c.telefone) as cliente_telefone,
             p.urgente,
             p.status,
-            p.created_at
+            p.created_at,
+            p.updated_at,
+            u.nome as vendedor_nome,
+            ua.nome as arte_finalista_nome,
+            (
+                SELECT pc.nome 
+                FROM pedido_itens pi 
+                LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id 
+                WHERE pi.pedido_id = p.id 
+                ORDER BY pi.id 
+                LIMIT 1
+            ) as primeiro_produto,
+            (
+                SELECT pa.caminho 
+                FROM pedido_arquivos pa 
+                WHERE pa.pedido_id = p.id 
+                AND LOWER(pa.nome_arquivo) ~ '\\.(jpg|jpeg|png|gif|webp)$'
+                ORDER BY pa.created_at DESC
+                LIMIT 1
+            ) as imagem_caminho,
+            GREATEST(
+                p.updated_at,
+                COALESCE((
+                    SELECT MAX(l.created_at) 
+                    FROM logs_sistema l 
+                    WHERE l.detalhes LIKE '%Pedido #' || p.numero || '%'
+                ), p.updated_at)
+            ) as ultima_atualizacao
         FROM pedidos p
         LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios u ON p.vendedor_id = u.id
+        LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
+        LEFT JOIN usuarios ua ON pa.arte_finalista_id = ua.id
         WHERE p.status NOT IN ('entregue', 'cancelado')
         ORDER BY 
-            CASE WHEN p.prazo_entrega IS NOT NULL THEN 0 ELSE 1 END,
-            p.prazo_entrega ASC NULLS LAST,
-            p.created_at DESC
+            ultima_atualizacao DESC
         LIMIT 15
     ");
     $proximas_entregas = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -48,7 +63,106 @@ try {
     $proximas_entregas = [];
 }
 
+// Função para formatar tempo relativo
+function formatarTempoRelativo($dataHora) {
+    if (!$dataHora) return '—';
+    $agora = new DateTime();
+    $data = new DateTime($dataHora);
+    $diff = $agora->diff($data);
+    
+    if ($diff->days > 0) {
+        return $diff->days . 'd';
+    } elseif ($diff->h > 0) {
+        return $diff->h . 'h';
+    } else {
+        return max(1, $diff->i) . 'min';
+    }
+}
+
+// Função para formatar identificação do cliente (primeiro nome + 4 últimos dígitos)
+function formatarClienteQuiosque($nome, $telefone) {
+    // Pegar primeiro nome
+    $primeiroNome = $nome ? explode(' ', trim($nome))[0] : 'Cliente';
+    
+    // Pegar últimos 4 dígitos do telefone
+    $telefoneNumeros = preg_replace('/\D/', '', $telefone ?? '');
+    $ultimos4 = strlen($telefoneNumeros) >= 4 ? substr($telefoneNumeros, -4) : '****';
+    
+    return $primeiroNome . ' - ' . $ultimos4;
+}
+
 $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
+
+// ============================================
+// ARRAYS PARA TELAS ESPECIAIS DO CARROSSEL
+// ============================================
+
+// Array de curiosidades sobre bandeiras (reutilizado da tela de login)
+$curiosidades = [
+    "Você sabia que a bandeira branca só virou regra internacional de trégua na Convenção de Haia de 1899?",
+    "Sabia que a bandeira do México mostra a lenda mexica da águia e da serpente sobre um nopal?",
+    "Você sabia que a bandeira do Paraguai tem frente e verso diferentes?",
+    "Sabia que a bandeira do Nepal é a única nacional que não é retangular?",
+    "Você sabia que as bandeiras da Suíça e do Vaticano são oficialmente quadradas?",
+    "Sabia que a bandeira da Líbia já foi apenas um retângulo verde sólido?",
+    "Você sabia que a bandeira de Bangladesh desloca o disco para parecer centrado ao vento?",
+    "Sabia que a bandeira de Palau também desloca o disco para o mastro?",
+    "Você sabia que a bandeira da Arábia Saudita não vai a meio-mastro por trazer o credo islâmico?",
+    "Sabia que a bandeira de Belize é uma das poucas bandeiras nacionais que incluem pessoas?",
+    "Você sabia que a bandeira de Dominica usa roxo no papagaio sisserou?",
+    "Sabia que a bandeira da Guatemala exibe rifles cruzados e o pássaro quetzal?",
+    "Você sabia que a bandeira da República Dominicana traz uma Bíblia aberta no brasão?",
+    "Sabia que a bandeira do Camboja estampa Angkor Wat em destaque?",
+    "Você sabia que a bandeira do Chade é quase idêntica à bandeira da Romênia?",
+    "Sabia que a bandeira de Mônaco quase se confunde com a bandeira da Indonésia?",
+    "Você sabia que a bandeira da Jamaica não usa vermelho, branco ou azul?",
+    "Sabia que a bandeira de Moçambique inclui um fuzil AK-47?",
+    "Você sabia que a bandeira das Filipinas vira de guerra quando o vermelho fica em cima?",
+    "Sabia que a bandeira da Dinamarca é a mais antiga em uso contínuo?",
+    "Você sabia que a bandeira de Gales com o dragão não aparece na bandeira do Reino Unido?",
+    "Sabia que a bandeira do Laos simboliza a lua cheia sobre o rio Mekong com o disco branco?",
+    "Você sabia que a bandeira do Brasil mostra o céu do Rio em 15/11/1889 com constelações espelhadas?",
+    "Sabia que a bandeira do Brasil dá a cada estrela um estado e o Distrito Federal?",
+    "Você sabia que a bandeira da Etiópia inspirou as cores pan-africanas verde amarelo e vermelho?",
+    "Sabia que as cores pan-árabes em muitas bandeiras vêm da Revolta Árabe de 1916?",
+    "Você sabia que a bandeira do Afeganistão mudou muitas vezes no último século?",
+    "Sabia que a bandeira do Japão só teve medidas do sol padronizadas por lei em 1999?",
+    "Você sabia que a bandeira do Qatar tem proporção incomum de 11:28?",
+    "Sabia que a cor vinho da bandeira do Qatar surgiu de pigmentos que escureciam no sol?",
+    "Você sabia que a bandeira do Chipre traz o mapa da ilha com ramos de oliveira?",
+    "Sabia que a bandeira do Alasca foi criada por um estudante de 13 anos em 1927?",
+    "Você sabia que a bandeira do Brasil exibe o lema positivista 'Ordem e Progresso'?",
+    "Sabia que muitas bandeiras com texto sagrado são confeccionadas em dupla face para evitar escrita espelhada?"
+];
+
+// Array de produtos da BR Bandeiras
+$produtos = [
+    ["nome" => "Bandeiras Oficiais", "descricao" => "Bandeiras do Brasil, estados e municípios com qualidade premium", "icone" => "🇧🇷"],
+    ["nome" => "Bandeiras Personalizadas", "descricao" => "Sua marca estampada em bandeiras de alta durabilidade", "icone" => "🎨"],
+    ["nome" => "Wind Banners", "descricao" => "Comunicação visual que se destaca em eventos e pontos de venda", "icone" => "🚩"],
+    ["nome" => "Faixas e Banners", "descricao" => "Impressão digital em lona com acabamento profissional", "icone" => "📢"],
+    ["nome" => "Mastros e Suportes", "descricao" => "Estruturas robustas para fixação de bandeiras", "icone" => "🏛️"],
+    ["nome" => "Toalhas de Mesa", "descricao" => "Sublimação total para eventos e feiras", "icone" => "🎪"],
+    ["nome" => "Galhardetes", "descricao" => "Perfeitos para decoração e brindes corporativos", "icone" => "🏆"],
+    ["nome" => "Flâmulas", "descricao" => "Ideais para troféus, medalhas e reconhecimentos", "icone" => "🎖️"],
+    ["nome" => "Bandeiras de Mesa", "descricao" => "Elegância para seu escritório e sala de reuniões", "icone" => "💼"],
+    ["nome" => "Uniformes Sublimados", "descricao" => "Camisetas e uniformes com impressão de alta definição", "icone" => "👕"]
+];
+
+// Array de branding BR Bandeiras
+$branding = [
+    ["slogan" => "Qualidade que Tremula", "mensagem" => "Há mais de 20 anos levando sua marca mais longe"],
+    ["slogan" => "Cores que Comunicam", "mensagem" => "Impressão digital de alta definição para resultados impactantes"],
+    ["slogan" => "Tradição e Inovação", "mensagem" => "Combinando técnicas tradicionais com tecnologia de ponta"],
+    ["slogan" => "Sua Marca, Nossa Missão", "mensagem" => "Comprometidos com a excelência em cada projeto"],
+    ["slogan" => "Do Projeto à Entrega", "mensagem" => "Acompanhamento completo do seu pedido"],
+    ["slogan" => "Feito para Durar", "mensagem" => "Materiais premium que resistem ao tempo e às intempéries"]
+];
+
+// Converter arrays para JSON para uso no JavaScript
+$curiosidadesJson = json_encode($curiosidades, JSON_UNESCAPED_UNICODE);
+$produtosJson = json_encode($produtos, JSON_UNESCAPED_UNICODE);
+$brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -56,7 +170,75 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiosque - <?= htmlspecialchars($empresa_nome) ?></title>
+    
+    <!-- Google Fonts - Inter + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
     <style>
+        /* ============================================
+           VARIÁVEIS CSS - SINGLE SOURCE OF TRUTH
+           Paleta baseada na identidade BR Bandeiras
+           ============================================ */
+        :root {
+            /* Cores primárias */
+            --color-brand-yellow: #f5b800;
+            --color-brand-green: #22c55e;
+            --color-brand-green-dark: #0d3d1a;
+            
+            /* Backgrounds - tons de verde escuro */
+            --color-bg-primary: #031a08;
+            --color-bg-secondary: rgba(13, 61, 26, 0.4);
+            --color-bg-elevated: rgba(13, 61, 26, 0.6);
+            --color-bg-card: rgba(10, 40, 18, 0.7);
+            --color-bg-hover: rgba(245, 184, 0, 0.1);
+            
+            /* Texto */
+            --color-text-primary: #ffffff;
+            --color-text-secondary: rgba(255, 255, 255, 0.8);
+            --color-text-muted: rgba(255, 255, 255, 0.6);
+            
+            /* Status */
+            --color-status-arte: #f5b800;
+            --color-status-producao: #22c55e;
+            --color-status-pronto: #4ade80;
+            --color-status-urgente: #ef4444;
+            --color-status-hoje: #f59e0b;
+            
+            /* Bordas */
+            --color-border-subtle: rgba(245, 184, 0, 0.15);
+            --color-border-medium: rgba(245, 184, 0, 0.25);
+            --color-border-accent: rgba(245, 184, 0, 0.4);
+            
+            /* Espaçamento (escala de 8px) */
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            
+            /* Tipografia */
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            
+            /* Tamanhos de fonte (otimizado para TV 32-43" a 2-3m) */
+            --text-xs: 0.875rem;
+            --text-sm: 1rem;
+            --text-base: 1.125rem;
+            --text-lg: 1.25rem;
+            --text-xl: 1.75rem;
+            --text-2xl: 2rem;
+            --text-3xl: 3.5rem;
+            
+            /* Transições */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+        }
+
+        /* ============================================
+           RESET E BASE
+           ============================================ */
         * {
             margin: 0;
             padding: 0;
@@ -64,304 +246,570 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
         }
 
         body {
-            font-family: 'Segoe UI', 'Roboto Mono', monospace;
-            background: linear-gradient(135deg, #041801 0%, #0a1a0d 50%, #041801 100%);
-            color: #ffffff;
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, #021a08 0%, #0d3d1a 25%, #0a2d12 50%, #0d3d1a 75%, #021a08 100%);
+            background-attachment: fixed;
+            color: var(--color-text-primary);
             min-height: 100vh;
             overflow: hidden;
+            line-height: 1.5;
         }
 
         /* ============================================
-           ELEMENTOS ABSTRATOS ANIMADOS
+           LAYOUT PRINCIPAL
            ============================================ */
-        .abstract-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-
-        .gradient-orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.1;
-            animation: float 25s ease-in-out infinite;
-        }
-
-        .gradient-orb-1 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, #f5b800 0%, transparent 70%);
-            top: -150px;
-            right: -150px;
-        }
-
-        .gradient-orb-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, #0d5c1e 0%, transparent 70%);
-            bottom: -100px;
-            left: -100px;
-            animation-delay: -10s;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(30px, -30px) scale(1.1); }
-        }
-
-        /* Linhas animadas */
-        .scan-line {
-            position: absolute;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(245, 184, 0, 0.3), transparent);
-            animation: scanDown 8s linear infinite;
-        }
-
-        .scan-line-1 { animation-delay: 0s; }
-        .scan-line-2 { animation-delay: -4s; }
-
-        @keyframes scanDown {
-            0% { top: -2px; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
-        }
-
-        /* ============================================
-           LAYOUT PRINCIPAL - ESTILO AEROPORTO
-           ============================================ */
-        .airport-container {
-            position: relative;
-            z-index: 1;
+        .quiosque-container {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 1rem;
+            padding: var(--spacing-md);
         }
 
-        /* Header compacto */
-        .airport-header {
+        /* ============================================
+           HEADER COM NOME DA EMPRESA E TÍTULOS
+           ============================================ */
+        .quiosque-header {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 8px 8px 0 0;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        /* Linha superior - Hora, Nome da empresa e Status */
+        .header-brand {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.75rem 1.5rem;
-            background: linear-gradient(180deg, rgba(13, 92, 30, 0.3) 0%, rgba(245, 184, 0, 0.1) 50%, transparent 100%);
-            border-bottom: 2px solid #f5b800;
-            margin-bottom: 1rem;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-bottom: 1px solid var(--color-border-subtle);
         }
 
-        .header-left {
+        .brand-left,
+        .brand-right {
+            flex: 1;
             display: flex;
             align-items: center;
-            gap: 1rem;
         }
 
-        .logo-bar {
-            width: 4px;
-            height: 40px;
-            background: #f5b800;
-            box-shadow: 0 0 10px rgba(245, 184, 0, 0.5);
+        .brand-left {
+            justify-content: flex-start;
         }
 
-        .logo-title {
-            font-size: 1.5rem;
+        .brand-right {
+            justify-content: flex-end;
+        }
+
+        .brand-name {
+            font-size: var(--text-xl);
             font-weight: 700;
-            color: #f5b800;
+            color: var(--color-text-primary);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
         }
 
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
+        .brand-highlight {
+            color: var(--color-brand-yellow);
         }
 
         .current-time {
-            font-size: 1.5rem;
+            font-size: var(--text-lg);
             font-weight: 600;
-            color: #ffffff;
-            font-family: 'Roboto Mono', monospace;
+            color: var(--color-text-primary);
+            font-family: var(--font-mono);
         }
 
         .update-indicator {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
+            gap: var(--spacing-xs);
+            font-size: var(--text-sm);
+            color: var(--color-text-secondary);
         }
 
         .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background: #22c55e;
+            width: 10px;
+            height: 10px;
+            background: var(--color-brand-green);
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 8px var(--color-brand-green);
+        }
+
+        /* Animação do pulse dot */
+        @media (prefers-reduced-motion: no-preference) {
+            .pulse-dot {
+                animation: pulse 2s ease-in-out infinite;
+            }
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
+            50% { opacity: 0.6; transform: scale(0.85); }
         }
 
-        /* KPIs em linha horizontal */
-        .kpi-bar {
+        /* Linha inferior - Títulos das colunas */
+        .header-columns {
+            display: table;
+            table-layout: fixed;
+            width: 100%;
+        }
+
+        .header-col {
+            display: table-cell;
+            font-size: var(--text-sm);
+            font-weight: 600;
+            color: var(--color-brand-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: var(--spacing-md) var(--spacing-lg);
+            vertical-align: middle;
+        }
+        
+        /* As larguras são herdadas das classes .col-* definidas abaixo */
+
+        .header-special-title {
+            text-align: center;
+            width: 100%;
+        }
+
+        .header-special-title #filterTitle {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--color-text-primary);
+            transition: opacity 0.2s ease;
+        }
+
+        /* ============================================
+           SEÇÃO DE ENTREGAS - TABELA
+           ============================================ */
+        .entregas-section {
+            flex: 1;
+            overflow: hidden;
             display: flex;
-            justify-content: center;
-            gap: 3rem;
-            padding: 1rem 0;
-            margin-bottom: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
+            flex-direction: column;
         }
 
-        .kpi-item {
+        /* Indicadores de navegação (agora no footer) */
+        .filter-indicators {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 0.75rem 2rem;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            border-left: 4px solid;
+            justify-content: center;
+            gap: 10px;
+            padding: 8px 20px;
+            background: var(--color-bg-card);
+            border-radius: 25px;
+            border: 1px solid var(--color-border-subtle);
         }
 
-        .kpi-item.arte { border-color: #f5b800; }
-        .kpi-item.producao { border-color: #0d5c1e; }
-        .kpi-item.pronto { border-color: #22c55e; }
+        .filter-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--color-text-muted);
+            opacity: 0.4;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
 
-        .kpi-label {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.7);
+        .filter-dot:hover {
+            opacity: 0.7;
+            transform: scale(1.1);
+        }
+
+        .filter-dot.active {
+            opacity: 1;
+            transform: scale(1.2);
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .filter-dot[data-filter="todos"] { background: var(--color-text-primary); }
+        .filter-dot[data-filter="todos"].active { box-shadow: 0 0 8px var(--color-text-primary); }
+        
+        .filter-dot[data-filter="arte"] { background: var(--color-status-arte); }
+        .filter-dot[data-filter="arte"].active { box-shadow: 0 0 8px var(--color-status-arte); }
+        
+        .filter-dot[data-filter="orcamento"] { background: #3b82f6; }
+        .filter-dot[data-filter="orcamento"].active { box-shadow: 0 0 8px #3b82f6; }
+        
+        .filter-dot[data-filter="producao"] { background: var(--color-status-producao); }
+        .filter-dot[data-filter="producao"].active { box-shadow: 0 0 8px var(--color-status-producao); }
+
+        .filter-separator {
+            width: 1px;
+            height: 16px;
+            background: var(--color-border-medium);
+            margin: 0 4px;
+        }
+        
+        .filter-dot[data-filter="curiosidade"] { background: #a855f7; }
+        .filter-dot[data-filter="curiosidade"].active { box-shadow: 0 0 8px #a855f7; }
+        
+        .filter-dot[data-filter="produto"] { background: #ec4899; }
+        .filter-dot[data-filter="produto"].active { box-shadow: 0 0 8px #ec4899; }
+        
+        .filter-dot[data-filter="branding"] { background: var(--color-brand-yellow); }
+        .filter-dot[data-filter="branding"].active { box-shadow: 0 0 8px var(--color-brand-yellow); }
+
+        /* Animação de transição da tabela */
+        .entregas-table-container {
+            transition: opacity 0.4s ease;
+        }
+
+        .entregas-table-container.transitioning {
+            opacity: 0.3;
+        }
+
+        /* ============================================
+           TELAS ESPECIAIS DO CARROSSEL
+           ============================================ */
+        .tela-especial {
+            display: none;
+            flex: 1;
+            background: var(--color-bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--color-border-subtle);
+            backdrop-filter: blur(10px);
+            padding: var(--spacing-xl);
+            animation: fadeInScale 0.6s ease-out;
+        }
+
+        .tela-especial.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeInScale {
+            from { 
+                opacity: 0; 
+                transform: scale(0.95);
+            }
+            to { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+        }
+
+        /* Tela de Curiosidade */
+        .tela-curiosidade {
+            text-align: center;
+        }
+
+        .curiosidade-icone {
+            font-size: 5rem;
+            margin-bottom: var(--spacing-lg);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .curiosidade-label {
+            font-size: var(--text-sm);
+            color: var(--color-brand-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: var(--spacing-md);
+            font-weight: 600;
+        }
+
+        .curiosidade-texto {
+            font-size: var(--text-xl);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+            max-width: 800px;
+            font-weight: 500;
+        }
+
+        /* Tela de Produto */
+        .tela-produto {
+            text-align: center;
+        }
+
+        .produto-icone {
+            font-size: 6rem;
+            margin-bottom: var(--spacing-lg);
+            filter: drop-shadow(0 0 20px rgba(245, 184, 0, 0.3));
+        }
+
+        .produto-nome {
+            font-size: var(--text-2xl);
+            color: var(--color-brand-yellow);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        .kpi-value {
-            font-size: 2.5rem;
+        .produto-descricao {
+            font-size: var(--text-lg);
+            color: var(--color-text-secondary);
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        .produto-cta {
+            margin-top: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: linear-gradient(135deg, var(--color-brand-yellow), #e6a800);
+            color: var(--color-bg-primary);
             font-weight: 700;
-            font-family: 'Roboto Mono', monospace;
-            line-height: 1;
-        }
-
-        .kpi-item.arte .kpi-value { color: #f5b800; }
-        .kpi-item.producao .kpi-value { color: #22c55e; }
-        .kpi-item.pronto .kpi-value { color: #4ade80; }
-
-        /* Tabela estilo aeroporto */
-        .flight-board {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .board-header {
-            display: grid;
-            grid-template-columns: 120px 1fr 150px 150px 140px;
-            background: linear-gradient(180deg, #0d2818 0%, #061a0e 100%);
-            border-bottom: 2px solid #f5b800;
-            padding: 1rem 1.5rem;
-            font-weight: 600;
+            font-size: var(--text-base);
+            border-radius: 50px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            font-size: 0.875rem;
-            color: #f5b800;
         }
 
-        .board-header span {
+        /* Tela de Branding */
+        .tela-branding {
+            text-align: center;
+            background: linear-gradient(135deg, rgba(13, 61, 26, 0.8), rgba(3, 26, 8, 0.9));
+        }
+
+        .branding-logo {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
         }
 
-        .board-body {
+        .branding-logo-text {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--color-text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .branding-logo-text span {
+            color: var(--color-brand-yellow);
+        }
+
+        .branding-logo-bar {
+            width: 60px;
+            height: 30px;
+            background: var(--color-brand-yellow);
+            border-radius: 4px;
+        }
+
+        .branding-slogan {
+            font-size: var(--text-2xl);
+            color: var(--color-brand-yellow);
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            font-style: italic;
+        }
+
+        .branding-mensagem {
+            font-size: var(--text-lg);
+            color: var(--color-text-secondary);
+            max-width: 700px;
+            line-height: 1.6;
+        }
+
+        .branding-contato {
+            margin-top: var(--spacing-xl);
+            display: flex;
+            gap: var(--spacing-lg);
+            color: var(--color-text-muted);
+            font-size: var(--text-sm);
+        }
+
+        .branding-contato span {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        /* Ocultar tabela quando tela especial estiver ativa */
+        .entregas-table-container.hidden {
+            display: none;
+        }
+
+        /* Container da tabela */
+        .entregas-table-container {
+            flex: 1;
+            background: var(--color-bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--color-border-subtle);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Tabela */
+        .entregas-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .entregas-table thead {
+            background: var(--color-bg-elevated);
+            border-bottom: 2px solid var(--color-brand-yellow);
+        }
+
+        .entregas-table th {
+            padding: var(--spacing-md) var(--spacing-lg);
+            text-align: left;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--color-brand-yellow);
+        }
+
+        .entregas-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+        .entregas-table thead,
+        .entregas-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .entregas-table tbody {
+            display: block;
             overflow-y: auto;
-            max-height: calc(100vh - 280px);
+            max-height: calc(100vh - 400px);
         }
 
-        .board-row {
-            display: grid;
-            grid-template-columns: 120px 1fr 150px 150px 140px;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-            animation: rowFadeIn 0.5s ease-out;
+        .entregas-table th,
+        .entregas-table td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        @keyframes rowFadeIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+        /* Larguras das colunas - usadas tanto no header quanto na tabela */
+        .col-imagem { width: 6%; text-align: center; }
+        .col-cliente { width: 16%; }
+        .col-produto { width: 22%; }
+        .col-vendedor { width: 12%; }
+        .col-arte { width: 14%; }
+        .col-status { width: 10%; text-align: center; }
+        .col-atualizado { width: 10%; text-align: center; }
+        .col-pedido { width: 10%; text-align: center; }
+
+        .entregas-table tbody tr {
+            transition: background var(--transition-fast);
         }
 
-        .board-row:nth-child(even) {
+        .entregas-table tbody tr:nth-child(even) {
             background: rgba(255, 255, 255, 0.02);
         }
 
-        .board-row:hover {
-            background: rgba(245, 184, 0, 0.05);
+        .entregas-table tbody tr:hover {
+            background: var(--color-bg-hover);
         }
 
-        .board-row.urgente {
-            background: rgba(239, 68, 68, 0.1);
-            border-left: 4px solid #ef4444;
+        .entregas-table tbody tr.urgente {
+            border-left: 4px solid var(--color-status-urgente);
         }
 
-        .board-row.urgente:nth-child(even) {
-            background: rgba(239, 68, 68, 0.15);
+        /* Animação de entrada das linhas */
+        @media (prefers-reduced-motion: no-preference) {
+            .entregas-table tbody tr {
+                animation: rowFadeIn 0.3s ease-out backwards;
+            }
         }
 
-        .board-cell {
+        @keyframes rowFadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Células da tabela */
+        .entregas-table td {
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-size: var(--text-sm);
+            color: var(--color-text-primary);
+            border-bottom: 1px solid var(--color-border-subtle);
+            vertical-align: middle;
+        }
+
+        .miniatura-container {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--color-bg-elevated);
+            border: 1px solid var(--color-border-subtle);
             display: flex;
             align-items: center;
-            font-size: 1rem;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .miniatura-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .miniatura-placeholder {
+            color: var(--color-text-muted);
+            font-size: 20px;
         }
 
         .pedido-numero {
-            font-family: 'Roboto Mono', monospace;
+            font-family: var(--font-mono);
             font-weight: 700;
-            color: #f5b800;
-            font-size: 1.125rem;
+            color: var(--color-brand-yellow);
+            font-size: var(--text-base);
         }
 
-        .cliente-nome {
-            color: #ffffff;
-            font-weight: 500;
-            white-space: nowrap;
+        .cliente-nome,
+        .vendedor-nome,
+        .arte-finalista-nome,
+        .produto-nome {
+            display: block;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
             max-width: 100%;
         }
 
-        .prazo-entrega {
-            font-family: 'Roboto Mono', monospace;
-            color: rgba(255, 255, 255, 0.8);
+        .cliente-nome {
+            color: var(--color-text-primary);
+            font-weight: 500;
         }
 
-        .prazo-entrega.atrasado {
-            color: #ef4444;
-            font-weight: 600;
+        .vendedor-nome {
+            color: var(--color-text-secondary);
+            font-weight: 500;
         }
 
-        .prazo-entrega.hoje {
-            color: #f59e0b;
-            font-weight: 600;
+        .arte-finalista-nome {
+            color: var(--color-status-arte);
+            font-weight: 500;
         }
 
-        /* Status badges */
+        .produto-nome {
+            color: var(--color-text-secondary);
+            font-size: var(--text-xs);
+        }
+
+        .tempo-atualizado {
+            font-family: var(--font-mono);
+            color: var(--color-text-muted);
+            font-size: var(--text-sm);
+            text-align: center;
+            display: block;
+        }
+
+        /* ============================================
+           STATUS BADGES
+           ============================================ */
         .status-badge {
-            padding: 0.375rem 0.75rem;
+            padding: 0.25rem 0.5rem;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -369,284 +817,309 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
 
         .status-arte {
             background: rgba(245, 184, 0, 0.2);
-            color: #f5b800;
-            border: 1px solid rgba(245, 184, 0, 0.3);
+            color: var(--color-status-arte);
         }
 
         .status-producao {
-            background: rgba(13, 92, 30, 0.3);
-            color: #22c55e;
-            border: 1px solid rgba(13, 92, 30, 0.5);
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--color-status-producao);
         }
 
         .status-pronto {
-            background: rgba(34, 197, 94, 0.2);
-            color: #4ade80;
-            border: 1px solid rgba(34, 197, 94, 0.3);
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--color-status-pronto);
         }
 
         .status-orcamento {
             background: rgba(245, 184, 0, 0.15);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 184, 0, 0.25);
+            color: var(--color-brand-yellow);
         }
 
-        .urgente-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.25rem 0.5rem;
-            background: #ef4444;
-            color: white;
-            border-radius: 4px;
-            font-size: 0.625rem;
-            font-weight: 700;
-            margin-left: 0.5rem;
-            animation: urgentePulse 1.5s infinite;
-        }
-
-        @keyframes urgentePulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        /* Mensagem quando não há pedidos */
+        /* ============================================
+           ESTADO VAZIO
+           ============================================ */
         .no-data {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 4rem;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 1.25rem;
+            padding: var(--spacing-xl) var(--spacing-xl);
+            color: var(--color-text-muted);
+            font-size: var(--text-lg);
         }
 
         .no-data svg {
             width: 64px;
             height: 64px;
-            margin-bottom: 1rem;
-            opacity: 0.3;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.4;
         }
 
-        /* Footer */
-        .airport-footer {
+        /* ============================================
+           FOOTER COM INDICADORES DE NAVEGAÇÃO
+           ============================================ */
+        .quiosque-footer {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            padding: 0.75rem 1.5rem;
-            margin-top: 1rem;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.5);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: var(--color-bg-secondary);
+            border-top: 1px solid var(--color-border-subtle);
+            flex-shrink: 0;
         }
 
-        /* Scrollbar estilizada */
-        .board-body::-webkit-scrollbar {
-            width: 8px;
+        /* ============================================
+           SCROLLBAR ESTILIZADA
+           ============================================ */
+        .entregas-table tbody::-webkit-scrollbar {
+            width: 6px;
         }
 
-        .board-body::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
+        .entregas-table tbody::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .board-body::-webkit-scrollbar-thumb {
+        .entregas-table tbody::-webkit-scrollbar-thumb {
             background: rgba(245, 184, 0, 0.3);
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
-        .board-body::-webkit-scrollbar-thumb:hover {
+        .entregas-table tbody::-webkit-scrollbar-thumb:hover {
             background: rgba(245, 184, 0, 0.5);
         }
 
-        /* Responsividade para TV */
+        /* ============================================
+           RESPONSIVIDADE PARA TV MAIORES
+           ============================================ */
         @media (min-width: 1920px) {
-            .airport-header {
-                padding: 1rem 2rem;
+            :root {
+                --text-xs: 1rem;
+                --text-sm: 1.125rem;
+                --text-base: 1.25rem;
+                --text-lg: 1.5rem;
+                --text-xl: 2rem;
+                --text-2xl: 2.5rem;
+                --text-3xl: 4rem;
             }
 
-            .logo-title {
-                font-size: 2rem;
+            .quiosque-header {
+                padding: var(--spacing-md) var(--spacing-xl);
             }
 
-            .current-time {
-                font-size: 2rem;
+            .header-col {
+                font-size: var(--text-base);
             }
 
-            .kpi-value {
-                font-size: 3.5rem;
-            }
-
-            .kpi-label {
-                font-size: 1rem;
-            }
-
-            .board-header {
-                font-size: 1rem;
-                padding: 1.25rem 2rem;
-            }
-
-            .board-row {
-                padding: 1.25rem 2rem;
-            }
-
-            .board-cell {
-                font-size: 1.125rem;
-            }
-
-            .pedido-numero {
-                font-size: 1.25rem;
-            }
-
-            .status-badge {
-                font-size: 0.875rem;
-                padding: 0.5rem 1rem;
+            .entregas-table td {
+                padding: var(--spacing-lg) var(--spacing-xl);
             }
         }
 
         /* 4K */
         @media (min-width: 2560px) {
-            .logo-title {
-                font-size: 2.5rem;
+            :root {
+                --text-xs: 1.125rem;
+                --text-sm: 1.25rem;
+                --text-base: 1.5rem;
+                --text-lg: 1.75rem;
+                --text-xl: 2.5rem;
+                --text-2xl: 3rem;
+                --text-3xl: 5rem;
             }
 
-            .current-time {
-                font-size: 2.5rem;
-            }
-
-            .kpi-value {
-                font-size: 4.5rem;
-            }
-
-            .board-header {
-                font-size: 1.25rem;
-            }
-
-            .board-cell {
-                font-size: 1.375rem;
+            .header-col {
+                font-size: var(--text-lg);
             }
         }
     </style>
 </head>
 <body>
-    <!-- Elementos Abstratos Animados -->
-    <div class="abstract-bg">
-        <div class="gradient-orb gradient-orb-1"></div>
-        <div class="gradient-orb gradient-orb-2"></div>
-        <div class="scan-line scan-line-1"></div>
-        <div class="scan-line scan-line-2"></div>
-    </div>
-
-    <div class="airport-container">
-        <!-- Header -->
-        <header class="airport-header">
-            <div class="header-left">
-                <div class="logo-bar"></div>
-                <span class="logo-title"><?= htmlspecialchars($empresa_nome) ?></span>
-            </div>
-            <div class="header-right">
-                <div class="current-time" id="currentTime"></div>
-                <div class="update-indicator">
-                    <div class="pulse-dot"></div>
-                    <span id="updateStatus">Ao vivo</span>
+    <div class="quiosque-container">
+        <!-- Header com nome da empresa e títulos das colunas -->
+        <header class="quiosque-header">
+            <!-- Linha superior com hora, nome da empresa e status -->
+            <div class="header-brand">
+                <div class="brand-left">
+                    <span class="current-time" id="currentTime"></span>
                 </div>
+                <span class="brand-name"><span class="brand-highlight">BR</span> BANDEIRAS</span>
+                <div class="brand-right">
+                    <div class="update-indicator">
+                        <div class="pulse-dot"></div>
+                        <span id="updateStatus">Ao vivo</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Linha inferior com títulos das colunas -->
+            <div class="header-columns" id="headerColumns">
+                <span class="header-col col-imagem">Imagem</span>
+                <span class="header-col col-cliente">Cliente</span>
+                <span class="header-col col-produto">Produto</span>
+                <span class="header-col col-vendedor">Atendente</span>
+                <span class="header-col col-arte">Arte Finalista</span>
+                <span class="header-col col-status">Status</span>
+                <span class="header-col col-atualizado">Atualizado</span>
+                <span class="header-col col-pedido">OS</span>
+            </div>
+            <!-- Título para telas especiais -->
+            <div class="header-special-title" id="headerSpecialTitle" style="display: none;">
+                <span id="filterTitle">Todos os Pedidos</span>
             </div>
         </header>
 
-        <!-- KPIs em barra horizontal -->
-        <div class="kpi-bar">
-            <div class="kpi-item arte">
-                <div class="kpi-label">Em Arte</div>
-                <div class="kpi-value" id="statArte"><?= $stats['arte'] ?></div>
+        <!-- Seção de Entregas -->
+        <div class="entregas-section">
+            <div class="entregas-table-container">
+                <table class="entregas-table">
+                    <tbody id="entregasTableBody">
+                        <?php if (!empty($proximas_entregas)): ?>
+                            <?php foreach ($proximas_entregas as $index => $entrega): ?>
+                            <tr class="<?= $entrega['urgente'] ? 'urgente' : '' ?>" data-numero="<?= htmlspecialchars($entrega['numero']) ?>" style="animation-delay: <?= $index * 0.03 ?>s">
+                                <td class="col-imagem">
+                                    <div class="miniatura-container">
+                                        <?php if (!empty($entrega['imagem_caminho'])): ?>
+                                            <img src="<?= htmlspecialchars($entrega['imagem_caminho']) ?>" 
+                                                 alt="Miniatura" 
+                                                 loading="lazy"
+                                                 onerror="this.parentElement.innerHTML='<span class=\'miniatura-placeholder\'>📋</span>'">
+                                        <?php else: ?>
+                                            <span class="miniatura-placeholder">📋</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td class="col-cliente">
+                                    <span class="cliente-nome"><?= htmlspecialchars(formatarClienteQuiosque($entrega['cliente_nome'], $entrega['cliente_telefone'])) ?></span>
+                                </td>
+                                <td class="col-produto">
+                                    <span class="produto-nome"><?= htmlspecialchars($entrega['primeiro_produto'] ?? 'Sem produto') ?></span>
+                                </td>
+                                <td class="col-vendedor">
+                                    <span class="vendedor-nome"><?= htmlspecialchars($entrega['vendedor_nome'] ?? '—') ?></span>
+                                </td>
+                                <td class="col-arte">
+                                    <span class="arte-finalista-nome"><?= htmlspecialchars($entrega['arte_finalista_nome'] ?? '—') ?></span>
+                                </td>
+                                <td class="col-status">
+                                    <span class="status-badge status-<?= htmlspecialchars($entrega['status']) ?>">
+                                        <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
+                                    </span>
+                                </td>
+                                <td class="col-atualizado">
+                                    <span class="tempo-atualizado"><?= formatarTempoRelativo($entrega['ultima_atualizacao']) ?></span>
+                                </td>
+                                <td class="col-pedido">
+                                    <span class="pedido-numero">#<?= htmlspecialchars($entrega['numero']) ?></span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="8">
+                                    <div class="no-data">
+                                        <svg viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span>Nenhum pedido em andamento</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
-            <div class="kpi-item producao">
-                <div class="kpi-label">Em Produção</div>
-                <div class="kpi-value" id="statProducao"><?= $stats['producao'] ?></div>
+
+            <!-- Tela de Curiosidade -->
+            <div id="telaCuriosidade" class="tela-especial tela-curiosidade">
+                <div class="curiosidade-icone">🏳️</div>
+                <div class="curiosidade-label">Você sabia?</div>
+                <div id="curiosidadeTexto" class="curiosidade-texto"></div>
             </div>
-            <div class="kpi-item pronto">
-                <div class="kpi-label">Prontos</div>
-                <div class="kpi-value" id="statPronto"><?= $stats['pronto'] ?></div>
+
+            <!-- Tela de Produto -->
+            <div id="telaProduto" class="tela-especial tela-produto">
+                <div id="produtoIcone" class="produto-icone"></div>
+                <div id="produtoNome" class="produto-nome"></div>
+                <div id="produtoDescricao" class="produto-descricao"></div>
+                <div class="produto-cta">Solicite um orçamento</div>
+            </div>
+
+            <!-- Tela de Branding -->
+            <div id="telaBranding" class="tela-especial tela-branding">
+                <div class="branding-logo">
+                    <div class="branding-logo-text"><span>BR</span> BANDEIRAS</div>
+                    <div class="branding-logo-bar"></div>
+                </div>
+                <div id="brandingSlogan" class="branding-slogan"></div>
+                <div id="brandingMensagem" class="branding-mensagem"></div>
+    
             </div>
         </div>
 
-        <!-- Tabela de Pedidos estilo Aeroporto -->
-        <div class="flight-board">
-            <div class="board-header">
-                <span>
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/>
-                    </svg>
-                    Pedido
-                </span>
-                <span>Cliente</span>
-                <span>Prazo</span>
-                <span>Status</span>
-                <span>Criado em</span>
+        <!-- Footer com indicadores de navegação e status -->
+        <footer class="quiosque-footer">
+            <div class="footer-left"></div>
+            <div class="filter-indicators">
+                <span class="filter-dot active" data-filter="todos" title="Todos"></span>
+                <span class="filter-dot" data-filter="arte" title="Arte"></span>
+                <span class="filter-dot" data-filter="orcamento" title="Comercial"></span>
+                <span class="filter-dot" data-filter="producao" title="Produção"></span>
+                <span class="filter-separator"></span>
+                <span class="filter-dot" data-filter="curiosidade" title="Curiosidade"></span>
+                <span class="filter-dot" data-filter="produto" title="Produtos"></span>
+                <span class="filter-dot" data-filter="branding" title="BR Bandeiras"></span>
             </div>
-            <div class="board-body" id="boardBody">
-                <?php if (!empty($proximas_entregas)): ?>
-                    <?php foreach ($proximas_entregas as $index => $entrega): 
-                        $isAtrasado = $entrega['prazo_entrega'] && strtotime($entrega['prazo_entrega']) < strtotime('today');
-                        $isHoje = $entrega['prazo_entrega'] && date('Y-m-d', strtotime($entrega['prazo_entrega'])) === date('Y-m-d');
-                    ?>
-                    <div class="board-row <?= $entrega['urgente'] ? 'urgente' : '' ?>" data-numero="<?= htmlspecialchars($entrega['numero']) ?>" style="animation-delay: <?= $index * 0.05 ?>s">
-                        <div class="board-cell">
-                            <span class="pedido-numero">#<?= htmlspecialchars($entrega['numero']) ?></span>
-                            <?php if ($entrega['urgente']): ?>
-                                <span class="urgente-badge">⚡ URGENTE</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="board-cell">
-                            <span class="cliente-nome"><?= htmlspecialchars($entrega['cliente_nome'] ?: 'Cliente não informado') ?></span>
-                        </div>
-                        <div class="board-cell">
-                            <span class="prazo-entrega <?= $isAtrasado ? 'atrasado' : ($isHoje ? 'hoje' : '') ?>">
-                                <?= $entrega['prazo_entrega'] ? date('d/m/Y', strtotime($entrega['prazo_entrega'])) : '—' ?>
-                            </span>
-                        </div>
-                        <div class="board-cell">
-                            <span class="status-badge status-<?= htmlspecialchars($entrega['status']) ?>">
-                                <?= htmlspecialchars(ucfirst($entrega['status'])) ?>
-                            </span>
-                        </div>
-                        <div class="board-cell">
-                            <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">
-                                <?= $entrega['created_at'] ? date('d/m/Y', strtotime($entrega['created_at'])) : '—' ?>
-                            </span>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="no-data">
-                        <svg viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                        </svg>
-                        <span>Nenhum pedido em andamento</span>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <footer class="airport-footer">
-            <span><?= htmlspecialchars($empresa_nome) ?> - Sistema de Gestão</span>
-            <span id="lastUpdate">Atualização automática a cada 5s</span>
         </footer>
     </div>
 
     <script>
-        // Atualizar hora atual
+        // ============================================
+        // DADOS DAS TELAS ESPECIAIS
+        // ============================================
+        const CURIOSIDADES = <?= $curiosidadesJson ?>;
+        const PRODUTOS = <?= $produtosJson ?>;
+        const BRANDING = <?= $brandingJson ?>;
+
+        // ============================================
+        // CONFIGURAÇÃO DE ROTAÇÃO DE TELAS
+        // ============================================
+        const TELAS = [
+            { id: 'todos', label: 'Todos os Pedidos', tipo: 'tabela', status: null },
+            { id: 'arte', label: 'Em Arte', tipo: 'tabela', status: 'arte' },
+            { id: 'orcamento', label: 'Comercial', tipo: 'tabela', status: 'orcamento' },
+            { id: 'producao', label: 'Em Produção', tipo: 'tabela', status: 'producao' },
+            { id: 'curiosidade', label: 'Curiosidade', tipo: 'especial' },
+           /* { id: 'produto', label: 'Nossos Produtos', tipo: 'especial' }, */
+            { id: 'branding', label: '', tipo: 'especial' }
+        ];
+        
+        let telaAtualIndex = 0;
+        let todosOsDados = []; // Armazena todos os dados para filtrar localmente
+        let rotacaoInterval = null;
+        const TEMPO_ROTACAO = 10000; // 10 segundos
+        
+        // Índices para telas especiais (não repetir)
+        let curiosidadeIndex = 0;
+        let brandingIndex = 0;
+
+        // ============================================
+        // ATUALIZAR HORA
+        // ============================================
         function updateTime() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const timeStr = now.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
             document.getElementById('currentTime').textContent = timeStr;
         }
 
         updateTime();
         setInterval(updateTime, 1000);
 
-        // Função para atualizar dados via AJAX
+        // ============================================
+        // BUSCAR DADOS VIA AJAX
+        // ============================================
         async function atualizarDados() {
             try {
                 const statusEl = document.getElementById('updateStatus');
@@ -659,12 +1132,13 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
                 const data = await response.json();
 
                 if (data.success) {
-                    atualizarEstatisticas(data.stats);
-                    atualizarTabela(data.entregas);
-                    
+                    todosOsDados = data.entregas; // Armazenar dados completos
+                    // Só atualizar se estiver em uma tela de tabela
+                    const telaAtual = TELAS[telaAtualIndex];
+                    if (telaAtual.tipo === 'tabela') {
+                        exibirTela();
+                    }
                     if (statusEl) statusEl.textContent = 'Ao vivo';
-                    document.getElementById('lastUpdate').textContent = 
-                        `Última atualização: ${new Date().toLocaleTimeString('pt-BR')}`;
                 }
             } catch (error) {
                 console.error('Erro ao atualizar dados:', error);
@@ -673,94 +1147,199 @@ $empresa_nome = defined('NOME_EMPRESA') ? NOME_EMPRESA : 'BR Bandeiras';
             }
         }
 
-        // Atualizar estatísticas com animação
-        function atualizarEstatisticas(stats) {
-            const elementos = {
-                'arte': document.getElementById('statArte'),
-                'producao': document.getElementById('statProducao'),
-                'pronto': document.getElementById('statPronto')
-            };
+        // ============================================
+        // EXIBIR TELA ATUAL
+        // ============================================
+        function exibirTela() {
+            const tela = TELAS[telaAtualIndex];
+            
+            // Elementos
+            const tableContainer = document.querySelector('.entregas-table-container');
+            const telaCuriosidade = document.getElementById('telaCuriosidade');
+            const telaProduto = document.getElementById('telaProduto');
+            const telaBranding = document.getElementById('telaBranding');
+            const headerColumns = document.getElementById('headerColumns');
+            const headerSpecialTitle = document.getElementById('headerSpecialTitle');
+            const titleEl = document.getElementById('filterTitle');
 
-            Object.keys(elementos).forEach(key => {
-                const el = elementos[key];
-                if (el) {
-                    const valorAtual = parseInt(el.textContent) || 0;
-                    const valorNovo = stats[key] || 0;
+            // Esconder todas as telas especiais
+            telaCuriosidade.classList.remove('active');
+            telaProduto.classList.remove('active');
+            telaBranding.classList.remove('active');
 
-                    if (valorAtual !== valorNovo) {
-                        el.style.transform = 'scale(1.2)';
-                        el.style.transition = 'transform 0.3s ease';
-                        el.textContent = valorNovo;
-                        setTimeout(() => { el.style.transform = 'scale(1)'; }, 300);
-                    }
+            // Atualizar indicadores visuais
+            document.querySelectorAll('.filter-dot').forEach(dot => {
+                dot.classList.remove('active');
+                if (dot.dataset.filter === tela.id) {
+                    dot.classList.add('active');
                 }
             });
+
+            if (tela.tipo === 'tabela') {
+                // Mostrar títulos das colunas no header
+                headerColumns.style.display = 'flex';
+                headerSpecialTitle.style.display = 'none';
+                
+                // Mostrar tabela
+                tableContainer.classList.remove('hidden');
+                
+                // Filtrar dados
+                let dadosFiltrados = todosOsDados;
+                if (tela.status) {
+                    dadosFiltrados = todosOsDados.filter(e => e.status === tela.status);
+                }
+
+                // Atualizar tabela com transição
+                tableContainer.classList.add('transitioning');
+                setTimeout(() => {
+                    atualizarTabela(dadosFiltrados);
+                    tableContainer.classList.remove('transitioning');
+                }, 400);
+
+            } else {
+                // Mostrar título especial no header
+                headerColumns.style.display = 'none';
+                headerSpecialTitle.style.display = 'block';
+                
+                // Atualizar título com transição
+                if (titleEl) {
+                    titleEl.style.opacity = '0';
+                    setTimeout(() => {
+                        titleEl.textContent = tela.label;
+                        titleEl.style.opacity = '1';
+                    }, 200);
+                }
+                
+                // Esconder tabela
+                tableContainer.classList.add('hidden');
+                
+                if (tela.id === 'curiosidade') {
+                    // Pegar próxima curiosidade (em ordem)
+                    const texto = CURIOSIDADES[curiosidadeIndex];
+                    curiosidadeIndex = (curiosidadeIndex + 1) % CURIOSIDADES.length;
+                    
+                    document.getElementById('curiosidadeTexto').textContent = texto;
+                    telaCuriosidade.classList.add('active');
+
+                } else if (tela.id === 'produto') {
+                    // Tela de produto (aleatório)
+                    const produto = PRODUTOS[Math.floor(Math.random() * PRODUTOS.length)];
+                    
+                    document.getElementById('produtoIcone').textContent = produto.icone;
+                    document.getElementById('produtoNome').textContent = produto.nome;
+                    document.getElementById('produtoDescricao').textContent = produto.descricao;
+                    telaProduto.classList.add('active');
+
+                } else if (tela.id === 'branding') {
+                    // Tela de branding (em ordem)
+                    const brand = BRANDING[brandingIndex];
+                    brandingIndex = (brandingIndex + 1) % BRANDING.length;
+                    
+                    document.getElementById('brandingSlogan').textContent = `"${brand.slogan}"`;
+                    document.getElementById('brandingMensagem').textContent = brand.mensagem;
+                    telaBranding.classList.add('active');
+                }
+            }
         }
 
-        // Atualizar tabela
+        // ============================================
+        // ROTAÇÃO AUTOMÁTICA DE TELAS
+        // ============================================
+        function proximaTela() {
+            telaAtualIndex = (telaAtualIndex + 1) % TELAS.length;
+            exibirTela();
+        }
+
+        function iniciarRotacao() {
+            if (rotacaoInterval) clearInterval(rotacaoInterval);
+            rotacaoInterval = setInterval(proximaTela, TEMPO_ROTACAO);
+        }
+
+        // ============================================
+        // ATUALIZAR TABELA
+        // ============================================
         function atualizarTabela(entregas) {
-            const container = document.getElementById('boardBody');
-            if (!container) return;
+            const tbody = document.getElementById('entregasTableBody');
+            if (!tbody) return;
+
+            const tela = TELAS[telaAtualIndex];
+            const mensagemVazia = tela.status 
+                ? `Nenhum pedido em ${tela.label}`
+                : 'Nenhum pedido em andamento';
 
             if (!entregas || entregas.length === 0) {
-                container.innerHTML = `
-                    <div class="no-data">
-                        <svg viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                        </svg>
-                        <span>Nenhum pedido em andamento</span>
-                    </div>
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8">
+                            <div class="no-data">
+                                <svg viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                </svg>
+                                <span>${mensagemVazia}</span>
+                            </div>
+                        </td>
+                    </tr>
                 `;
                 return;
             }
 
-            const hoje = new Date().toISOString().split('T')[0];
-
             const html = entregas.map((entrega, index) => {
-                const isAtrasado = entrega.prazo_entrega_raw && entrega.prazo_entrega_raw < hoje;
-                const isHoje = entrega.prazo_entrega_raw === hoje;
-                const prazoClass = isAtrasado ? 'atrasado' : (isHoje ? 'hoje' : '');
                 const urgenteClass = entrega.urgente ? 'urgente' : '';
-                const urgenteBadge = entrega.urgente ? '<span class="urgente-badge">⚡ URGENTE</span>' : '';
+                const statusLabel = entrega.status.charAt(0).toUpperCase() + entrega.status.slice(1);
+                const imagemHtml = entrega.imagem_caminho 
+                    ? `<img src="${entrega.imagem_caminho}" alt="Miniatura" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'miniatura-placeholder\\'>📋</span>'">`
+                    : '<span class="miniatura-placeholder">📋</span>';
 
                 return `
-                    <div class="board-row ${urgenteClass}" data-numero="${entrega.numero}" style="animation-delay: ${index * 0.05}s">
-                        <div class="board-cell">
-                            <span class="pedido-numero">#${entrega.numero}</span>
-                            ${urgenteBadge}
-                        </div>
-                        <div class="board-cell">
-                            <span class="cliente-nome">${entrega.cliente_nome}</span>
-                        </div>
-                        <div class="board-cell">
-                            <span class="prazo-entrega ${prazoClass}">
-                                ${entrega.prazo_entrega || '—'}
-                            </span>
-                        </div>
-                        <div class="board-cell">
-                            <span class="status-badge status-${entrega.status}">
-                                ${entrega.status.charAt(0).toUpperCase() + entrega.status.slice(1)}
-                            </span>
-                        </div>
-                        <div class="board-cell">
-                            <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem;">
-                                ${entrega.created_at || '—'}
-                            </span>
-                        </div>
-                    </div>
+                    <tr class="${urgenteClass}" data-numero="${entrega.numero}" style="animation-delay: ${index * 0.03}s">
+                        <td class="col-imagem"><div class="miniatura-container">${imagemHtml}</div></td>
+                        <td class="col-cliente"><span class="cliente-nome">${entrega.cliente_nome}</span></td>
+                        <td class="col-produto"><span class="produto-nome">${entrega.primeiro_produto || 'Sem produto'}</span></td>
+                        <td class="col-vendedor"><span class="vendedor-nome">${entrega.vendedor_nome || '—'}</span></td>
+                        <td class="col-arte"><span class="arte-finalista-nome">${entrega.arte_finalista_nome || '—'}</span></td>
+                        <td class="col-status"><span class="status-badge status-${entrega.status}">${statusLabel}</span></td>
+                        <td class="col-atualizado"><span class="tempo-atualizado">${entrega.tempo_atualizado || '—'}</span></td>
+                        <td class="col-pedido"><span class="pedido-numero">#${entrega.numero}</span></td>
+                    </tr>
                 `;
             }).join('');
 
-            container.style.opacity = '0.5';
+            tbody.style.opacity = '0';
             setTimeout(() => {
-                container.innerHTML = html;
-                container.style.opacity = '1';
-            }, 200);
+                tbody.innerHTML = html;
+                tbody.style.opacity = '1';
+            }, 150);
         }
 
-        // Atualizar a cada 5 segundos
-        setInterval(atualizarDados, 5000);
-        setTimeout(atualizarDados, 5000);
+        // ============================================
+        // CLIQUE NOS INDICADORES (manual)
+        // ============================================
+        document.querySelectorAll('.filter-dot').forEach((dot) => {
+            dot.addEventListener('click', () => {
+                const filterId = dot.dataset.filter;
+                // Encontrar índice da tela correspondente
+                const index = TELAS.findIndex(t => t.id === filterId);
+                if (index !== -1) {
+                    telaAtualIndex = index;
+                    exibirTela();
+                    iniciarRotacao(); // Reiniciar timer após clique manual
+                }
+            });
+        });
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        // Buscar dados iniciais e exibir primeira tela
+        atualizarDados().then(() => {
+            exibirTela();
+        });
+        
+        // Atualizar dados a cada 30 segundos
+        setInterval(atualizarDados, 30000);
+        
+        // Iniciar rotação de telas a cada 10 segundos
+        iniciarRotacao();
     </script>
 </body>
 </html>

@@ -193,10 +193,13 @@ function formatarDataHora($dataHora, $formato = 'd/m/Y H:i') {
 
 /**
  * Formata CPF ou CNPJ com máscara
- * @param string $documento Documento limpo (apenas números)
- * @return string Documento formatado
+ * @param string|null $documento Documento limpo (apenas números)
+ * @return string Documento formatado ou vazio
  */
 function formatarCpfCnpj($documento) {
+    if ($documento === null || $documento === '') {
+        return '';
+    }
     $documento = preg_replace('/\D/', '', $documento);
     
     if (strlen($documento) == 11) {
@@ -982,19 +985,23 @@ function processarObservacoesHTML($observacoes) {
  */
 function separarArquivosPorTipo($arquivos) {
     $arquivos_imagem = [];
+    $arquivos_audio = [];
     $arquivos_outros = [];
     $extensoes_imagem = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    $extensoes_audio = ['mp3', 'ogg', 'opus', 'm4a', 'wav', 'aac', 'amr', 'webm'];
     
     foreach ($arquivos as $arquivo) {
         $extensao = strtolower(pathinfo($arquivo['nome_arquivo'] ?? '', PATHINFO_EXTENSION));
         if (in_array($extensao, $extensoes_imagem)) {
             $arquivos_imagem[] = $arquivo;
+        } elseif (in_array($extensao, $extensoes_audio)) {
+            $arquivos_audio[] = $arquivo;
         } else {
             $arquivos_outros[] = $arquivo;
         }
     }
     
-    return ['imagens' => $arquivos_imagem, 'outros' => $arquivos_outros];
+    return ['imagens' => $arquivos_imagem, 'audios' => $arquivos_audio, 'outros' => $arquivos_outros];
 }
 
 // ============================================================================

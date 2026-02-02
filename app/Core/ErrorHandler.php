@@ -147,7 +147,6 @@ class ErrorHandler {
             E_USER_ERROR => Logger::LEVEL_ERROR,
             E_USER_WARNING => Logger::LEVEL_WARNING,
             E_USER_NOTICE => Logger::LEVEL_INFO,
-            E_STRICT => Logger::LEVEL_INFO,
             E_RECOVERABLE_ERROR => Logger::LEVEL_ERROR,
             E_DEPRECATED => Logger::LEVEL_WARNING,
             E_USER_DEPRECATED => Logger::LEVEL_WARNING,

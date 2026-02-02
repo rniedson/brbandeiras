@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 
                 // Mudar status
-                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'aprovado' WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'aprovado', updated_at = NOW() WHERE id = ?");
                 $stmt->execute([$pedido_id]);
                 
                 registrarLog('arte_entregue', "OS #$pedido_id entregue para aprovação");

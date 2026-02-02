@@ -492,7 +492,7 @@ try {
         
         $stmt = $pdo->prepare($sql);
         
-        $allowed_types = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        $allowed_types = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx', 'mp3', 'ogg', 'opus', 'm4a', 'wav', 'aac', 'amr', 'webm'];
         $max_size = 10 * 1024 * 1024; // 10MB
         $arquivos_adicionados = 0;
         

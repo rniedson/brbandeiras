@@ -220,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->commit();
         
         $_SESSION['mensagem'] = "Versão {$nova_versao} enviada com sucesso!";
-        header("Location: pedido_detalhes_arte_finalista.php?id={$pedido_id}");
+        header("Location: ../pedidos/detalhes/pedido_detalhes_arte_finalista.php?id={$pedido_id}");
         exit;
         
     } catch (Exception $e) {
@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        header("Location: arte_upload.php?pedido_id={$pedido_id}");
+        header("Location: ../pedidos/detalhes/pedido_detalhes_arte_finalista.php?id={$pedido_id}&erro=1");
         exit;
     }
 }
@@ -259,7 +259,7 @@ $pedido_id = $_GET['pedido_id'] ?? null;
 
 if (!$pedido_id) {
     $_SESSION['erro'] = 'Pedido não especificado';
-    header('Location: arte_finalista.php');
+    header('Location: ../dashboard/dashboard_arte_finalista.php');
     exit;
 }
 
@@ -283,7 +283,7 @@ try {
 
     if (!$pedido) {
         $_SESSION['erro'] = 'Pedido não encontrado';
-        header('Location: arte_finalista.php');
+        header('Location: ../dashboard/dashboard_arte_finalista.php');
         exit;
     }
 
@@ -292,7 +292,7 @@ try {
         $pedido['arte_finalista_id'] && 
         $pedido['arte_finalista_id'] != $_SESSION['user_id']) {
         $_SESSION['erro'] = 'Você não é o arte-finalista responsável por este pedido';
-        header('Location: arte_finalista.php');
+        header('Location: ../dashboard/dashboard_arte_finalista.php');
         exit;
     }
 
@@ -311,14 +311,14 @@ try {
 
 } catch (Exception $e) {
     $_SESSION['erro'] = 'Erro ao carregar pedido: ' . $e->getMessage();
-    header('Location: arte_finalista.php');
+    header('Location: ../dashboard/dashboard_arte_finalista.php');
     exit;
 }
 
 $titulo = 'Enviar Arte - Pedido #' . $pedido['numero'];
 $breadcrumb = [
-    ['label' => 'Arte-Finalista', 'url' => 'arte_finalista.php'],
-    ['label' => 'Pedido #' . $pedido['numero'], 'url' => 'pedido_detalhes_arte_finalista.php?id=' . $pedido_id],
+    ['label' => 'Arte-Finalista', 'url' => '../dashboard/dashboard_arte_finalista.php'],
+    ['label' => 'Pedido #' . $pedido['numero'], 'url' => '../pedidos/detalhes/pedido_detalhes_arte_finalista.php?id=' . $pedido_id],
     ['label' => 'Nova Versão']
 ];
 
@@ -436,7 +436,7 @@ include '../../views/layouts/_header.php';
 
         <!-- Botões -->
         <div class="flex justify-between items-center pt-4 border-t">
-            <a href="pedido_detalhes_arte_finalista.php?id=<?= $pedido_id ?>" 
+            <a href="../pedidos/detalhes/pedido_detalhes_arte_finalista.php?id=<?= $pedido_id ?>" 
                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
                 Cancelar
             </a>

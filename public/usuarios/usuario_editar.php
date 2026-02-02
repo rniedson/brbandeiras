@@ -103,21 +103,22 @@ include '../../views/layouts/_header.php';
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Nome de Usuário <span class="text-red-500">*</span>
+                            Nome Completo <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="nome" value="<?= htmlspecialchars($usuario['nome']) ?>" 
                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" 
                                required
-                               placeholder="Ex: joao.silva">
+                               placeholder="Ex: João da Silva">
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            E-mail <span class="text-red-500">*</span>
+                            Usuário <span class="text-red-500">*</span>
                         </label>
-                        <input type="email" name="email" value="<?= htmlspecialchars($usuario['email']) ?>" 
+                        <input type="text" name="email" value="<?= htmlspecialchars($usuario['email']) ?>" 
                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" 
-                               required>
+                               required
+                               placeholder="Ex: joao.silva ou joao@email.com">
                     </div>
                     
                     <div>

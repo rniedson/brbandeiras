@@ -78,6 +78,10 @@ if (!in_array('pgsql', $availableDrivers)) {
 // Montar DSN e credenciais
 if (!empty($databaseUrl)) {
     // Usar DATABASE_URL diretamente (mais confiável para conexões remotas)
+    // IMPORTANTE: gssencmode=disable evita crash no Apache prefork com libpq/Kerberos
+    if (strpos($databaseUrl, 'gssencmode=') === false) {
+        $databaseUrl .= (strpos($databaseUrl, '?') === false ? '?' : '&') . 'gssencmode=disable';
+    }
     $dsn = $databaseUrl;
     $user = null;
     $pass = null;
@@ -93,7 +97,8 @@ if (!empty($databaseUrl)) {
         throw new RuntimeException('DB_NAME/DB_USER não definidos no .env');
     }
     
-    $dsn = "pgsql:host={$host};port={$port};dbname={$name};options='--client_encoding=UTF8'";
+    // IMPORTANTE: gssencmode=disable evita crash no Apache prefork com libpq/Kerberos
+    $dsn = "pgsql:host={$host};port={$port};dbname={$name};gssencmode=disable;options='--client_encoding=UTF8'";
 }
 
 // 4) Conexão PDO com opções recomendadas para conexões remotas

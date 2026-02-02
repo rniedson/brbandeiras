@@ -286,7 +286,7 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
     <link rel="preload" href="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" as="script">
     <link rel="preload" href="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js" as="script">
     
-    <!-- Tailwind CSS - Build local -->
+    <!-- Tailwind CSS - Arquivo local otimizado -->
     <link rel="stylesheet" href="<?= $baseUrl ?>css/tailwind.min.css">
     
     <!-- Preload da fonte crítica para otimizar cadeia de dependências -->
@@ -318,6 +318,37 @@ $baseUrl = rtrim($baseUrl, '/') . '/';
         font-weight: 900;
         font-style: normal;
     }
+    </style>
+    <style>
+    /* Classes Tailwind Lime - não incluídas no build padrão */
+    .bg-lime-50 { background-color: #f7fee7; }
+    .bg-lime-100 { background-color: #ecfccb; }
+    .bg-lime-200 { background-color: #d9f99d; }
+    .bg-lime-300 { background-color: #bef264; }
+    .bg-lime-400 { background-color: #a3e635; }
+    .bg-lime-500 { background-color: #84cc16; }
+    .bg-lime-600 { background-color: #65a30d; }
+    .bg-lime-700 { background-color: #4d7c0f; }
+    .bg-lime-800 { background-color: #3f6212; }
+    .bg-lime-900 { background-color: #365314; }
+    .bg-lime-950 { background-color: #1a2e05; }
+    .text-lime-50 { color: #f7fee7; }
+    .text-lime-100 { color: #ecfccb; }
+    .text-lime-200 { color: #d9f99d; }
+    .text-lime-300 { color: #bef264; }
+    .text-lime-400 { color: #a3e635; }
+    .text-lime-500 { color: #84cc16; }
+    .text-lime-600 { color: #65a30d; }
+    .text-lime-700 { color: #4d7c0f; }
+    .text-lime-800 { color: #3f6212; }
+    .text-lime-900 { color: #365314; }
+    .text-lime-950 { color: #1a2e05; }
+    .border-lime-200 { border-color: #d9f99d; }
+    .border-lime-300 { border-color: #bef264; }
+    .border-lime-400 { border-color: #a3e635; }
+    .border-lime-500 { border-color: #84cc16; }
+    .border-lime-600 { border-color: #65a30d; }
+    .hover\:bg-lime-700:hover { background-color: #4d7c0f; }
     </style>
     <!-- Alpine Collapse Plugin ANTES do Alpine Core -->
     <script src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>

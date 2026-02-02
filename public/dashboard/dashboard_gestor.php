@@ -159,6 +159,7 @@ function getIconForStatus($status) {
         'cancelado' => 'times-circle',
         'orcamento' => 'file-text',
         'arte' => 'palette',
+        'aprovado' => 'eye',
         'producao' => 'cog',
         'pronto' => 'package',
         'entregue' => 'check-circle'
@@ -201,6 +202,7 @@ try {
                 COUNT(*) FILTER (WHERE status = 'cancelado') as cancelado,
                 COUNT(*) FILTER (WHERE status = 'orcamento') as orcamento,
                 COUNT(*) FILTER (WHERE status = 'arte') as arte,
+                COUNT(*) FILTER (WHERE status = 'aprovado') as aprovado,
                 COUNT(*) FILTER (WHERE status = 'producao') as producao,
                 COUNT(*) FILTER (WHERE status = 'pronto') as pronto,
                 COUNT(*) FILTER (WHERE status = 'entregue') as entregue,
@@ -224,6 +226,7 @@ try {
         'cancelado' => 0,
         'orcamento' => 0,
         'arte' => 0,
+        'aprovado' => 0,
         'producao' => 0,
         'pronto' => 0,
         'entregue' => 0,
@@ -280,6 +283,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $pdo->commit();
                 
                 echo json_encode(['success' => true, 'message' => count($ids) . ' pedidos atualizados']);
+                break;
+                
+            case 'aprovarArte':
+                $pedido_id = intval($_POST['pedido_id']);
+                
+                $pdo->beginTransaction();
+                
+                // Buscar última versão de arte do pedido
+                $stmt = $pdo->prepare("SELECT id FROM arte_versoes WHERE pedido_id = ? ORDER BY versao DESC LIMIT 1");
+                $stmt->execute([$pedido_id]);
+                $versao = $stmt->fetch();
+                
+                if ($versao) {
+                    // Marcar versão como aprovada
+                    $stmt = $pdo->prepare("UPDATE arte_versoes SET aprovada = true, reprovada = false WHERE id = ?");
+                    $stmt->execute([$versao['id']]);
+                }
+                
+                // Mover pedido para produção
+                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'producao', updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$pedido_id]);
+                
+                $stmt = $pdo->prepare("INSERT INTO producao_status (pedido_id, status, observacoes, usuario_id, created_at) VALUES (?, ?, ?, ?, NOW())");
+                $stmt->execute([$pedido_id, 'producao', "Arte aprovada via dashboard - movido para produção", $_SESSION['user_id']]);
+                
+                registrarLog('arte_aprovada_dashboard', "Arte do pedido #$pedido_id aprovada via dashboard");
+                
+                $pdo->commit();
+                
+                echo json_encode(['success' => true, 'message' => 'Arte aprovada com sucesso']);
+                break;
+                
+            case 'solicitarAjusteArte':
+                $pedido_id = intval($_POST['pedido_id']);
+                $motivo = trim($_POST['motivo'] ?? '');
+                
+                $pdo->beginTransaction();
+                
+                // Buscar última versão de arte do pedido
+                $stmt = $pdo->prepare("SELECT id, comentario_cliente FROM arte_versoes WHERE pedido_id = ? ORDER BY versao DESC LIMIT 1");
+                $stmt->execute([$pedido_id]);
+                $versao = $stmt->fetch();
+                
+                if ($versao) {
+                    // Marcar versão como reprovada e adicionar comentário
+                    $comentario_atual = $versao['comentario_cliente'] ?? '';
+                    $timestamp = date('d/m H:i');
+                    $usuario = $_SESSION['user_nome'] ?? 'Usuário';
+                    $novo_comentario = $comentario_atual;
+                    if (!empty($comentario_atual)) {
+                        $novo_comentario .= "\n";
+                    }
+                    $novo_comentario .= "[{$timestamp} - {$usuario}] ⚠️ AJUSTES: {$motivo}";
+                    
+                    $stmt = $pdo->prepare("UPDATE arte_versoes SET reprovada = true, aprovada = false, comentario_cliente = ? WHERE id = ?");
+                    $stmt->execute([$novo_comentario, $versao['id']]);
+                }
+                
+                // Mover pedido de volta para arte
+                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'arte', updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$pedido_id]);
+                
+                $stmt = $pdo->prepare("INSERT INTO producao_status (pedido_id, status, observacoes, usuario_id, created_at) VALUES (?, ?, ?, ?, NOW())");
+                $stmt->execute([$pedido_id, 'arte', "Ajustes solicitados: $motivo", $_SESSION['user_id']]);
+                
+                registrarLog('arte_ajuste_solicitado', "Ajustes solicitados para pedido #$pedido_id: $motivo");
+                
+                $pdo->commit();
+                
+                echo json_encode(['success' => true, 'message' => 'Ajustes solicitados com sucesso']);
                 break;
         }
     } catch (Exception $e) {
@@ -344,10 +417,48 @@ try {
     $stmt->execute($params);
     $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Organizar pedidos por status para Kanban (apenas 4 status principais)
+    // Buscar arquivos de todos os pedidos para o Kanban (imagens e áudios)
+    $pedidoIds = array_column($pedidos, 'id');
+    $arquivosPorPedido = [];
+    
+    if (!empty($pedidoIds)) {
+        $placeholders = str_repeat('?,', count($pedidoIds) - 1) . '?';
+        $sqlArquivos = "
+            SELECT id, pedido_id, nome_arquivo, caminho, tipo
+            FROM pedido_arquivos 
+            WHERE pedido_id IN ($placeholders)
+            ORDER BY pedido_id, created_at DESC
+        ";
+        $stmtArq = $pdo->prepare($sqlArquivos);
+        $stmtArq->execute($pedidoIds);
+        $todosArquivos = $stmtArq->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Extensões para categorização
+        $extImagem = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $extAudio = ['mp3', 'ogg', 'opus', 'm4a', 'wav', 'aac', 'amr', 'webm'];
+        
+        foreach ($todosArquivos as $arq) {
+            $pid = $arq['pedido_id'];
+            $ext = strtolower(pathinfo($arq['nome_arquivo'], PATHINFO_EXTENSION));
+            
+            if (!isset($arquivosPorPedido[$pid])) {
+                $arquivosPorPedido[$pid] = ['imagem' => null, 'audio' => null];
+            }
+            
+            // Pegar apenas o primeiro de cada tipo
+            if (in_array($ext, $extImagem) && !$arquivosPorPedido[$pid]['imagem']) {
+                $arquivosPorPedido[$pid]['imagem'] = $arq;
+            } elseif (in_array($ext, $extAudio) && !$arquivosPorPedido[$pid]['audio']) {
+                $arquivosPorPedido[$pid]['audio'] = $arq;
+            }
+        }
+    }
+    
+    // Organizar pedidos por status para Kanban (5 status principais incluindo aprovação)
     $pedidosPorStatus = [
         'orcamento' => [],
         'arte' => [],
+        'aprovado' => [],
         'producao' => [],
         'pronto' => []
     ];
@@ -413,6 +524,7 @@ $statusConfig = [
     'cancelado' => ['color' => 'bg-red-500', 'label' => 'CANCELADO', 'textColor' => 'text-red-600', 'borderColor' => 'border-red-200', 'bgLight' => 'bg-red-50'],
     'orcamento' => ['color' => 'bg-green-800', 'label' => 'COMERCIAL', 'textColor' => 'text-green-800', 'borderColor' => 'border-green-300', 'bgLight' => 'bg-green-50'],
     'arte' => ['color' => 'bg-lime-600', 'label' => 'ARTE', 'textColor' => 'text-lime-700', 'borderColor' => 'border-lime-300', 'bgLight' => 'bg-lime-50'],
+    'aprovado' => ['color' => 'bg-purple-600', 'label' => 'APROVAÇÃO', 'textColor' => 'text-purple-700', 'borderColor' => 'border-purple-300', 'bgLight' => 'bg-purple-50'],
     'producao' => ['color' => 'bg-yellow-500', 'label' => 'PRODUÇÃO', 'textColor' => 'text-yellow-700', 'borderColor' => 'border-yellow-300', 'bgLight' => 'bg-yellow-50'],
     'pronto' => ['color' => 'bg-amber-400', 'label' => 'EXPEDIÇÃO', 'textColor' => 'text-amber-700', 'borderColor' => 'border-amber-300', 'bgLight' => 'bg-amber-50'],
     'entregue' => ['color' => 'bg-gray-500', 'label' => 'ENTREGUE', 'textColor' => 'text-gray-600', 'borderColor' => 'border-gray-200', 'bgLight' => 'bg-gray-50']
@@ -571,6 +683,19 @@ $cssInline = '
     border-color: #3b82f6;
 }
 
+/* Player de áudio compacto nos cards */
+.kanban-card audio {
+    height: 28px;
+    border-radius: 14px;
+}
+.kanban-card audio::-webkit-media-controls-panel {
+    background: #f3f4f6;
+}
+.kanban-card audio::-webkit-media-controls-play-button {
+    background-color: #22c55e;
+    border-radius: 50%;
+}
+
 /* Container do Kanban responsivo */
 .kanban-container {
     display: grid;
@@ -604,10 +729,10 @@ $cssInline = '
     100% { background-position: -200% 0; }
 }
 
-/* Desktop - 4 colunas */
+/* Desktop - 5 colunas */
 @media (min-width: 1280px) {
     .kanban-container {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
     }
 }
 
@@ -848,9 +973,9 @@ function abrirNovoPedidoModal(clienteId = null) {
         </div>
         
         <!-- Cards de Status (KPIs) - Apenas na visualização de tabela -->
-        <div x-show="viewMode === 'table'" x-cloak class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <div x-show="viewMode === 'table'" x-cloak class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
             <?php 
-            $kpiStatus = ['orcamento', 'arte', 'producao', 'pronto'];
+            $kpiStatus = ['orcamento', 'arte', 'aprovado', 'producao', 'pronto'];
             foreach ($kpiStatus as $status): 
                 $config = $statusConfig[$status];
             ?>
@@ -889,7 +1014,7 @@ function abrirNovoPedidoModal(clienteId = null) {
         <!-- Visualização Kanban - Default -->
         <div x-show="viewMode === 'kanban'" x-cloak class="kanban-container">
             <?php 
-            $kanbanStatus = ['orcamento', 'arte', 'producao', 'pronto'];
+            $kanbanStatus = ['orcamento', 'arte', 'aprovado', 'producao', 'pronto'];
             foreach ($kanbanStatus as $status): 
                 $config = $statusConfig[$status];
             ?>
@@ -921,42 +1046,78 @@ function abrirNovoPedidoModal(clienteId = null) {
                 >
                     <?php if (isset($pedidosPorStatus[$status])): ?>
                         <?php foreach ($pedidosPorStatus[$status] as $pedido): ?>
+                        <?php 
+                        $arquivoPedido = $arquivosPorPedido[$pedido['id']] ?? ['imagem' => null, 'audio' => null];
+                        $temImagem = !empty($arquivoPedido['imagem']);
+                        $temAudio = !empty($arquivoPedido['audio']);
+                        ?>
                         <div 
                             class="kanban-card bg-white border-2 <?= $config['borderColor'] ?> rounded-lg p-3 md:p-4 cursor-move"
                             draggable="true"
                             @dragstart="handleDragStart($event, <?= $pedido['id'] ?>)"
                             data-pedido-id="<?= $pedido['id'] ?>"
                         >
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="font-bold <?= $config['textColor'] ?> text-sm md:text-base">
-                                    #<?= htmlspecialchars($pedido['numero']) ?>
-                                </span>
-                                <?php if ($pedido['urgente']): ?>
-                                <span class="bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">URG</span>
+                            <div class="flex gap-3">
+                                <?php if ($temImagem): ?>
+                                <!-- Miniatura quadrada à esquerda -->
+                                <div class="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                                    <img src="../<?= htmlspecialchars($arquivoPedido['imagem']['caminho']) ?>" 
+                                         alt="Miniatura"
+                                         class="w-full h-full object-cover"
+                                         onerror="this.parentElement.classList.add('hidden')"
+                                         loading="lazy">
+                                </div>
                                 <?php endif; ?>
+                                
+                                <!-- Conteúdo principal -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <span class="font-bold <?= $config['textColor'] ?> text-sm md:text-base">
+                                            #<?= htmlspecialchars($pedido['numero']) ?>
+                                        </span>
+                                        <?php if ($pedido['urgente']): ?>
+                                        <span class="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded animate-pulse">URG</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <div class="text-sm text-gray-600 space-y-0.5">
+                                        <div class="font-medium truncate text-xs">
+                                            <?= htmlspecialchars(formatarNomeCliente($pedido['cliente_nome'] ?? '', $pedido['cliente_telefone'] ?? '')) ?>
+                                        </div>
+                                        <div class="text-xs text-gray-500 truncate">
+                                            <?= htmlspecialchars($pedido['primeiro_produto'] ?? 'Sem produto') ?>
+                                        </div>
+                                        <?php if ($pedido['arte_finalista_nome']): ?>
+                                        <div class="text-xs <?= $config['textColor'] ?> flex items-center gap-1">
+                                            <i class="fas fa-palette" style="font-size: 10px;"></i>
+                                            <?= htmlspecialchars($pedido['arte_finalista_nome']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div class="text-sm text-gray-600 space-y-1">
-                                <div class="font-medium truncate">
-                                    <?= htmlspecialchars(formatarNomeCliente($pedido['cliente_nome'] ?? '', $pedido['cliente_telefone'] ?? '')) ?>
+                            <?php if ($temAudio): ?>
+                            <!-- Mini player de áudio -->
+                            <div class="mt-2 bg-gray-50 rounded-lg p-1.5" @click.stop>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-microphone text-green-600" style="font-size: 10px;"></i>
+                                    </div>
+                                    <audio controls class="h-6 flex-1 min-w-0" preload="none">
+                                        <source src="../<?= htmlspecialchars($arquivoPedido['audio']['caminho']) ?>" type="<?= htmlspecialchars($arquivoPedido['audio']['tipo'] ?? 'audio/mpeg') ?>">
+                                    </audio>
                                 </div>
-                                <div class="text-xs text-gray-500 truncate">
-                                    <?= htmlspecialchars($pedido['primeiro_produto'] ?? 'Sem produto') ?>
-                                </div>
-                                <?php if ($pedido['arte_finalista_nome']): ?>
-                                <div class="text-xs <?= $config['textColor'] ?> flex items-center gap-1">
-                                    <i class="fas fa-palette"></i>
-                                    <?= htmlspecialchars($pedido['arte_finalista_nome']) ?>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (podeVerValores()): ?>
-                                <div class="font-bold <?= $config['textColor'] ?> text-right pt-2 text-sm md:text-base">
-                                    <?= formatarMoeda($pedido['valor_final'] ?? $pedido['valor_total'] ?? 0) ?>
-                                </div>
-                                <?php endif; ?>
                             </div>
+                            <?php endif; ?>
                             
-                            <div class="flex justify-between items-center mt-3 pt-3 border-t">
+                            <?php if (podeVerValores()): ?>
+                            <div class="font-bold <?= $config['textColor'] ?> text-right pt-2 text-sm">
+                                <?= formatarMoeda($pedido['valor_final'] ?? $pedido['valor_total'] ?? 0) ?>
+                            </div>
+                            <?php endif; ?>
+                                
+                                <div class="flex justify-between items-center mt-3 pt-3 border-t">
                                 <span class="text-xs text-gray-600">
                                     <?php
                                     $updated = new DateTime($pedido['updated_at']);
@@ -981,6 +1142,24 @@ function abrirNovoPedidoModal(clienteId = null) {
                                     </button>
                                     <?php endif; ?>
                                     
+                                    <?php if ($status === 'aprovado'): ?>
+                                    <!-- Botões de aprovação de arte -->
+                                    <button 
+                                        @click.stop="aprovarArte(<?= $pedido['id'] ?>)"
+                                        class="text-green-600 hover:text-green-700 hover:bg-green-50 p-1 rounded transition-all"
+                                        title="Aprovar Arte"
+                                    >
+                                        <i class="fas fa-check text-sm"></i>
+                                    </button>
+                                    <button 
+                                        @click.stop="solicitarAjusteArte(<?= $pedido['id'] ?>)"
+                                        class="text-orange-600 hover:text-orange-700 hover:bg-orange-50 p-1 rounded transition-all"
+                                        title="Solicitar Ajustes"
+                                    >
+                                        <i class="fas fa-redo text-sm"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    
                                     <?php if ($status === 'pronto'): ?>
                                     <button 
                                         @click.stop="pendingStatus = 'entregue'; pendingSingleId = <?= $pedido['id'] ?>; paymentAlert = true;"
@@ -991,7 +1170,7 @@ function abrirNovoPedidoModal(clienteId = null) {
                                     </button>
                                     <?php endif; ?>
                                     
-                                    <a href="../pedidos/pedido_detalhes.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-1" title="Ver">
+                                    <a href="../pedidos/detalhes/pedido_detalhes_gestor.php?id=<?= $pedido['id'] ?>" class="text-blue-600 hover:text-blue-700 p-1" title="Ver">
                                         <i class="fas fa-eye text-sm"></i>
                                     </a>
                                     <a href="../pedidos/pedido_editar.php?id=<?= $pedido['id'] ?>" class="text-green-600 hover:text-green-700 p-1" title="Editar">
@@ -1146,6 +1325,24 @@ function abrirNovoPedidoModal(clienteId = null) {
                                         title="Cancelar OS"
                                     >
                                         <i class="fas fa-times-circle text-sm"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($pedido['status'] === 'aprovado'): ?>
+                                    <!-- Botões de aprovação de arte -->
+                                    <button 
+                                        @click="aprovarArte(<?= $pedido['id'] ?>)"
+                                        class="text-green-600 hover:text-green-700 p-1.5 rounded hover:bg-green-50 transition-all"
+                                        title="Aprovar Arte"
+                                    >
+                                        <i class="fas fa-check text-sm"></i>
+                                    </button>
+                                    <button 
+                                        @click="solicitarAjusteArte(<?= $pedido['id'] ?>)"
+                                        class="text-orange-600 hover:text-orange-700 p-1.5 rounded hover:bg-orange-50 transition-all"
+                                        title="Solicitar Ajustes"
+                                    >
+                                        <i class="fas fa-redo text-sm"></i>
                                     </button>
                                     <?php endif; ?>
                                     
@@ -1688,6 +1885,69 @@ function dashboardGestor() {
 
         showPedidoDetails(id) {
             window.location.href = `../pedidos/pedido_detalhes.php?id=${id}`;
+        },
+        
+        // Aprovar arte diretamente do Kanban
+        async aprovarArte(pedidoId) {
+            if (!confirm('Aprovar a arte deste pedido? O pedido será movido para PRODUÇÃO.')) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'aprovarArte');
+            formData.append('pedido_id', pedidoId);
+
+            try {
+                const response = await fetch('dashboard_gestor.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('Arte aprovada! Pedido movido para produção.', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    this.showNotification(data.message || 'Erro ao aprovar arte', 'error');
+                }
+            } catch (error) {
+                this.showNotification('Erro ao aprovar arte', 'error');
+            }
+        },
+        
+        // Solicitar ajustes na arte
+        async solicitarAjusteArte(pedidoId) {
+            const motivo = prompt('Descreva os ajustes necessários na arte:');
+            
+            if (!motivo) {
+                if (motivo === null) return; // Cancelou
+                alert('Por favor, descreva os ajustes necessários');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'solicitarAjusteArte');
+            formData.append('pedido_id', pedidoId);
+            formData.append('motivo', motivo);
+
+            try {
+                const response = await fetch('dashboard_gestor.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.showNotification('Ajustes solicitados! Pedido voltou para ARTE.', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    this.showNotification(data.message || 'Erro ao solicitar ajustes', 'error');
+                }
+            } catch (error) {
+                this.showNotification('Erro ao solicitar ajustes', 'error');
+            }
         },
         
         showDayDetails(date) {

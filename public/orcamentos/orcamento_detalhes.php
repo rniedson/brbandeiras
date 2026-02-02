@@ -325,7 +325,7 @@ include '../../views/layouts/_header.php';
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <a href="download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
+                        <a href="../utils/download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
                            class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                             Baixar
                         </a>

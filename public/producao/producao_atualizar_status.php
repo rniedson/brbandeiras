@@ -86,7 +86,8 @@ try {
                     UPDATE pedidos 
                     SET status = ?, 
                         responsavel_producao_id = ?,
-                        iniciado_producao_em = ?
+                        iniciado_producao_em = ?,
+                        updated_at = NOW()
                     WHERE id = ?
                 ");
                 $stmt->execute([$novoStatus, $_SESSION['usuario_id'], $agora->format('Y-m-d H:i:s'), $pedidoId]);
@@ -127,7 +128,7 @@ try {
                 // Atualizar pedido
                 $stmt = $pdo->prepare("
                     UPDATE pedidos 
-                    SET status = ?, finalizado_producao_em = ?
+                    SET status = ?, finalizado_producao_em = ?, updated_at = NOW()
                     WHERE id = ?
                 ");
                 $stmt->execute([$novoStatus, $agora->format('Y-m-d H:i:s'), $pedidoId]);
@@ -152,7 +153,8 @@ try {
                     SET status = ?, 
                         responsavel_producao_id = NULL,
                         iniciado_producao_em = NULL,
-                        finalizado_producao_em = NULL
+                        finalizado_producao_em = NULL,
+                        updated_at = NOW()
                     WHERE id = ?
                 ");
                 $stmt->execute([$novoStatus, $pedidoId]);

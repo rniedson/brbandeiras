@@ -51,14 +51,7 @@ if ($id > 0) {
 
 // Validações básicas
 if (empty($nome) || empty($email)) {
-    $_SESSION['erro'] = 'Nome e e-mail são obrigatórios';
-    header($id ? "Location: usuario_editar.php?id=$id" : "Location: usuario_novo.php");
-    exit;
-}
-
-// Validar e-mail
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $_SESSION['erro'] = 'E-mail inválido';
+    $_SESSION['erro'] = 'Nome e usuário são obrigatórios';
     header($id ? "Location: usuario_editar.php?id=$id" : "Location: usuario_novo.php");
     exit;
 }
@@ -79,11 +72,11 @@ if (!empty($senha)) {
 }
 
 try {
-    // Verificar se e-mail já existe (exceto para o próprio usuário)
+    // Verificar se usuário já existe (exceto para o próprio usuário)
     $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ? AND id != ?");
     $stmt->execute([$email, $id]);
     if ($stmt->fetch()) {
-        throw new Exception('Este e-mail já está em uso');
+        throw new Exception('Este usuário já está em uso');
     }
     
     // Se está editando próprio perfil e não é gestor, manter perfil e status

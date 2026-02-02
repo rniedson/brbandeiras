@@ -28,32 +28,19 @@ try {
     $novo_codigo = $produto['codigo'] . '-COPIA-' . uniqid();
     $novo_nome = $produto['nome'] . ' (Cópia)';
     
-    // Inserir cópia
+    // Inserir cópia (usando apenas colunas existentes)
     $stmt = $pdo->prepare("
         INSERT INTO produtos_catalogo (
-            codigo, nome, descricao, categoria_id, preco, preco_promocional,
-            unidade_venda, tempo_producao, estoque_disponivel, imagem_principal,
-            especificacoes, tags, ativo
+            codigo, nome, descricao, categoria_id, preco, ativo
         ) 
         SELECT 
-            ?, ?, descricao, categoria_id, preco, preco_promocional,
-            unidade_venda, tempo_producao, estoque_disponivel, imagem_principal,
-            especificacoes, tags, false
+            ?, ?, descricao, categoria_id, preco, false
         FROM produtos_catalogo 
         WHERE id = ?
     ");
     
     $stmt->execute([$novo_codigo, $novo_nome, $produto_id]);
     $novo_id = $pdo->lastInsertId();
-    
-    // Copiar imagens adicionais
-    $stmt = $pdo->prepare("
-        INSERT INTO produtos_imagens (produto_id, caminho, descricao, ordem)
-        SELECT ?, caminho, descricao, ordem
-        FROM produtos_imagens
-        WHERE produto_id = ?
-    ");
-    $stmt->execute([$novo_id, $produto_id]);
     
     // Log
     $stmt = $pdo->prepare("

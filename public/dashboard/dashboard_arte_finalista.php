@@ -19,15 +19,28 @@ if ($_SESSION['user_perfil'] !== 'arte_finalista') {
 function formatarNomeCliente($nome, $telefone) {
     if (empty($nome)) return 'OS';
     $primeiro = explode(' ', trim($nome))[0];
+    // Tratar telefone null para evitar erro no PHP 8.x
+    $telefone = $telefone ?? '';
     $digitos = substr(preg_replace('/\D/', '', $telefone), -4);
     return $primeiro . ($digitos ? '...' . $digitos : '');
 }
 
 // Processar AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    header('Content-Type: application/json');
+    // Limpar qualquer output buffer para garantir JSON limpo
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-cache, must-revalidate');
     
     try {
+        // Validar pedido_id
+        if (!isset($_POST['pedido_id']) || !is_numeric($_POST['pedido_id'])) {
+            throw new Exception('ID do pedido inválido');
+        }
+        
         $pedido_id = intval($_POST['pedido_id']);
         
         switch ($_POST['action']) {
@@ -70,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 
                 // Mudar status para aprovado
-                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'aprovado' WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE pedidos SET status = 'aprovado', updated_at = NOW() WHERE id = ?");
                 $stmt->execute([$pedido_id]);
                 
                 registrarLog('arte_entregue', "OS #$pedido_id entregue para aprovação");
@@ -78,6 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 
                 echo json_encode(['success' => true]);
                 break;
+                
+            default:
+                throw new Exception('Ação inválida');
         }
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -348,7 +364,7 @@ include '../../views/layouts/_header.php';
                             
                             <!-- Ações Rápidas -->
                             <div class="flex gap-2">
-                                <button onclick="event.stopPropagation(); window.location.href='arte_upload.php?pedido_id=<?= $os['id'] ?>'"
+                                <button onclick="event.stopPropagation(); window.location.href='../arte/arte_upload.php?pedido_id=<?= $os['id'] ?>'"
                                         class="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition">
                                     <i class="fas fa-plus mr-1"></i>
                                     Nova Versão
@@ -521,8 +537,9 @@ include '../../views/layouts/_header.php';
 </div>
 
 <script>
-function dashboardArte() {
-    return {
+// Registrar componente Alpine ANTES da inicialização
+document.addEventListener('alpine:init', () => {
+    Alpine.data('dashboardArte', () => ({
         tab: 'minhas',
         notification: null,
 
@@ -530,8 +547,8 @@ function dashboardArte() {
             this.notification = { message, type };
             setTimeout(() => this.notification = null, 3000);
         }
-    }
-}
+    }));
+});
 
 async function assumirOS(id) {
     if (!confirm('Deseja pegar esta OS?')) return;
@@ -545,7 +562,22 @@ async function assumirOS(id) {
             method: 'POST',
             body: formData
         });
-        const data = await response.json();
+        
+        // Verificar se a resposta é válida
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        
+        // Tentar parsear como JSON
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Resposta não é JSON válido:', text);
+            throw new Error('Resposta inválida do servidor');
+        }
         
         if (data.success) {
             location.reload();
@@ -553,7 +585,8 @@ async function assumirOS(id) {
             alert(data.message || 'Erro ao pegar OS');
         }
     } catch (error) {
-        alert('Erro ao processar requisição');
+        console.error('Erro:', error);
+        alert(error.message || 'Erro ao processar requisição');
     }
 }
 
@@ -569,7 +602,22 @@ async function entregarOS(id) {
             method: 'POST',
             body: formData
         });
-        const data = await response.json();
+        
+        // Verificar se a resposta é válida
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        
+        // Tentar parsear como JSON
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Resposta não é JSON válido:', text);
+            throw new Error('Resposta inválida do servidor');
+        }
         
         if (data.success) {
             location.reload();
@@ -577,7 +625,8 @@ async function entregarOS(id) {
             alert(data.message || 'Erro ao entregar OS');
         }
     } catch (error) {
-        alert('Erro ao processar requisição');
+        console.error('Erro:', error);
+        alert(error.message || 'Erro ao processar requisição');
     }
 }
 

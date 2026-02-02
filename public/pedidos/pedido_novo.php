@@ -432,8 +432,8 @@ $isGestor = $_SESSION['user_perfil'] === 'gestor';
                                                                  :class="{'active': pIndex === item.produto_ativo}"
                                                                  class="autocomplete-item">
                                                                 <div>
-                                                                    <span class="categoria-badge" x-text="produto.categoria_nome || 'Sem Categoria'"></span>
-                                                                    <span class="font-medium" x-html="destacarTexto(produto.codigo + ' - ' + produto.nome, item.produto_busca)"></span>
+                                                                    <span x-show="produto.categoria_nome" class="categoria-badge" x-text="produto.categoria_nome"></span>
+                                                                    <span class="font-medium" x-html="destacarTexto((produto.codigo ? produto.codigo + ' - ' : '') + produto.nome, item.produto_busca)"></span>
                                                                 </div>
                                                                 <div class="text-xs text-green-600 mt-1">
                                                                     R$ <span x-text="parseFloat(produto.preco).toFixed(2).replace('.', ',')"></span>
@@ -636,7 +636,7 @@ $isGestor = $_SESSION['user_perfil'] === 'gestor';
                                             <input type="file" 
                                                    id="fileInput"
                                                    multiple 
-                                                   accept=".pdf,.jpg,.jpeg,.png,.ai,.cdr,.psd"
+                                                   accept=".pdf,.jpg,.jpeg,.png,.ai,.cdr,.psd,.mp3,.ogg,.opus,.m4a,.wav,.aac,.amr,.webm,audio/*"
                                                    class="hidden"
                                                    @change="handleFiles($event.target.files)">
                                             
@@ -645,6 +645,7 @@ $isGestor = $_SESSION['user_perfil'] === 'gestor';
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                                                 </svg>
                                                 <p class="mt-1 text-xs text-gray-600">Clique ou arraste arquivos</p>
+                                                <p class="text-xs text-gray-400">Imagens, PDFs, áudios do WhatsApp</p>
                                             </label>
                                             
                                             <!-- Lista de arquivos -->
@@ -1056,7 +1057,7 @@ $isGestor = $_SESSION['user_perfil'] === 'gestor';
                 
                 if (produto) {
                     item.produto_id = produto.id;
-                    item.descricao = `${produto.codigo} - ${produto.nome}`;
+                    item.descricao = produto.codigo ? `${produto.codigo} - ${produto.nome}` : produto.nome;
                     item.produto_busca = item.descricao;
                     item.valor_unitario = parseFloat(produto.preco);
                 } else {
@@ -1153,53 +1154,48 @@ $isGestor = $_SESSION['user_perfil'] === 'gestor';
                 this.files.splice(index, 1);
             },
             
-            // Upload assíncrono
+            // Upload assíncrono usando fetch
             async processarUploads(pedido_id) {
+                console.log('processarUploads chamado com pedido_id:', pedido_id, typeof pedido_id);
+                
+                if (!pedido_id) {
+                    console.error('pedido_id não definido para upload');
+                    return;
+                }
+                
                 for (let file of this.files) {
                     this.uploadingFiles.push(file.name);
                     this.uploadProgress[file.name] = 0;
                     
                     const formData = new FormData();
                     formData.append('arquivo', file);
-                    formData.append('pedido_id', pedido_id);
+                    formData.append('pedido_id', String(pedido_id));
+                    
+                    // Debug: verificar formData
+                    console.log('Enviando arquivo:', file.name, 'para pedido:', pedido_id);
                     
                     try {
-                        const xhr = new XMLHttpRequest();
-                        
-                        // Monitorar progresso
-                        xhr.upload.addEventListener('progress', (e) => {
-                            if (e.lengthComputable) {
-                                this.uploadProgress[file.name] = Math.round((e.loaded / e.total) * 100);
-                            }
+                        const response = await fetch('pedido_upload_ajax.php', {
+                            method: 'POST',
+                            body: formData,
+                            credentials: 'same-origin' // Enviar cookies de sessão
                         });
                         
-                        // Promise para aguardar conclusão
-                        await new Promise((resolve, reject) => {
-                            xhr.onload = () => {
-                                if (xhr.status === 200) {
-                                    const response = JSON.parse(xhr.responseText);
-                                    if (response.success) {
-                                        resolve();
-                                    } else {
-                                        reject(new Error(response.message));
-                                    }
-                                } else {
-                                    reject(new Error('Erro no upload'));
-                                }
-                            };
-                            
-                            xhr.onerror = () => reject(new Error('Erro de rede'));
-                            
-                            xhr.open('POST', 'pedido_upload_ajax.php');
-                            xhr.send(formData);
-                        });
+                        const result = await response.json();
+                        
+                        if (response.ok && result.success) {
+                            this.uploadProgress[file.name] = 100;
+                            console.log('Upload concluído:', file.name);
+                        } else {
+                            throw new Error(result.message || result.error || `Erro HTTP ${response.status}`);
+                        }
                         
                         // Remover da lista de uploading
                         this.uploadingFiles = this.uploadingFiles.filter(f => f !== file.name);
                         
                     } catch (error) {
                         console.error(`Erro ao enviar ${file.name}:`, error);
-                        this.showNotification(`Erro ao enviar ${file.name}`, 'error');
+                        this.showNotification(`Erro ao enviar ${file.name}: ${error.message}`, 'error');
                     }
                 }
             },

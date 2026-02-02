@@ -28,7 +28,7 @@ try {
             c.telefone as cliente_telefone,
             c.email as cliente_email,
             c.endereco,
-            c.numero,
+            c.numero as cliente_numero,
             c.complemento,
             c.bairro,
             c.cidade,
@@ -425,14 +425,14 @@ include '../../../views/layouts/_header.php';
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
                     <div class="glass-card rounded-lg p-4 shadow-sm">
                         <p class="text-xs text-gray-500 uppercase mb-1">Cliente</p>
-                        <p class="font-bold text-gray-900"><?= htmlspecialchars($pedido['cliente_nome']) ?></p>
-                        <p class="text-xs text-gray-600"><?= formatarCpfCnpj($pedido['cpf_cnpj']) ?></p>
+                        <p class="font-bold text-gray-900"><?= htmlspecialchars($pedido['cliente_nome'] ?? 'Não informado') ?></p>
+                        <p class="text-xs text-gray-600"><?= formatarCpfCnpj($pedido['cpf_cnpj'] ?? '') ?></p>
                     </div>
                     
                     <div class="glass-card rounded-lg p-4 shadow-sm">
                         <p class="text-xs text-gray-500 uppercase mb-1">Vendedor</p>
-                        <p class="font-bold text-gray-900"><?= htmlspecialchars($pedido['vendedor_nome']) ?></p>
-                        <p class="text-xs text-gray-600"><?= $pedido['vendedor_telefone'] ?></p>
+                        <p class="font-bold text-gray-900"><?= htmlspecialchars($pedido['vendedor_nome'] ?? 'Não informado') ?></p>
+                        <p class="text-xs text-gray-600"><?= htmlspecialchars($pedido['vendedor_telefone'] ?? '') ?></p>
                     </div>
                     
                     <div class="glass-card rounded-lg p-4 shadow-sm">
@@ -536,9 +536,10 @@ include '../../../views/layouts/_header.php';
                                 </div>
                             <?php else: ?>
                                 <?php 
-                                // Separar arquivos de imagem e outros usando função auxiliar
+                                // Separar arquivos de imagem, áudio e outros usando função auxiliar
                                 $arquivos_separados = separarArquivosPorTipo($arquivos);
                                 $arquivos_imagem = $arquivos_separados['imagens'];
+                                $arquivos_audio = $arquivos_separados['audios'] ?? [];
                                 $arquivos_outros = $arquivos_separados['outros'];
                                 ?>
                                 
@@ -548,14 +549,14 @@ include '../../../views/layouts/_header.php';
                                         <?php foreach ($arquivos_imagem as $arquivo): ?>
                                             <div class="group relative">
                                                 <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-                                                    <img src="<?= htmlspecialchars($arquivo['caminho_arquivo']) ?>" 
-                                                         alt="<?= htmlspecialchars($arquivo['nome_arquivo']) ?>"
+                                                    <img src="../../<?= htmlspecialchars($arquivo['caminho'] ?? '') ?>" 
+                                                         alt="<?= htmlspecialchars($arquivo['nome_original'] ?? $arquivo['nome_arquivo'] ?? '') ?>"
                                                          class="w-full h-full object-cover group-hover:scale-105 transition cursor-pointer"
-                                                         onclick="abrirModalImagem('<?= htmlspecialchars($arquivo['caminho_arquivo']) ?>', '<?= htmlspecialchars($arquivo['nome_arquivo']) ?>')"
+                                                         onclick="abrirModalImagem('../../<?= htmlspecialchars($arquivo['caminho'] ?? '') ?>', '<?= htmlspecialchars($arquivo['nome_original'] ?? $arquivo['nome_arquivo'] ?? '') ?>')"
                                                          onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gray-100\'><svg class=\'w-8 h-8 text-gray-400\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\'></path></svg></div>'">
                                                 </div>
                                                 <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition rounded-lg flex items-center justify-center">
-                                                    <a href="download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
+                                                    <a href="../../utils/download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
                                                        class="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-gray-100 no-print"
                                                        onclick="event.stopPropagation()">
                                                         <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,6 +570,46 @@ include '../../../views/layouts/_header.php';
                                                 </div>
                                             </div>
                                         <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php if (!empty($arquivos_audio)): ?>
+                                    <!-- Áudios do WhatsApp -->
+                                    <div class="mb-4">
+                                        <p class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                                            </svg>
+                                            Áudios (<?= count($arquivos_audio) ?>)
+                                        </p>
+                                        <div class="space-y-3">
+                                            <?php foreach ($arquivos_audio as $arquivo): ?>
+                                                <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                                                    <div class="flex items-center gap-3 mb-2">
+                                                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                                            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+                                                            </svg>
+                                                        </div>
+                                                        <div class="flex-1 min-w-0">
+                                                            <p class="text-sm font-medium text-gray-900 truncate"><?= htmlspecialchars($arquivo['nome_original'] ?? $arquivo['nome_arquivo']) ?></p>
+                                                            <p class="text-xs text-gray-500"><?= formatarDataHora($arquivo['created_at'] ?? $arquivo['uploaded_at'] ?? '') ?></p>
+                                                        </div>
+                                                        <a href="../../utils/download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
+                                                           class="text-green-600 hover:text-green-800 no-print p-1"
+                                                           title="Baixar áudio">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                                            </svg>
+                                                        </a>
+                                                    </div>
+                                                    <audio controls class="w-full h-10" preload="metadata">
+                                                        <source src="../../<?= htmlspecialchars($arquivo['caminho'] ?? '') ?>" type="<?= htmlspecialchars($arquivo['tipo'] ?? 'audio/mpeg') ?>">
+                                                        Seu navegador não suporta o elemento de áudio.
+                                                    </audio>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                                 
@@ -589,7 +630,7 @@ include '../../../views/layouts/_header.php';
                                                         <p class="text-xs text-gray-500"><?= formatarDataHora($arquivo['created_at']) ?></p>
                                                     </div>
                                                 </div>
-                                                <a href="download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
+                                                <a href="../../utils/download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
                                                    class="text-blue-600 hover:text-blue-800 no-print">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
@@ -631,10 +672,10 @@ include '../../../views/layouts/_header.php';
                                         <?php if ($is_image && !empty($versao['caminho_arquivo'])): ?>
                                             <div class="group relative">
                                                 <div class="aspect-square bg-green-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-                                                    <img src="<?= htmlspecialchars($versao['caminho_arquivo']) ?>" 
+                                                    <img src="../../<?= htmlspecialchars($versao['caminho_arquivo']) ?>" 
                                                          alt="Versão <?= $versao['versao'] ?>"
                                                          class="w-full h-full object-cover group-hover:scale-105 transition cursor-pointer"
-                                                         onclick="abrirModalImagem('<?= htmlspecialchars($versao['caminho_arquivo']) ?>', 'Versão <?= $versao['versao'] ?> - Aprovada')">
+                                                         onclick="abrirModalImagem('../../<?= htmlspecialchars($versao['caminho_arquivo']) ?>', 'Versão <?= $versao['versao'] ?> - Aprovada')">
                                                 </div>
                                                 <div class="absolute top-2 left-2">
                                                     <span class="bg-green-600 text-white text-xs px-2 py-1 rounded-full font-bold">
@@ -642,7 +683,7 @@ include '../../../views/layouts/_header.php';
                                                     </span>
                                                 </div>
                                                 <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition rounded-lg flex items-center justify-center">
-                                                    <a href="download.php?tipo=arte&id=<?= $versao['id'] ?>" 
+                                                    <a href="../../utils/download.php?tipo=arte&id=<?= $versao['id'] ?>" 
                                                        class="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-gray-100 no-print"
                                                        onclick="event.stopPropagation()">
                                                         <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -663,7 +704,7 @@ include '../../../views/layouts/_header.php';
                                                 <p class="text-xs text-gray-600">Por <?= htmlspecialchars($versao['usuario_nome']) ?></p>
                                                 <p class="text-xs text-gray-500"><?= formatarDataHora($versao['created_at']) ?></p>
                                                 <?php if (!empty($versao['caminho_arquivo'])): ?>
-                                                    <a href="download.php?tipo=arte&id=<?= $versao['id'] ?>" 
+                                                    <a href="../../utils/download.php?tipo=arte&id=<?= $versao['id'] ?>" 
                                                        class="text-green-600 hover:text-green-800 text-xs no-print">
                                                         Download
                                                     </a>
@@ -680,12 +721,12 @@ include '../../../views/layouts/_header.php';
             
             <!-- Tab: Orçamento (Segunda aba) -->
             <div x-show="activeTab === 'fiscal'" class="tab-content" :class="activeTab === 'fiscal' ? 'active-print' : ''" x-cloak>
-                <?php require_once 'orcamento.php'; ?>
+                <?php require_once '../../orcamentos/orcamento.php'; ?>
             </div>
             
             <!-- Tab: Timeline Arte (Terceira aba) -->
             <div x-show="activeTab === 'timeline'" class="tab-content" :class="activeTab === 'timeline' ? 'active-print' : ''" x-cloak>
-                <?php require_once '_arte_timeline.php'; ?>
+                <?php require_once '../../../views/partials/_arte_timeline.php'; ?>
             </div>
             
             <!-- Tab: Produção (Quarta aba) -->

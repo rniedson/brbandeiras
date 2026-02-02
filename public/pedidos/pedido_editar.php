@@ -482,9 +482,11 @@ include '../../views/layouts/_header.php';
             <div class="flex-1 overflow-y-auto p-4">
                 <?php foreach ($produtosPorCategoria as $categoria => $produtosCategoria): ?>
                 <div class="mb-6" x-show="produtosFiltrados['<?= htmlspecialchars($categoria, ENT_QUOTES) ?>']?.length > 0">
+                    <?php if ($categoria !== 'Sem Categoria'): ?>
                     <h4 class="font-bold text-gray-700 mb-3 pb-2 border-b">
                         <?= htmlspecialchars($categoria) ?>
                     </h4>
+                    <?php endif; ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <?php foreach ($produtosCategoria as $produto): ?>
                         <div class="border rounded-lg p-3 hover:bg-green-50 cursor-pointer transition"
@@ -639,7 +641,7 @@ function editarPedidoForm() {
         adicionarProdutoCatalogo(produto) {
             const novoItem = {
                 produto_id: produto.id,
-                descricao: `${produto.codigo} - ${produto.nome}\n${produto.descricao || ''}`,
+                descricao: (produto.codigo ? `${produto.codigo} - ` : '') + produto.nome + (produto.descricao ? `\n${produto.descricao}` : ''),
                 quantidade: 1,
                 valor_unitario: produto.preco,
                 valor_total: produto.preco,

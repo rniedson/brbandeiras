@@ -21,9 +21,9 @@ $where = ["1=1"];
 $params = [];
 
 if ($busca) {
-    $where[] = "(p.nome ILIKE ? OR p.codigo LIKE ? OR p.descricao ILIKE ? OR p.tags ILIKE ?)";
+    $where[] = "(p.nome ILIKE ? OR p.codigo LIKE ? OR p.descricao ILIKE ?)";
     $buscaParam = "%$busca%";
-    $params = array_merge($params, [$buscaParam, $buscaParam, $buscaParam, $buscaParam]);
+    $params = array_merge($params, [$buscaParam, $buscaParam, $buscaParam]);
 }
 
 if ($categoria) {
@@ -39,11 +39,11 @@ if ($status === 'ativos') {
 
 $whereClause = implode(' AND ', $where);
 
-// Ordenação
+// Ordenação (usando apenas colunas existentes)
 $orderBy = match($ordenar) {
     'codigo' => 'p.codigo',
     'preco' => 'p.preco',
-    'popularidade' => 'p.popularidade DESC',
+    'popularidade' => 'p.nome', // popularidade não existe na tabela
     default => 'p.nome'
 };
 
@@ -204,9 +204,13 @@ include '../../views/layouts/_header.php';
         <div class="p-4">
             <!-- Status e Categoria -->
             <div class="flex justify-between items-start mb-2">
+                <?php if (!empty($produto['categoria_nome'])): ?>
                 <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                    <?= htmlspecialchars($produto['categoria_nome'] ?? 'Sem Categoria') ?>
+                    <?= htmlspecialchars($produto['categoria_nome']) ?>
                 </span>
+                <?php else: ?>
+                <span></span>
+                <?php endif; ?>
                 <?php if (!($produto['ativo'] ?? true)): ?>
                 <span class="text-xs px-2 py-1 bg-red-100 text-red-600 rounded">
                     Inativo

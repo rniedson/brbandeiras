@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Atualizar status do pedido
                 $stmt = $pdo->prepare("
                     UPDATE pedidos 
-                    SET status = 'aprovado' 
+                    SET status = 'aprovado', updated_at = NOW() 
                     WHERE id = (SELECT pedido_id FROM arte_versoes WHERE id = ?)
                 ");
                 $stmt->execute([$versao_id]);
@@ -202,7 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Atualizar status do pedido de volta para arte
                 $stmt = $pdo->prepare("
                     UPDATE pedidos 
-                    SET status = 'arte' 
+                    SET status = 'arte', updated_at = NOW() 
                     WHERE id = (SELECT pedido_id FROM arte_versoes WHERE id = ?)
                 ");
                 $stmt->execute([$versao_id]);
@@ -339,92 +339,81 @@ $breadcrumb = [
 include '../../../views/layouts/_header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $titulo ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preload" href="<?= $baseUrl ?>css/font-awesome/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="<?= $baseUrl ?>css/font-awesome/all.min.css"></noscript>
-    <style>
-        .preview-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 0.5rem;
+<style>
+    .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .preview-thumb {
+        aspect-ratio: 1;
+        object-fit: cover;
+        cursor: pointer;
+        transition: all 0.3s;
+        border-radius: 0.5rem;
+    }
+    
+    .preview-thumb:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
+    }
+    
+    .bee-animation {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .message-bubble {
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from { 
+            opacity: 0;
+            transform: translateX(-20px);
         }
-        
-        .preview-thumb {
-            aspect-ratio: 1;
-            object-fit: cover;
-            cursor: pointer;
-            transition: all 0.3s;
-            border-radius: 0.5rem;
+        to {
+            opacity: 1;
+            transform: translateX(0);
         }
-        
-        .preview-thumb:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
-        }
-        
-        .bee-animation {
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .message-bubble {
-            animation: slideIn 0.3s ease;
-        }
-        
-        @keyframes slideIn {
-            from { 
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .status-badge {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
-        
-        /* Scrollbar customizado */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #9333ea;
-            border-radius: 3px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #7c3aed;
-        }
-    </style>
-</head>
-<body class="bg-gray-100">
+    }
+    
+    .status-badge {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+    
+    /* Scrollbar customizado */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #9333ea;
+        border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #7c3aed;
+    }
+</style>
 
-<div class="max-w-7xl mx-auto p-4 lg:p-6">
+<div class="max-w-7xl mx-auto p-4 lg:p-6 bg-gray-100">
     <!-- Header Roxo -->
     <div class="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow-lg mb-6 p-6 text-white">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -534,17 +523,22 @@ include '../../../views/layouts/_header.php';
                     Arquivos do cliente
                 </h2>
                 
-                <!-- Grid de previews para imagens -->
+                <!-- Grid de previews para imagens e áudios -->
                 <div class="preview-grid mb-4">
                     <?php 
                     $tem_imagens = false;
+                    $tem_audios = false;
+                    $extensoes_imagem = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    $extensoes_audio = ['ogg', 'opus', 'mp3', 'm4a', 'wav', 'aac', 'amr', 'webm'];
+                    
                     foreach ($arquivos_cliente as $arquivo): 
                         $ext = strtolower(pathinfo($arquivo['nome_arquivo'], PATHINFO_EXTENSION));
-                        $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                        $is_image = in_array($ext, $extensoes_imagem);
                         
                         if ($is_image):
                             $tem_imagens = true;
-                            $caminho = '../' . ($arquivo['caminho'] ?? $arquivo['caminho_arquivo']);
+                            // Corrigir caminho: a página está em /pedidos/detalhes/, então precisa subir 2 níveis para chegar em /public/
+                            $caminho = '../../' . $arquivo['caminho'];
                     ?>
                         <img src="<?= htmlspecialchars($caminho) ?>" 
                              alt="<?= htmlspecialchars($arquivo['nome_arquivo']) ?>"
@@ -556,6 +550,32 @@ include '../../../views/layouts/_header.php';
                     endforeach; 
                     ?>
                 </div>
+                
+                <!-- Player de áudios -->
+                <?php 
+                foreach ($arquivos_cliente as $arquivo): 
+                    $ext = strtolower(pathinfo($arquivo['nome_arquivo'], PATHINFO_EXTENSION));
+                    $is_audio = in_array($ext, $extensoes_audio);
+                    
+                    if ($is_audio):
+                        $tem_audios = true;
+                        $caminho_audio = '../../' . $arquivo['caminho'];
+                        $mime_type = $arquivo['mime_type'] ?? 'audio/' . ($ext === 'opus' ? 'opus' : ($ext === 'ogg' ? 'ogg' : $ext));
+                ?>
+                <div class="mb-3 p-3 bg-purple-50 rounded-lg">
+                    <p class="text-sm text-gray-700 mb-2 flex items-center gap-2">
+                        <i class="fas fa-microphone text-purple-600"></i>
+                        <?= htmlspecialchars($arquivo['nome_arquivo']) ?>
+                    </p>
+                    <audio controls class="w-full h-10">
+                        <source src="<?= htmlspecialchars($caminho_audio) ?>" type="<?= htmlspecialchars($mime_type) ?>">
+                        Seu navegador não suporta áudio HTML5.
+                    </audio>
+                </div>
+                <?php 
+                    endif;
+                endforeach; 
+                ?>
                 
                 <!-- Lista de todos os arquivos -->
                 <div class="space-y-2 <?= $tem_imagens ? 'border-t pt-3' : '' ?>">
@@ -572,7 +592,7 @@ include '../../../views/layouts/_header.php';
                             $cor_icone = 'red-500';
                         }
                     ?>
-                    <a href="download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
+                    <a href="../../utils/download.php?tipo=pedido&id=<?= $arquivo['id'] ?>" 
                        class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition group">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-<?= $icone ?> text-<?= $cor_icone ?>"></i>
@@ -628,7 +648,7 @@ include '../../../views/layouts/_header.php';
                     Enviar nova versão
                 </h2>
                 
-                <form id="formUpload" method="POST" action="arte_upload.php" enctype="multipart/form-data">
+                <form id="formUpload" method="POST" action="../../arte/arte_upload.php" enctype="multipart/form-data">
                     <input type="hidden" name="pedido_id" value="<?= $pedido_id ?>">
                     
                     <div id="dropZone" 
@@ -717,7 +737,7 @@ include '../../../views/layouts/_header.php';
                         
                         $ext = strtolower(pathinfo($versao['arquivo_nome'], PATHINFO_EXTENSION));
                         $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                        $caminho = '../uploads/arte_versoes/' . basename($versao['arquivo_caminho']);
+                        $caminho = '../../uploads/arte_versoes/' . basename($versao['arquivo_caminho']);
                     ?>
                     <div class="border rounded-lg p-4 <?= $borderColor ?> message-bubble">
                         <!-- Header da versão -->
@@ -745,7 +765,7 @@ include '../../../views/layouts/_header.php';
                                     <i class="fas fa-eye"></i> Ver
                                 </button>
                                 <?php endif; ?>
-                                <a href="download.php?tipo=arte&id=<?= $versao['id'] ?>" 
+                                <a href="../../utils/download.php?tipo=arte&id=<?= $versao['id'] ?>" 
                                    class="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition">
                                     <i class="fas fa-download"></i> Baixar
                                 </a>
@@ -1136,5 +1156,4 @@ if (window.location.hash !== '#no-refresh') {
 }
 </script>
 
-</body>
-</html>
+<?php include '../../../views/layouts/_footer.php'; ?>

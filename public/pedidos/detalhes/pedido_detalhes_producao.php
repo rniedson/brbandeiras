@@ -1,23 +1,29 @@
 <?php
-require_once '../../../app/config.php';
-require_once '../../../app/auth.php';
-require_once '../../../app/functions.php';
+// Verificar se está sendo incluído de outro arquivo
+$_modo_componente = isset($pedido_id) && isset($pedido);
 
-requireLogin();
-requireRole(['producao', 'gestor', 'vendedor']);
+if (!$_modo_componente) {
+    require_once '../../../app/config.php';
+    require_once '../../../app/auth.php';
+    require_once '../../../app/functions.php';
 
-// Validar ID do pedido
-$pedido_id = validarPedidoId($_GET['id'] ?? null);
+    requireLogin();
+    requireRole(['producao', 'gestor', 'vendedor']);
+
+    // Validar ID do pedido
+    $pedido_id = validarPedidoId($_GET['id'] ?? null);
+    
+    if (!$pedido_id) {
+        $_SESSION['erro'] = 'ID de pedido inválido';
+        redirect('../../producao/producao.php');
+    }
+}
+
 $modo_edicao = isset($_GET['editar']) && in_array($_SESSION['user_perfil'], ['gestor', 'vendedor']);
 $modo_iframe = isset($_GET['iframe']);
 
-if (!$pedido_id) {
-    $_SESSION['erro'] = 'ID de pedido inválido';
-    redirect('../../producao/producao.php');
-}
-
-// Processar salvamento de edições (AJAX)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+// Processar salvamento de edições (AJAX) - apenas quando não em modo componente
+if (!$_modo_componente && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     
     try {
@@ -39,31 +45,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     exit;
 }
 
-// Buscar dados do pedido
-try {
-    $stmt = $pdo->prepare("
-        SELECT 
-            p.*,
-            c.nome as cliente_nome,
-            v.nome as vendedor_nome
-        FROM pedidos p
-        LEFT JOIN clientes c ON p.cliente_id = c.id
-        LEFT JOIN usuarios v ON p.vendedor_id = v.id
-        WHERE p.id = ?
-    ");
-    $stmt->execute([$pedido_id]);
-    $pedido = $stmt->fetch();
-    
-    if (!$pedido) {
-        throw new Exception('Pedido não encontrado');
+// Buscar dados do pedido - apenas se não estiver em modo componente
+if (!$_modo_componente) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                p.*,
+                c.nome as cliente_nome,
+                v.nome as vendedor_nome
+            FROM pedidos p
+            LEFT JOIN clientes c ON p.cliente_id = c.id
+            LEFT JOIN usuarios v ON p.vendedor_id = v.id
+            WHERE p.id = ?
+        ");
+        $stmt->execute([$pedido_id]);
+        $pedido = $stmt->fetch();
+        
+        if (!$pedido) {
+            throw new Exception('Pedido não encontrado');
+        }
+    } catch (PDOException $e) {
+        error_log("Erro ao buscar pedido: " . $e->getMessage());
+        $_SESSION['erro'] = 'Erro ao carregar dados do pedido';
+        redirect('../../producao/producao.php');
+    } catch (Exception $e) {
+        $_SESSION['erro'] = $e->getMessage();
+        redirect('../../producao/producao.php');
     }
-} catch (PDOException $e) {
-    error_log("Erro ao buscar pedido: " . $e->getMessage());
-    $_SESSION['erro'] = 'Erro ao carregar dados do pedido';
-    redirect('../../producao/producao.php');
-} catch (Exception $e) {
-    $_SESSION['erro'] = $e->getMessage();
-    redirect('../../producao/producao.php');
 }
 
 // Formatar número da OS - apenas últimos 4 dígitos
@@ -112,14 +120,16 @@ foreach ($itens as $item) {
         break;
     }
 }
+
+// Quando incluído como componente, não renderizar estrutura HTML completa
+if (!$_modo_componente):
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OS <?= $numero_os ?> - BR Bandeiras</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../css/tailwind.min.css">
     <style>
         @media print {
             body { 
@@ -193,6 +203,19 @@ foreach ($itens as $item) {
     </style>
 </head>
 <body class="bg-white">
+<?php endif; // fim do if (!$_modo_componente) para estrutura HTML ?>
+
+<?php // Estilos inline para modo componente ?>
+<?php if ($_modo_componente): ?>
+<style>
+    .checkbox-etapa { width: 14px; height: 14px; border: 2px solid #000; display: inline-block; margin-right: 4px; vertical-align: middle; }
+    .checkbox-etapa.checked { background-color: #16a34a; position: relative; }
+    .checkbox-etapa.checked:after { content: '✓'; position: absolute; color: white; font-weight: bold; font-size: 10px; top: -2px; left: 1px; }
+    .destaque-material { background-color: #fef08a !important; border: 2px solid #ca8a04 !important; font-weight: bold; }
+    .grade-table { font-size: 9px; }
+    .grade-table td, .grade-table th { border: 1px solid #000; padding: 2px 4px; text-align: center; }
+</style>
+<?php endif; ?>
     
     <!-- Container Principal A4 -->
     <div class="max-w-[200mm] mx-auto bg-white p-2">
@@ -413,8 +436,8 @@ foreach ($itens as $item) {
                                 Aprovada: <?= formatarData($arte['created_at']) ?>
                             </div>
                             
-                            <?php if ($is_image && file_exists('../' . $arte['arquivo_caminho'])): ?>
-                                <img src="../<?= htmlspecialchars($arte['arquivo_caminho']) ?>" 
+                            <?php if ($is_image && file_exists('../../' . $arte['arquivo_caminho'])): ?>
+                                <img src="../../<?= htmlspecialchars($arte['arquivo_caminho']) ?>" 
                                      alt="Arte V<?= $arte['versao'] ?>"
                                      class="max-w-full h-auto mx-auto"
                                      style="max-height: 250px;">
@@ -587,5 +610,7 @@ foreach ($itens as $item) {
         <?php endif; ?>
     </script>
 
+<?php if (!$_modo_componente): ?>
 </body>
 </html>
+<?php endif; ?>

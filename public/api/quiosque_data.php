@@ -9,6 +9,18 @@ header('Cache-Control: no-cache, must-revalidate');
 
 require_once '../../app/config.php';
 
+// Função para formatar identificação do cliente (primeiro nome + 4 últimos dígitos)
+function formatarClienteQuiosque($nome, $telefone) {
+    // Pegar primeiro nome
+    $primeiroNome = $nome ? explode(' ', trim($nome))[0] : 'Cliente';
+    
+    // Pegar últimos 4 dígitos do telefone
+    $telefoneNumeros = preg_replace('/\D/', '', $telefone ?? '');
+    $ultimos4 = strlen($telefoneNumeros) >= 4 ? substr($telefoneNumeros, -4) : '****';
+    
+    return $primeiroNome . ' - ' . $ultimos4;
+}
+
 try {
     // Estatísticas de pedidos por status - Apenas Arte, Produção e Prontos
     $stmt = $pdo->query("
@@ -29,23 +41,69 @@ try {
     ];
 }
 
+// Função para formatar tempo relativo
+function formatarTempoRelativo($dataHora) {
+    if (!$dataHora) return '—';
+    $agora = new DateTime();
+    $data = new DateTime($dataHora);
+    $diff = $agora->diff($data);
+    
+    if ($diff->days > 0) {
+        return $diff->days . 'd';
+    } elseif ($diff->h > 0) {
+        return $diff->h . 'h';
+    } else {
+        return max(1, $diff->i) . 'min';
+    }
+}
+
 // Buscar próximas entregas - Incluir todos os pedidos ativos
 try {
     $stmt = $pdo->query("
         SELECT 
+            p.id,
             p.numero,
             p.prazo_entrega,
             c.nome as cliente_nome,
+            COALESCE(c.celular, c.whatsapp, c.telefone) as cliente_telefone,
             p.urgente,
             p.status,
-            p.created_at
+            p.created_at,
+            p.updated_at,
+            u.nome as vendedor_nome,
+            ua.nome as arte_finalista_nome,
+            (
+                SELECT pc.nome 
+                FROM pedido_itens pi 
+                LEFT JOIN produtos_catalogo pc ON pi.produto_id = pc.id 
+                WHERE pi.pedido_id = p.id 
+                ORDER BY pi.id 
+                LIMIT 1
+            ) as primeiro_produto,
+            (
+                SELECT paq.caminho 
+                FROM pedido_arquivos paq 
+                WHERE paq.pedido_id = p.id 
+                AND LOWER(paq.nome_arquivo) ~ '\\.(jpg|jpeg|png|gif|webp)$'
+                ORDER BY paq.created_at DESC
+                LIMIT 1
+            ) as imagem_caminho,
+            GREATEST(
+                p.updated_at,
+                COALESCE((
+                    SELECT MAX(l.created_at) 
+                    FROM logs_sistema l 
+                    WHERE l.detalhes LIKE '%Pedido #' || p.numero || '%'
+                ), p.updated_at)
+            ) as ultima_atualizacao
         FROM pedidos p
         LEFT JOIN clientes c ON p.cliente_id = c.id
+        LEFT JOIN usuarios u ON p.vendedor_id = u.id
+        LEFT JOIN pedido_arte pa ON pa.pedido_id = p.id
+        LEFT JOIN usuarios ua ON pa.arte_finalista_id = ua.id
         WHERE p.status NOT IN ('entregue', 'cancelado')
         ORDER BY 
-            CASE WHEN p.prazo_entrega IS NOT NULL THEN 0 ELSE 1 END,
-            p.prazo_entrega ASC NULLS LAST,
-            p.created_at DESC
+            ultima_atualizacao DESC
         LIMIT 20
     ");
     $proximas_entregas = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -55,12 +113,14 @@ try {
     foreach ($proximas_entregas as $entrega) {
         $entregas_formatadas[] = [
             'numero' => $entrega['numero'],
-            'cliente_nome' => $entrega['cliente_nome'] ?: 'Cliente não informado',
-            'prazo_entrega' => $entrega['prazo_entrega'] ? date('d/m/Y', strtotime($entrega['prazo_entrega'])) : null,
-            'prazo_entrega_raw' => $entrega['prazo_entrega'],
+            'cliente_nome' => formatarClienteQuiosque($entrega['cliente_nome'], $entrega['cliente_telefone']),
+            'vendedor_nome' => $entrega['vendedor_nome'],
+            'arte_finalista_nome' => $entrega['arte_finalista_nome'],
+            'primeiro_produto' => $entrega['primeiro_produto'],
+            'imagem_caminho' => $entrega['imagem_caminho'],
+            'tempo_atualizado' => formatarTempoRelativo($entrega['ultima_atualizacao']),
             'urgente' => (bool)$entrega['urgente'],
-            'status' => $entrega['status'],
-            'created_at' => $entrega['created_at'] ? date('d/m/Y', strtotime($entrega['created_at'])) : null
+            'status' => $entrega['status']
         ];
     }
 } catch (Exception $e) {

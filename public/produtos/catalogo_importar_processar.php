@@ -81,23 +81,12 @@ try {
                 continue;
             }
             
-            // Extrair dados
+            // Extrair dados (apenas colunas que existem na tabela)
             $codigo = trim($linha[$indices['codigo']] ?? '');
             $nome = trim($linha[$indices['nome']] ?? '');
             $categoria_id = intval($linha[$indices['categoria']] ?? 0);
             $preco = floatval($linha[$indices['preco']] ?? 0);
-            $preco_promocional = isset($indices['preco_promocional']) 
-                ? floatval($linha[$indices['preco_promocional']] ?? 0) 
-                : null;
-            $unidade_venda = isset($indices['unidade_venda']) 
-                ? trim($linha[$indices['unidade_venda']] ?? 'UN') 
-                : 'UN';
-            $tempo_producao = isset($indices['tempo_producao']) 
-                ? intval($linha[$indices['tempo_producao']] ?? 1) 
-                : 1;
-            $tags = isset($indices['tags']) 
-                ? trim($linha[$indices['tags']] ?? '') 
-                : null;
+            $descricao = isset($indices['descricao']) ? trim($linha[$indices['descricao']] ?? '') : null;
             
             // Validações
             if (empty($codigo)) {
@@ -125,12 +114,6 @@ try {
                 continue;
             }
             
-            // Validar unidade de venda
-            $unidades_validas = ['UN', 'M', 'M2', 'ML', 'KG', 'CX', 'PC'];
-            if (!in_array($unidade_venda, $unidades_validas)) {
-                $unidade_venda = 'UN';
-            }
-            
             // Verificar se produto existe
             $stmt = $pdo->prepare("SELECT id FROM produtos_catalogo WHERE codigo = ?");
             $stmt->execute([$codigo]);
@@ -142,16 +125,13 @@ try {
                     continue;
                 }
                 
-                // Atualizar produto existente
+                // Atualizar produto existente (usando apenas colunas existentes)
                 $stmt = $pdo->prepare("
                     UPDATE produtos_catalogo SET 
                         nome = ?,
                         categoria_id = ?,
                         preco = ?,
-                        preco_promocional = NULLIF(?, 0),
-                        unidade_venda = ?,
-                        tempo_producao = ?,
-                        tags = ?,
+                        descricao = ?,
                         ativo = ?,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
@@ -161,10 +141,7 @@ try {
                     $nome,
                     $categoria_id,
                     $preco,
-                    $preco_promocional,
-                    $unidade_venda,
-                    $tempo_producao,
-                    $tags,
+                    $descricao,
                     $ativar_produtos ? true : false,
                     $produto_existente['id']
                 ]);
@@ -172,12 +149,11 @@ try {
                 $atualizados++;
                 
             } else {
-                // Inserir novo produto
+                // Inserir novo produto (usando apenas colunas existentes)
                 $stmt = $pdo->prepare("
                     INSERT INTO produtos_catalogo (
-                        codigo, nome, categoria_id, preco, preco_promocional,
-                        unidade_venda, tempo_producao, tags, ativo
-                    ) VALUES (?, ?, ?, ?, NULLIF(?, 0), ?, ?, ?, ?)
+                        codigo, nome, categoria_id, preco, descricao, ativo
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                 ");
                 
                 $stmt->execute([
@@ -185,10 +161,7 @@ try {
                     $nome,
                     $categoria_id,
                     $preco,
-                    $preco_promocional,
-                    $unidade_venda,
-                    $tempo_producao,
-                    $tags,
+                    $descricao,
                     $ativar_produtos ? true : false
                 ]);
                 
