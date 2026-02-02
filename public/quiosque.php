@@ -228,14 +228,14 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
             
-            /* Tamanhos de fonte (otimizado para visualização de longe) */
-            --text-xs: 1.25rem;
-            --text-sm: 1.5rem;
-            --text-base: 1.75rem;
-            --text-lg: 2rem;
-            --text-xl: 2.5rem;
-            --text-2xl: 3rem;
-            --text-3xl: 4.5rem;
+            /* Tamanhos de fonte (otimizado para visualização de longe - aumentado 50%) */
+            --text-xs: 1.875rem;
+            --text-sm: 2.25rem;
+            --text-base: 2.625rem;
+            --text-lg: 3rem;
+            --text-xl: 3.75rem;
+            --text-2xl: 4.5rem;
+            --text-3xl: 6.75rem;
             
             /* Transições */
             --transition-fast: 0.15s ease;
@@ -767,7 +767,8 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         .entregas-table td {
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
+            white-space: normal;
+            word-wrap: break-word;
         }
 
         /* Larguras das colunas - usadas tanto no header quanto na tabela */
@@ -852,9 +853,10 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         .produto-nome {
             display: block;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            white-space: normal;
+            word-wrap: break-word;
             max-width: 100%;
+            line-height: 1.3;
         }
 
         .cliente-nome {
@@ -975,13 +977,13 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
            ============================================ */
         @media (min-width: 1920px) {
             :root {
-                --text-xs: 1.5rem;
-                --text-sm: 1.75rem;
-                --text-base: 2rem;
-                --text-lg: 2.5rem;
-                --text-xl: 3rem;
-                --text-2xl: 3.5rem;
-                --text-3xl: 5rem;
+                --text-xs: 2.25rem;
+                --text-sm: 2.625rem;
+                --text-base: 3rem;
+                --text-lg: 3.75rem;
+                --text-xl: 4.5rem;
+                --text-2xl: 5.25rem;
+                --text-3xl: 7.5rem;
             }
 
             .quiosque-header {
@@ -1005,13 +1007,13 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         /* 4K */
         @media (min-width: 2560px) {
             :root {
-                --text-xs: 1.75rem;
-                --text-sm: 2rem;
-                --text-base: 2.25rem;
-                --text-lg: 2.75rem;
-                --text-xl: 3.5rem;
-                --text-2xl: 4rem;
-                --text-3xl: 6rem;
+                --text-xs: 2.625rem;
+                --text-sm: 3rem;
+                --text-base: 3.375rem;
+                --text-lg: 4.125rem;
+                --text-xl: 5.25rem;
+                --text-2xl: 6rem;
+                --text-3xl: 9rem;
             }
 
             .header-col {
