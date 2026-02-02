@@ -1116,7 +1116,6 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
 
             <!-- Tela de Curiosidade -->
             <div id="telaCuriosidade" class="tela-especial tela-curiosidade">
-                <div class="curiosidade-icone">🏳️</div>
                 <div class="curiosidade-label">Você sabia?</div>
                 <div id="curiosidadeTexto" class="curiosidade-texto"></div>
             </div>
