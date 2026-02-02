@@ -176,6 +176,9 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
     <style>
         /* ============================================
            VARIÁVEIS CSS - SINGLE SOURCE OF TRUTH
@@ -222,14 +225,14 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
             
-            /* Tamanhos de fonte (otimizado para TV 32-43" a 2-3m) */
-            --text-xs: 0.875rem;
-            --text-sm: 1rem;
-            --text-base: 1.125rem;
-            --text-lg: 1.25rem;
-            --text-xl: 1.75rem;
-            --text-2xl: 2rem;
-            --text-3xl: 3.5rem;
+            /* Tamanhos de fonte (otimizado para visualização de longe) */
+            --text-xs: 1.25rem;
+            --text-sm: 1.5rem;
+            --text-base: 1.75rem;
+            --text-lg: 2rem;
+            --text-xl: 2.5rem;
+            --text-2xl: 3rem;
+            --text-3xl: 4.5rem;
             
             /* Transições */
             --transition-fast: 0.15s ease;
@@ -363,6 +366,28 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             letter-spacing: 0.05em;
             padding: var(--spacing-md) var(--spacing-lg);
             vertical-align: middle;
+        }
+        
+        .header-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        @media (min-width: 1920px) {
+            .header-icon {
+                width: 2.25rem;
+                height: 2.25rem;
+            }
+        }
+        
+        @media (min-width: 2560px) {
+            .header-icon {
+                width: 2.75rem;
+                height: 2.75rem;
+            }
         }
         
         /* As larguras são herdadas das classes .col-* definidas abaixo */
@@ -575,6 +600,23 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             justify-content: center;
             gap: var(--spacing-md);
             margin-bottom: var(--spacing-xl);
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        
+        .tela-branding.active .branding-logo {
+            animation: brandingLogoIn 1s ease-out 0.2s forwards;
+        }
+        
+        @keyframes brandingLogoIn {
+            0% { 
+                opacity: 0; 
+                transform: scale(0.8);
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
         }
 
         .branding-logo-text {
@@ -595,6 +637,21 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             background: var(--color-brand-yellow);
             border-radius: 4px;
         }
+        
+        .tela-branding.active .branding-logo-bar {
+            animation: brandingBarPulse 2s ease-in-out 2s infinite;
+        }
+        
+        @keyframes brandingBarPulse {
+            0%, 100% { 
+                transform: scaleX(1);
+                box-shadow: 0 0 0 rgba(245, 184, 0, 0);
+            }
+            50% { 
+                transform: scaleX(1.1);
+                box-shadow: 0 0 30px rgba(245, 184, 0, 0.5);
+            }
+        }
 
         .branding-slogan {
             font-size: var(--text-2xl);
@@ -602,11 +659,35 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             font-weight: 600;
             margin-bottom: var(--spacing-lg);
             font-style: italic;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .tela-branding.active .branding-slogan {
+            animation: brandingSlideUp 0.8s ease-out 1s forwards;
+        }
+        
+        @keyframes brandingSlideUp {
+            0% { 
+                opacity: 0; 
+                transform: translateY(30px);
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
         }
 
         .branding-mensagem {
             font-size: var(--text-lg);
             color: var(--color-text-secondary);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .tela-branding.active .branding-mensagem {
+            animation: brandingSlideUp 0.8s ease-out 1.5s forwards;
+        }
             max-width: 700px;
             line-height: 1.6;
         }
@@ -687,14 +768,12 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         }
 
         /* Larguras das colunas - usadas tanto no header quanto na tabela */
-        .col-imagem { width: 6%; text-align: center; }
-        .col-cliente { width: 16%; }
-        .col-produto { width: 22%; }
-        .col-vendedor { width: 12%; }
-        .col-arte { width: 14%; }
-        .col-status { width: 10%; text-align: center; }
+        .col-imagem { width: 10%; text-align: center; }
+        .col-produto { width: 30%; }
+        .col-vendedor { width: 18%; }
+        .col-arte { width: 18%; }
+        .col-status { width: 14%; text-align: center; }
         .col-atualizado { width: 10%; text-align: center; }
-        .col-pedido { width: 10%; text-align: center; }
 
         .entregas-table tbody tr {
             transition: background var(--transition-fast);
@@ -734,9 +813,9 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         }
 
         .miniatura-container {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
+            width: 128px;
+            height: 128px;
+            border-radius: 10px;
             overflow: hidden;
             background: var(--color-bg-elevated);
             border: 1px solid var(--color-border-subtle);
@@ -754,7 +833,7 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
 
         .miniatura-placeholder {
             color: var(--color-text-muted);
-            font-size: 20px;
+            font-size: 48px;
         }
 
         .pedido-numero {
@@ -807,9 +886,9 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
            STATUS BADGES
            ============================================ */
         .status-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: var(--text-xs);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -893,13 +972,13 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
            ============================================ */
         @media (min-width: 1920px) {
             :root {
-                --text-xs: 1rem;
-                --text-sm: 1.125rem;
-                --text-base: 1.25rem;
-                --text-lg: 1.5rem;
-                --text-xl: 2rem;
-                --text-2xl: 2.5rem;
-                --text-3xl: 4rem;
+                --text-xs: 1.5rem;
+                --text-sm: 1.75rem;
+                --text-base: 2rem;
+                --text-lg: 2.5rem;
+                --text-xl: 3rem;
+                --text-2xl: 3.5rem;
+                --text-3xl: 5rem;
             }
 
             .quiosque-header {
@@ -913,22 +992,32 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             .entregas-table td {
                 padding: var(--spacing-lg) var(--spacing-xl);
             }
+            
+            .miniatura-container {
+                width: 144px;
+                height: 144px;
+            }
         }
 
         /* 4K */
         @media (min-width: 2560px) {
             :root {
-                --text-xs: 1.125rem;
-                --text-sm: 1.25rem;
-                --text-base: 1.5rem;
-                --text-lg: 1.75rem;
-                --text-xl: 2.5rem;
-                --text-2xl: 3rem;
-                --text-3xl: 5rem;
+                --text-xs: 1.75rem;
+                --text-sm: 2rem;
+                --text-base: 2.25rem;
+                --text-lg: 2.75rem;
+                --text-xl: 3.5rem;
+                --text-2xl: 4rem;
+                --text-3xl: 6rem;
             }
 
             .header-col {
                 font-size: var(--text-lg);
+            }
+            
+            .miniatura-container {
+                width: 192px;
+                height: 192px;
             }
         }
     </style>
@@ -952,14 +1041,12 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             </div>
             <!-- Linha inferior com títulos das colunas -->
             <div class="header-columns" id="headerColumns">
-                <span class="header-col col-imagem">Imagem</span>
-                <span class="header-col col-cliente">Cliente</span>
-                <span class="header-col col-produto">Produto</span>
-                <span class="header-col col-vendedor">Atendente</span>
-                <span class="header-col col-arte">Arte Finalista</span>
-                <span class="header-col col-status">Status</span>
-                <span class="header-col col-atualizado">Atualizado</span>
-                <span class="header-col col-pedido">OS</span>
+                <span class="header-col col-imagem"><i data-lucide="image" class="header-icon"></i></span>
+                <span class="header-col col-produto"><i data-lucide="package" class="header-icon"></i></span>
+                <span class="header-col col-vendedor"><i data-lucide="headset" class="header-icon"></i></span>
+                <span class="header-col col-arte"><i data-lucide="palette" class="header-icon"></i></span>
+                <span class="header-col col-status"><i data-lucide="activity" class="header-icon"></i></span>
+                <span class="header-col col-atualizado"><i data-lucide="clock" class="header-icon"></i></span>
             </div>
             <!-- Título para telas especiais -->
             <div class="header-special-title" id="headerSpecialTitle" style="display: none;">
@@ -987,9 +1074,6 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
                                         <?php endif; ?>
                                     </div>
                                 </td>
-                                <td class="col-cliente">
-                                    <span class="cliente-nome"><?= htmlspecialchars(formatarClienteQuiosque($entrega['cliente_nome'], $entrega['cliente_telefone'])) ?></span>
-                                </td>
                                 <td class="col-produto">
                                     <span class="produto-nome"><?= htmlspecialchars($entrega['primeiro_produto'] ?? 'Sem produto') ?></span>
                                 </td>
@@ -1007,14 +1091,11 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
                                 <td class="col-atualizado">
                                     <span class="tempo-atualizado"><?= formatarTempoRelativo($entrega['ultima_atualizacao']) ?></span>
                                 </td>
-                                <td class="col-pedido">
-                                    <span class="pedido-numero">#<?= htmlspecialchars($entrega['numero']) ?></span>
-                                </td>
                             </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="8">
+                                <td colspan="6">
                                     <div class="no-data">
                                         <svg viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
@@ -1094,8 +1175,9 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         
         let telaAtualIndex = 0;
         let todosOsDados = []; // Armazena todos os dados para filtrar localmente
-        let rotacaoInterval = null;
-        const TEMPO_ROTACAO = 10000; // 10 segundos
+        let rotacaoTimeout = null;
+        const TEMPO_ROTACAO = 10000; // 10 segundos (padrão)
+        const TEMPO_BRANDING = 20000; // 20 segundos para tela de branding
         
         // Índices para telas especiais (não repetir)
         let curiosidadeIndex = 0;
@@ -1114,6 +1196,9 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             document.getElementById('currentTime').textContent = timeStr;
         }
 
+        // Inicializar ícones Lucide
+        lucide.createIcons();
+        
         updateTime();
         setInterval(updateTime, 1000);
 
@@ -1250,9 +1335,21 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             exibirTela();
         }
 
+        function agendarProximaTela() {
+            if (rotacaoTimeout) clearTimeout(rotacaoTimeout);
+            
+            // Verificar se a tela atual é branding para usar tempo maior
+            const telaAtual = TELAS[telaAtualIndex];
+            const tempo = telaAtual.id === 'branding' ? TEMPO_BRANDING : TEMPO_ROTACAO;
+            
+            rotacaoTimeout = setTimeout(() => {
+                proximaTela();
+                agendarProximaTela();
+            }, tempo);
+        }
+        
         function iniciarRotacao() {
-            if (rotacaoInterval) clearInterval(rotacaoInterval);
-            rotacaoInterval = setInterval(proximaTela, TEMPO_ROTACAO);
+            agendarProximaTela();
         }
 
         // ============================================
@@ -1270,7 +1367,7 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             if (!entregas || entregas.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8">
+                        <td colspan="6">
                             <div class="no-data">
                                 <svg viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
@@ -1293,13 +1390,11 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
                 return `
                     <tr class="${urgenteClass}" data-numero="${entrega.numero}" style="animation-delay: ${index * 0.03}s">
                         <td class="col-imagem"><div class="miniatura-container">${imagemHtml}</div></td>
-                        <td class="col-cliente"><span class="cliente-nome">${entrega.cliente_nome}</span></td>
                         <td class="col-produto"><span class="produto-nome">${entrega.primeiro_produto || 'Sem produto'}</span></td>
                         <td class="col-vendedor"><span class="vendedor-nome">${entrega.vendedor_nome || '—'}</span></td>
                         <td class="col-arte"><span class="arte-finalista-nome">${entrega.arte_finalista_nome || '—'}</span></td>
                         <td class="col-status"><span class="status-badge status-${entrega.status}">${statusLabel}</span></td>
                         <td class="col-atualizado"><span class="tempo-atualizado">${entrega.tempo_atualizado || '—'}</span></td>
-                        <td class="col-pedido"><span class="pedido-numero">#${entrega.numero}</span></td>
                     </tr>
                 `;
             }).join('');
