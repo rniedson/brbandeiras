@@ -548,7 +548,7 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             font-size: var(--text-xl);
             color: var(--color-text-primary);
             line-height: 1.6;
-            max-width: 800px;
+            max-width: 90%;
             font-weight: 500;
         }
 
