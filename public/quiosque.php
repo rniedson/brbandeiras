@@ -169,6 +169,9 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Quiosque - <?= htmlspecialchars($empresa_nome) ?></title>
     
     <!-- Google Fonts - Inter + JetBrains Mono -->
@@ -1430,11 +1433,118 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             exibirTela();
         });
         
-        // Atualizar dados a cada 30 segundos
-        setInterval(atualizarDados, 30000);
+        // Atualizar dados a cada 60 segundos (evitar rate limit)
+        setInterval(atualizarDados, 60000);
         
         // Iniciar rotação de telas a cada 10 segundos
         iniciarRotacao();
+
+        // ============================================
+        // WAKE LOCK - MANTER TELA LIGADA
+        // Impede que o Fire Stick/TV entre em hibernação
+        // ============================================
+        let wakeLock = null;
+        let noSleepVideo = null;
+
+        // Método 1: Wake Lock API (navegadores modernos)
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('🔆 Wake Lock ativado');
+                    
+                    // Re-adquirir wake lock quando a aba voltar ao foco
+                    wakeLock.addEventListener('release', () => {
+                        console.log('🌙 Wake Lock liberado');
+                    });
+                    
+                    return true;
+                } catch (err) {
+                    console.log('Wake Lock não disponível:', err.message);
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        // Método 2: Fallback com vídeo invisível (Fire Stick, navegadores antigos)
+        function createNoSleepVideo() {
+            if (noSleepVideo) return;
+            
+            // Criar elemento de vídeo invisível com vídeo base64 mínimo
+            noSleepVideo = document.createElement('video');
+            noSleepVideo.setAttribute('playsinline', '');
+            noSleepVideo.setAttribute('muted', '');
+            noSleepVideo.setAttribute('loop', '');
+            noSleepVideo.setAttribute('title', 'No Sleep');
+            noSleepVideo.style.cssText = 'position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none;';
+            
+            // Vídeo base64 mínimo (1x1 pixel, transparente, ~500 bytes)
+            // Este é um webm válido que mantém o navegador "ativo"
+            const webmBase64 = 'data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKIbWF0cm9za2FCh4EEQoWBAhhTgGcBAAAAAAACHhFNm3RALE27i1OrhBVJqWZTrIHfTbuMU6uEFlSua1OsggEuTbuMU6uEHFO7a1OsggIn7AEAAAAAAAAHAAAAAAAMRAGCw5oCAAAAAAAIRAGCw5oCAAAAAAAJRAGCw5oCAAAAAAAKRAGCw5oCAAAAAAARRhqCARVgPQb/E//6g/9A/8H/wv//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+            
+            // Tentar usar uma fonte de vídeo mais robusta
+            const source = document.createElement('source');
+            source.src = webmBase64;
+            source.type = 'video/webm';
+            noSleepVideo.appendChild(source);
+            
+            document.body.appendChild(noSleepVideo);
+            
+            // Tentar reproduzir
+            const playPromise = noSleepVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('🎬 NoSleep Video ativado');
+                }).catch((err) => {
+                    console.log('NoSleep Video falhou:', err.message);
+                });
+            }
+        }
+
+        // Método 3: Simular atividade periódica (movimento de mouse virtual)
+        function simulateActivity() {
+            // Criar e disparar evento de mouse move
+            const event = new MouseEvent('mousemove', {
+                bubbles: true,
+                cancelable: true,
+                clientX: Math.random() * window.innerWidth,
+                clientY: Math.random() * window.innerHeight
+            });
+            document.dispatchEvent(event);
+        }
+
+        // Inicializar sistema de keep-alive
+        async function initKeepAlive() {
+            // Tentar Wake Lock API primeiro
+            const hasWakeLock = await requestWakeLock();
+            
+            // Se Wake Lock não disponível, usar fallback do vídeo
+            if (!hasWakeLock) {
+                createNoSleepVideo();
+            }
+            
+            // Simular atividade a cada 30 segundos (backup adicional)
+            setInterval(simulateActivity, 30000);
+            
+            console.log('✅ Sistema Keep-Alive inicializado');
+        }
+
+        // Re-adquirir Wake Lock quando a página voltar ao foco
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+                if ('wakeLock' in navigator && wakeLock === null) {
+                    await requestWakeLock();
+                }
+                // Garantir que o vídeo está rodando
+                if (noSleepVideo && noSleepVideo.paused) {
+                    noSleepVideo.play().catch(() => {});
+                }
+            }
+        });
+
+        // Iniciar sistema keep-alive
+        initKeepAlive();
     </script>
 </body>
 </html>
