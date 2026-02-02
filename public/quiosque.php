@@ -1144,12 +1144,14 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
             <div class="footer-left"></div>
             <div class="filter-indicators">
                 <span class="filter-dot active" data-filter="todos" title="Todos"></span>
-                <span class="filter-dot" data-filter="arte" title="Arte"></span>
-                <span class="filter-dot" data-filter="orcamento" title="Comercial"></span>
-                <span class="filter-dot" data-filter="producao" title="Produção"></span>
-                <span class="filter-separator"></span>
+                <!-- DESATIVADAS TEMPORARIAMENTE - Remover style="display:none" para reativar: -->
+                <span class="filter-dot" data-filter="arte" title="Arte" style="display:none"></span>
+                <span class="filter-dot" data-filter="orcamento" title="Comercial" style="display:none"></span>
+                <span class="filter-dot" data-filter="producao" title="Produção" style="display:none"></span>
+                <span class="filter-separator" style="display:none"></span>
+                <!-- FIM DAS DESATIVADAS -->
                 <span class="filter-dot" data-filter="curiosidade" title="Curiosidade"></span>
-                <span class="filter-dot" data-filter="produto" title="Produtos"></span>
+                <span class="filter-dot" data-filter="produto" title="Produtos" style="display:none"></span>
                 <span class="filter-dot" data-filter="branding" title="BR Bandeiras"></span>
             </div>
         </footer>
@@ -1166,13 +1168,18 @@ $brandingJson = json_encode($branding, JSON_UNESCAPED_UNICODE);
         // ============================================
         // CONFIGURAÇÃO DE ROTAÇÃO DE TELAS
         // ============================================
+        // ============================================
+        // TELAS DO CARROSSEL
+        // Para reativar arte/comercial/produção, descomente as linhas abaixo
+        // ============================================
         const TELAS = [
             { id: 'todos', label: 'Todos os Pedidos', tipo: 'tabela', status: null },
-            { id: 'arte', label: 'Em Arte', tipo: 'tabela', status: 'arte' },
-            { id: 'orcamento', label: 'Comercial', tipo: 'tabela', status: 'orcamento' },
-            { id: 'producao', label: 'Em Produção', tipo: 'tabela', status: 'producao' },
+            // DESATIVADAS TEMPORARIAMENTE - Descomentar para reativar:
+            // { id: 'arte', label: 'Em Arte', tipo: 'tabela', status: 'arte' },
+            // { id: 'orcamento', label: 'Comercial', tipo: 'tabela', status: 'orcamento' },
+            // { id: 'producao', label: 'Em Produção', tipo: 'tabela', status: 'producao' },
             { id: 'curiosidade', label: 'Curiosidade', tipo: 'especial' },
-           /* { id: 'produto', label: 'Nossos Produtos', tipo: 'especial' }, */
+            /* { id: 'produto', label: 'Nossos Produtos', tipo: 'especial' }, */
             { id: 'branding', label: '', tipo: 'especial' }
         ];
         
