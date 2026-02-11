@@ -120,6 +120,8 @@ RewriteRule ^clientes_template_csv\.php$ /clientes/clientes_template_csv.php [L]
 
 # Produtos/Catálogo
 RewriteRule ^catalogo\.php$ /produtos/catalogo.php [L]
+# Corrigir URL incorreta: produtos/dashboard.php -> dashboard/dashboard.php
+RewriteRule ^produtos/dashboard\.php$ /dashboard/dashboard.php [L,R=301]
 RewriteRule ^catalogo_produto_novo\.php$ /produtos/catalogo_produto_novo.php [L]
 RewriteRule ^catalogo_produto_editar\.php$ /produtos/catalogo_produto_editar.php [L]
 RewriteRule ^catalogo_produto_salvar\.php$ /produtos/catalogo_produto_salvar.php [L]
